@@ -4,7 +4,9 @@ battery telemetry via Win32_Battery, and truthful reporting of Acer OEM Control 
 """
 
 import os
+import sys
 import re
+import time
 import logging
 import subprocess
 from pathlib import Path
@@ -126,6 +128,9 @@ class PowerManager:
     def __init__(self):
         self._cached_schemes: Optional[List[Dict[str, Any]]] = None
         self.acer_adapter = AcerOEMAdapter()
+        self._battery_cache: Optional[Dict[str, Any]] = None
+        self._battery_cache_time: float = 0.0
+        self._battery_cache_ttl: float = 2.0  # 2-second lightweight cache
 
     def list_power_schemes(self) -> List[Dict[str, Any]]:
         """Queries Windows power schemes using powercfg /list."""
@@ -221,60 +226,153 @@ class PowerManager:
             logger.error(msg)
             return {"success": False, "verified": False, "message": msg}
 
-    def get_battery_telemetry(self) -> Dict[str, Any]:
-        """Queries battery status and charge percentage via Windows WMI."""
-        try:
-            cmd = "Get-CimInstance Win32_Battery | Select-Object EstimatedChargeRemaining, BatteryStatus"
-            res = subprocess.run(
-                ["powershell", "-NoProfile", "-Command", cmd],
-                capture_output=True,
-                text=True,
-                timeout=5.0,
-                check=False
-            )
-            lines = [l.strip() for l in res.stdout.splitlines() if l.strip()]
-            if len(lines) >= 3:
-                # The data line is after the header and dash separator
-                data_line = lines[2]
-                parts = data_line.split()
-                if len(parts) >= 2 and parts[0].isdigit():
-                    pct = int(parts[0])
-                    status_code = int(parts[1]) if parts[1].isdigit() else 1
-                    # BatteryStatus: 1 = Discharging, 2 = AC / Unknown, 3 = Fully Charged, 4 = Low, 5 = Critical, 6 = Charging
-                    is_charging = status_code in (2, 3, 6)
-                    status_desc = "Charging" if status_code == 6 else ("Plugged in" if status_code == 2 else "On battery")
-                    return {
-                        "success": True,
-                        "percentage": pct,
-                        "status": status_desc,
-                        "is_charging": is_charging,
-                        "message": f"Battery is at {pct}%, {status_desc}."
-                    }
-        except Exception as e:
-            logger.debug(f"WMI battery query error: {e}")
+    def get_battery_telemetry(self, force_fresh: bool = False) -> Dict[str, Any]:
+        """Queries battery status, percentage, AC state, and remaining time via native Windows APIs.
+        Utilizes psutil and Win32 GetSystemPowerStatus directly for instant sub-millisecond execution.
+        Caches readings for 2.0 seconds to prevent hardware bus thrashing.
+        """
+        now = time.time()
+        if not force_fresh and self._battery_cache and (now - self._battery_cache_time < self._battery_cache_ttl):
+            return dict(self._battery_cache)
 
-        # Fallback to psutil if installed
+        telemetry_available = False
+        has_battery = False
+        pct: Optional[int] = None
+        power_plugged: Optional[bool] = None
+        secsleft: Optional[int] = None
+        is_charging: bool = False
+        status_desc = "Unknown"
+
+        # 1. Primary: Fast native psutil sensors_battery
         try:
             import psutil
             batt = psutil.sensors_battery()
-            if batt:
-                pct = int(batt.percent)
-                plugged = batt.power_plugged
-                status_desc = "Plugged in" if plugged else "On battery"
-                return {
-                    "success": True,
-                    "percentage": pct,
-                    "status": status_desc,
-                    "is_charging": plugged,
-                    "message": f"Battery is at {pct}%, {status_desc}."
-                }
-        except Exception:
-            pass
+            if batt is not None:
+                has_battery = True
+                telemetry_available = True
+                pct = int(round(batt.percent))
+                power_plugged = bool(batt.power_plugged)
+                # psutil docs: secsleft is -1 (POWER_TIME_UNMATCHED/calculating) or -2 (POWER_TIME_UNLIMITED/plugged in)
+                if batt.secsleft is not None and int(batt.secsleft) > 0:
+                    secsleft = int(batt.secsleft)
+                is_charging = power_plugged
+        except Exception as pe:
+            logger.debug(f"psutil battery check: {pe}")
 
-        return {
-            "success": False,
-            "message": "Battery telemetry is unavailable or system is connected to desktop AC power."
+        # 2. Secondary Fallback: Win32 GetSystemPowerStatus via ctypes
+        if not telemetry_available and sys.platform == "win32":
+            try:
+                import ctypes
+                from ctypes import wintypes
+
+                class _SYSTEM_POWER_STATUS(ctypes.Structure):
+                    _fields_ = [
+                        ('ACLineStatus', wintypes.BYTE),
+                        ('BatteryFlag', wintypes.BYTE),
+                        ('BatteryLifePercent', wintypes.BYTE),
+                        ('SystemStatusFlag', wintypes.BYTE),
+                        ('BatteryLifeTime', wintypes.DWORD),
+                        ('BatteryFullLifeTime', wintypes.DWORD)
+                    ]
+
+                sps = _SYSTEM_POWER_STATUS()
+                if ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(sps)):
+                    # BatteryFlag: 128 = No system battery, 255 = Unknown status
+                    if sps.BatteryFlag != 128:
+                        has_battery = True
+                        telemetry_available = True
+                        if sps.BatteryLifePercent <= 100:
+                            pct = int(sps.BatteryLifePercent)
+                        if sps.ACLineStatus in (0, 1):
+                            power_plugged = (sps.ACLineStatus == 1)
+                        if sps.BatteryFlag & 8 or (power_plugged and pct is not None and pct < 100):
+                            is_charging = True
+                        if sps.BatteryLifeTime != 0xFFFFFFFF and sps.BatteryLifeTime > 0:
+                            secsleft = int(sps.BatteryLifeTime)
+                    else:
+                        has_battery = False
+                        telemetry_available = True
+                        power_plugged = (sps.ACLineStatus == 1)
+            except Exception as we:
+                logger.debug(f"Win32 GetSystemPowerStatus check: {we}")
+
+        # 3. Tertiary Fallback: WMI CIM query (only if native calls failed)
+        if not telemetry_available:
+            try:
+                cmd = "Get-CimInstance Win32_Battery | Select-Object EstimatedChargeRemaining, BatteryStatus"
+                res = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", cmd],
+                    capture_output=True,
+                    text=True,
+                    timeout=3.0,
+                    check=False
+                )
+                lines = [l.strip() for l in res.stdout.splitlines() if l.strip()]
+                if len(lines) >= 3:
+                    data_line = lines[2]
+                    parts = data_line.split()
+                    if len(parts) >= 2 and parts[0].isdigit():
+                        has_battery = True
+                        telemetry_available = True
+                        pct = int(parts[0])
+                        status_code = int(parts[1]) if parts[1].isdigit() else 1
+                        power_plugged = status_code in (2, 3, 6)
+                        is_charging = status_code in (2, 6)
+            except Exception as wmie:
+                logger.debug(f"WMI battery query fallback error: {wmie}")
+
+        # Format remaining time safely and distinguish percentage from estimate
+        time_remaining_seconds: Optional[int] = None
+        time_remaining_formatted: Optional[str] = None
+        if secsleft is not None and secsleft > 0:
+            time_remaining_seconds = secsleft
+            hours = secsleft // 3600
+            mins = (secsleft % 3600) // 60
+            if hours > 0 and mins > 0:
+                time_remaining_formatted = f"{hours} hour{'s' if hours > 1 else ''} and {mins} minute{'s' if mins > 1 else ''}"
+            elif hours > 0:
+                time_remaining_formatted = f"{hours} hour{'s' if hours > 1 else ''}"
+            else:
+                time_remaining_formatted = f"{mins} minute{'s' if mins != 1 else ''}"
+
+        # Construct truthful natural message
+        if not telemetry_available:
+            status_desc = "Unavailable"
+            msg = "Battery telemetry is currently unavailable on this system."
+        elif not has_battery:
+            status_desc = "AC Desktop"
+            msg = "No battery detected; the system is running on desktop AC power."
+        elif power_plugged:
+            if pct is not None and pct >= 99:
+                status_desc = "Fully charged"
+                msg = f"Battery is at {pct}%, fully charged and connected to AC power."
+            else:
+                status_desc = "Charging" if is_charging else "Plugged in"
+                msg = f"Battery is at {pct}%, currently plugged in and charging."
+        else:
+            status_desc = "Discharging"
+            if time_remaining_formatted:
+                msg = f"Battery is at {pct}%, discharging. Estimated time remaining is {time_remaining_formatted}."
+            else:
+                msg = f"Battery is at {pct}%, discharging on battery power. Windows did not provide a reliable time estimate."
+
+        res = {
+            "success": telemetry_available,
+            "has_battery": has_battery,
+            "telemetry_available": telemetry_available,
+            "percentage": pct,
+            "power_plugged": power_plugged,
+            "is_charging": bool(is_charging),
+            "status": status_desc,
+            "time_remaining_seconds": time_remaining_seconds,
+            "time_remaining_formatted": time_remaining_formatted,
+            "last_read_timestamp": now,
+            "message": msg
         }
+
+        self._battery_cache = dict(res)
+        self._battery_cache_time = now
+        return res
 
     def get_acer_oem_report(self) -> Dict[str, Any]:
         """Provides a truthful report on Acer ALG OEM Control Center profiles and capabilities.

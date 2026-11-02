@@ -1,0 +1,219 @@
+{
+  "timestamp": "2026-11-01T23:34:00",
+  "responses": [
+    {
+      "response_num": 1,
+      "label": "R1_Online",
+      "text_snippet": "Hello Sir, I am SANTRA, your desktop assistant....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1780.22
+    },
+    {
+      "response_num": 2,
+      "label": "R2_Online",
+      "text_snippet": "Quicksort is an efficient sorting algorithm with average O(n...",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1497.35
+    },
+    {
+      "response_num": 3,
+      "label": "R3_Online",
+      "text_snippet": "I am monitoring your workstation telemetry....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 3155.99
+    },
+    {
+      "response_num": 4,
+      "label": "R4_Online",
+      "text_snippet": "The battery is currently at optimal capacity and plugged in....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 6206.62
+    },
+    {
+      "response_num": 5,
+      "label": "R5_Online",
+      "text_snippet": "All system subsystems are functioning normally....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1273.33
+    },
+    {
+      "response_num": 6,
+      "label": "R6_Offline_Fallback",
+      "text_snippet": "Network disconnected. Falling back to native Windows SAPI....",
+      "forced_offline": true,
+      "provider": "Windows SAPI (Native Offline)",
+      "voice_id": "Microsoft David Desktop",
+      "gender": "Male",
+      "latency_ms": 162.77
+    },
+    {
+      "response_num": 7,
+      "label": "R7_Offline_Fallback",
+      "text_snippet": "This offline response is rendered by Microsoft David....",
+      "forced_offline": true,
+      "provider": "Windows SAPI (Native Offline)",
+      "voice_id": "Microsoft David Desktop",
+      "gender": "Male",
+      "latency_ms": 80.26
+    },
+    {
+      "response_num": 8,
+      "label": "R8_Offline_Fallback",
+      "text_snippet": "Local synthesis operates without external cloud dependencies...",
+      "forced_offline": true,
+      "provider": "Windows SAPI (Native Offline)",
+      "voice_id": "Microsoft David Desktop",
+      "gender": "Male",
+      "latency_ms": 71.99
+    },
+    {
+      "response_num": 9,
+      "label": "R9_Offline_Fallback",
+      "text_snippet": "Binary search requires a pre-sorted array for logarithmic lo...",
+      "forced_offline": true,
+      "provider": "Windows SAPI (Native Offline)",
+      "voice_id": "Microsoft David Desktop",
+      "gender": "Male",
+      "latency_ms": 80.14
+    },
+    {
+      "response_num": 10,
+      "label": "R10_Offline_Fallback",
+      "text_snippet": "Offline speech engine verified....",
+      "forced_offline": true,
+      "provider": "Windows SAPI (Native Offline)",
+      "voice_id": "Microsoft David Desktop",
+      "gender": "Male",
+      "latency_ms": 63.76
+    },
+    {
+      "response_num": 11,
+      "label": "R11_Online_Restored",
+      "text_snippet": "Network restored. Resuming neural voice synthesis....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 4151.53
+    },
+    {
+      "response_num": 12,
+      "label": "R12_Online",
+      "text_snippet": "Neural stream delivers articulate, warm prosody....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 6656.83
+    },
+    {
+      "response_num": 13,
+      "label": "R13_Online",
+      "text_snippet": "Navigation to Brave browser completed successfully....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 6597.8
+    },
+    {
+      "response_num": 14,
+      "label": "R14_Online",
+      "text_snippet": "HiAnime watchlist is now open and ready for viewing....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 2435.69
+    },
+    {
+      "response_num": 15,
+      "label": "R15_Online",
+      "text_snippet": "Code generation completed with 100% test coverage....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1701.71
+    },
+    {
+      "response_num": 16,
+      "label": "R16_Multi_Sentence",
+      "text_snippet": "Sentence one explains the concept. Sentence two provides an ...",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1843.51
+    },
+    {
+      "response_num": 17,
+      "label": "R17_Technical_Stream",
+      "text_snippet": "Polymorphism in C++ is achieved through virtual function tab...",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1705.46
+    },
+    {
+      "response_num": 18,
+      "label": "R18_Long_Response",
+      "text_snippet": "An operating system manages hardware abstraction, process sc...",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 2485.24
+    },
+    {
+      "response_num": 19,
+      "label": "R19_BargeIn_Test",
+      "text_snippet": "This utterance will be interrupted midway by the user....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1338.9
+    },
+    {
+      "response_num": 20,
+      "label": "R20_Final_Verification",
+      "text_snippet": "TTS acceptance suite successfully completed....",
+      "forced_offline": false,
+      "provider": "EdgeTTS (Neural Cloud)",
+      "voice_id": "en-GB-RyanNeural",
+      "gender": "Male",
+      "latency_ms": 1756.34
+    }
+  ],
+  "cancellation_metrics": {
+    "ack_latency_median_ms": 0.575,
+    "playback_stop_latency_median_ms": 0.583,
+    "zero_overlapping_streams": true
+  },
+  "persona_audit": {
+    "online_voice": "en-GB-RyanNeural",
+    "offline_voice": "Microsoft David Desktop",
+    "online_accent": "British English (en-GB, Neural)",
+    "offline_accent": "US English (en-US, Formant)",
+    "gender_continuity": "Strictly Male across all tiers"
+  },
+  "verdict": "PASSED",
+  "total_evaluated": 20
+}

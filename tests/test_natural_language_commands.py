@@ -168,7 +168,8 @@ class TestNaturalLanguageCommands(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 res = self.engine.parse(phrase)
                 self.assertEqual(res["intent"], "system_control")
-                self.assertEqual(res["action"], "sleep_pc")
+                expected_action = "sleep_assistant" if phrase == "Go to sleep" else "sleep_pc"
+                self.assertEqual(res["action"], expected_action)
                 self.assertGreaterEqual(res["confidence"], 0.95)
 
     def test_restart_computer_variations(self):

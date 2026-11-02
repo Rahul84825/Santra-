@@ -38,7 +38,7 @@ class ContentGenerator:
         logger.info(f"[CONTENT] Drafting '{content_type}' on '{topic_clean}' with tone '{tone}'")
 
         # 1. Try AI Provider first if available
-        if self.provider_mgr.is_ai_available():
+        if self.provider_mgr and self.provider_mgr.is_ai_available():
             system_prompt = (
                 f"You are JARVIS, an elite AI assistant. Draft a {tone} {content_type} based on the request: {topic_clean}. "
                 "Provide complete, high-quality, ready-to-use content."

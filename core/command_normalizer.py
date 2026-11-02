@@ -76,7 +76,6 @@ class CommandNormalizer:
             (r"\b(resume listening|enable listening|turn on listening|unmute microphone|unmute mic)\b", "resume listening"),
             (r"\b(let\s*'?\s*s\s+start|lets\s+start|start\s+session|let\s*'?\s*s\s+begin|lets\s+begin|begin\s+session|start\s+working|let\s*'?\s*s\s+get\s+started|lets\s+get\s+started)\b", "start session"),
 
-
             # Developer test commands
             (r"\b(run the tests|run tests|run project tests|run my tests)\b", "run tests"),
 
@@ -85,10 +84,10 @@ class CommandNormalizer:
             (r"\bstart\b(?!\s+(?:session|working)\b)", "open"),
             (r"\brun\b(?!\s+(?:the\s+)?tests\b)", "open"),
 
-
             # App name aliases & fuzzy command shortcuts
             (r"\b(visual studio code|vs code|vieskund|vees code|viscode|vies kund)\b", "vscode"),
             (r"\b(?:open|launch|bring up|start)\s+code\b", "open vscode"),
+            (r"\b(?:open|launch|start|bring up)\s+room\b", "open chrome"),
             (r"\b(?:(?:the\s+)?(?:google\s+)?chrome(?:\s+browser)?|krone|crome)\b", "chrome"),
             (r"\b(?:the\s+)?brave(?:\s+browser)?\b", "brave"),
             (r"\b(you\s+tube|u\s+tube|utube)\b", "youtube"),
@@ -210,8 +209,24 @@ class CommandNormalizer:
         if self.is_explicit_search(text) or self.is_youtube_search(text):
             return [text]
 
-        # Do not split research and explain or AI reasoning compound requests
+        # Strip leading conversational conjunctions / fillers at start of utterance
+        text = re.sub(r"^(?:and|also|so|then)\s+", "", text, flags=re.IGNORECASE).strip()
+
+        # Strip assistant address first (e.g. 'Hey Santra, open Chrome' -> 'open Chrome')
+        is_addr, name, payload = self.extract_assistant_address(text)
+        if is_addr and payload:
+            text = payload
+
         clean_check = text.lower().strip()
+        # Do not split explanation format preferences
+        if "short answer" in clean_check or "explain in detail" in clean_check:
+            return [text]
+
+        # Do not split questions, explanations, or informational queries
+        if re.search(r"^(?:what|why|how|who|when|where|is|can|could|tell|explain|compare|difference)\b", clean_check):
+            return [text]
+
+        # Do not split research and explain or AI reasoning compound requests
         if re.search(r"\b(?:find|search)\b.*\band\b\s*(?:explain|summarize|tell)\b", clean_check, re.IGNORECASE):
             return [text]
         if re.search(r"\b(?:explain|solve|write|debug|compare)\b.*\band\b", clean_check, re.IGNORECASE):

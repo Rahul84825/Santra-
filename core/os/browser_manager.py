@@ -86,7 +86,7 @@ class BrowserManager:
     def is_browser_available(self, browser_name: str) -> bool:
         return platform_manager.is_browser_available(browser_name)
 
-    def resolve_target_browser(self, requested_browser: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
+    def resolve_target_browser(self, requested_browser: Optional[str] = None, strict_browser: bool = False) -> Tuple[Optional[str], Optional[str]]:
         """Resolves target browser according to priority:
         Requested/Preferred -> Chrome -> Chromium -> Default browser.
         Returns Tuple of (resolved_browser_name_or_default, error_message).
@@ -102,7 +102,9 @@ class BrowserManager:
 
         logger.warning(f"[BROWSER_RESOLVE] Target browser '{target}' is not installed.")
 
-        if not self.fallback_browser_enabled:
+        if strict_browser or target == "brave" or not self.fallback_browser_enabled:
+            if target == "brave":
+                return None, "I couldn't find Brave Browser."
             return None, f"{target.title()} isn't installed. I couldn't open the browser."
 
         # Fallback chain: Chrome -> Chromium -> Default
@@ -141,9 +143,9 @@ class BrowserManager:
             logger.error(f"[BROWSER_ERROR] Failed to open URL '{url}': {e}")
             return {"success": False, "message": "I couldn't open that website."}
 
-    def open_browser(self, browser_name: str = "default", url: str = None, enable_cdp: bool = False) -> Dict[str, Any]:
+    def open_browser(self, browser_name: str = "default", url: str = None, enable_cdp: bool = False, strict_browser: bool = False) -> Dict[str, Any]:
         """Launches specified or preferred browser with optional URL and secure CDP port startup."""
-        resolved, err = self.resolve_target_browser(browser_name)
+        resolved, err = self.resolve_target_browser(browser_name, strict_browser=strict_browser or (browser_name.lower() == "brave"))
         if not resolved:
             return {"success": False, "message": err or "I couldn't find a supported browser."}
 

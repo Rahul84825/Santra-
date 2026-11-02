@@ -9,7 +9,7 @@ from modules.files import file_control
 from modules.browser import web_control
 from core.os import TerminalManager, FilesystemManager, ProcessManager, SystemInfoProvider, ProjectRegistry, BrowserManager
 from core.content_generator import ContentGenerator
-from core.response_registry import CommandOutcome
+from core.response_registry import CommandOutcome, response_registry
 
 logger = logging.getLogger("Jarvis.Executor")
 
@@ -31,6 +31,7 @@ class CommandExecutor:
         self.last_created_file = None
         self.last_search_results = []
         self.panel_visibility_cb = None
+        self.response_registry = response_registry
         logger.info("Command Executor initialized with Full OS Control Layer.")
 
     def execute(self, intent_node: dict, confirm: bool = False) -> dict:
@@ -218,22 +219,53 @@ class CommandExecutor:
                     return result
                 outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
 
+            elif intent.startswith("typing."):
+                res = self._execute_typing_command(intent_node)
+                self._record_history(intent_node, res)
+                return res
+
+            elif intent.startswith("message."):
+                res = self._execute_message_command(intent_node)
+                self._record_history(intent_node, res)
+                return res
+
+            elif intent.startswith("project."):
+                res = self._execute_project_command(intent_node, confirm=confirm)
+                self._record_history(intent_node, res)
+                return res
+
             elif intent == "open_website":
                 browser_name = intent_node.get("browser")
                 url = intent_node.get("url")
                 if browser_name:
                     if not url:
                         url = web_control.links.get(target.lower(), f"https://{target}")
-                    res = self.browser_mgr.open_browser(browser_name=browser_name, url=url)
+                    strict = intent_node.get("strict_browser", False) or (browser_name.lower() == "brave")
+                    if strict:
+                        res = self.browser_mgr.open_browser(browser_name=browser_name, url=url, strict_browser=True)
+                    else:
+                        res = self.browser_mgr.open_browser(browser_name=browser_name, url=url)
                     success = res.get("success", False)
                     site_display = target.title() if target else "website"
                     browser_display = browser_name.title()
+                    is_brave = browser_name.lower() == "brave"
+                    is_watching = (url == "https://hianime.at/user/watching") or (target and target.lower() in ["hianime watching", "watched anime", "my watched anime", "anime watchlist", "my anime list"])
+                    is_home = (url == "https://hianime.at/") or (target and target.lower() in ["hianime", "anime site", "hianime homepage"])
+
                     if success:
                         outcome = CommandOutcome.SUCCESS
-                        message = f"Opening {site_display} in {browser_display}."
+                        if is_brave and is_watching:
+                            message = "Opening your watched anime in Brave."
+                        elif is_brave and is_home:
+                            message = "Opening HiAnime in Brave."
+                        else:
+                            message = f"Opening {site_display} in {browser_display}."
                     else:
                         outcome = CommandOutcome.EXECUTION_FAILED
-                        message = res.get("message", f"I couldn't open {site_display} in {browser_display}.")
+                        if is_brave and ("not installed" in res.get("message", "").lower() or "find" in res.get("message", "").lower() or not self.browser_mgr.is_browser_available("brave")):
+                            message = "I couldn't find Brave Browser."
+                        else:
+                            message = res.get("message", f"I couldn't open {site_display} in {browser_display}.")
                 else:
                     success, message = web_control.open_website(target)
                     if not success:
@@ -410,6 +442,7 @@ class CommandExecutor:
                         outcome = CommandOutcome.MISSING_ARGUMENT
                     elif raw_outcome == "UNSUPPORTED_CAPABILITY":
                         outcome = CommandOutcome.UNSUPPORTED_CAPABILITY
+                        message = self.response_registry.get_failure_response(intent_node, outcome=outcome, reason="not installed")
                     elif success:
                         outcome = CommandOutcome.SUCCESS
                     else:
@@ -577,6 +610,131 @@ class CommandExecutor:
                     outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
 
             # ---------------------------------------------------------
+            # WORKSPACE, ANTIGRAVITY, CHATGPT & DRAFT WORKFLOWS
+            # ---------------------------------------------------------
+            elif intent in [
+                "workspace.create_folder", "workspace.rename_folder", "workspace.open_folder", "workspace.open_antigravity",
+                "browser.open_chatgpt", "browser.open_pinned_chat", "browser.open_named_conversation",
+                "draft.start_prompt", "draft.start_message", "draft.enter_text", "draft.approve_submission", "draft.cancel"
+            ]:
+                from core.workspace_interaction import (
+                    workspace_manager, application_manager, browser_interaction_manager,
+                    application_interaction_manager, draft_manager, DraftState
+                )
+
+                if intent == "workspace.create_folder":
+                    folder_n = intent_node.get("folder_name") or target or "New Folder"
+                    parent_loc = intent_node.get("parent")
+                    res = workspace_manager.create_folder(folder_name=folder_n, parent_location=parent_loc)
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "workspace.rename_folder":
+                    src = intent_node.get("source") or target or "that folder"
+                    new_n = intent_node.get("new_name") or ""
+                    parent_loc = intent_node.get("parent")
+                    res = workspace_manager.rename_folder(source_name=src, new_name=new_n, parent_location=parent_loc)
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "workspace.open_folder":
+                    tgt = intent_node.get("target") or target or "that folder"
+                    app = intent_node.get("app") or "explorer"
+                    if "antigravity" in app.lower():
+                        res_ws = workspace_manager.resolve_workspace(tgt)
+                        if res_ws.get("success"):
+                            res = application_manager.open_workspace_in_antigravity(res_ws["path"])
+                        else:
+                            res = res_ws
+                    else:
+                        res = workspace_manager.reveal_in_file_manager(tgt)
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "workspace.open_antigravity":
+                    tgt = intent_node.get("target") or target
+                    if tgt:
+                        res_ws = workspace_manager.resolve_workspace(tgt)
+                        if res_ws.get("success"):
+                            res = application_manager.open_workspace_in_antigravity(res_ws["path"])
+                        else:
+                            res = res_ws
+                    else:
+                        last = workspace_manager.get_last_active_folder()
+                        if last:
+                            res = application_manager.open_workspace_in_antigravity(last)
+                        else:
+                            res = application_manager.activate_application("antigravity")
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "browser.open_chatgpt":
+                    res = browser_interaction_manager.open_or_focus_chatgpt()
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "browser.open_pinned_chat":
+                    pinned_n = intent_node.get("target") or target or "SANTRA"
+                    res = browser_interaction_manager.open_pinned_chat(pinned_n)
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "browser.open_named_conversation":
+                    conv_n = intent_node.get("target") or target or ""
+                    res = browser_interaction_manager.open_named_conversation(conv_n)
+                    success = bool(res.get("success", False))
+                    message = res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent in ["draft.start_prompt", "draft.start_message"]:
+                    target_app = intent_node.get("target_app") or ("antigravity" if "prompt" in intent else "chatgpt")
+                    if target_app == "antigravity":
+                        field_res = application_interaction_manager.locate_antigravity_input()
+                    else:
+                        field_res = browser_interaction_manager.locate_prompt_field()
+                    draft_manager.current_state = DraftState.DRAFTING
+                    success = bool(field_res.get("success", False))
+                    message = "Input field activated. Go ahead, dictate your text." if success else "Could not focus target input field."
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "draft.enter_text":
+                    dictated_text = intent_node.get("text") or target or ""
+                    target_app = intent_node.get("target_app") or "antigravity"
+                    ins_res = application_interaction_manager.insert_text_into_target(dictated_text)
+                    if ins_res.get("success"):
+                        draft = draft_manager.create_draft(
+                            app_name=target_app,
+                            draft_text=dictated_text,
+                            target_hwnd=ins_res.get("hwnd", 0)
+                        )
+                        success = True
+                        message = "Your prompt is ready. Should I send it?" if target_app == "antigravity" else "Message drafted in your conversation. Should I send it?"
+                        outcome = CommandOutcome.SUCCESS
+                    else:
+                        success = False
+                        message = ins_res.get("message", "Failed to insert draft.")
+                        outcome = CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "draft.approve_submission":
+                    user_utt = intent_node.get("utterance") or intent_node.get("raw_text") or target or ""
+                    app_res = draft_manager.process_approval(user_utterance=user_utt)
+                    success = bool(app_res.get("success", False))
+                    message = app_res.get("message", "")
+                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+                elif intent == "draft.cancel":
+                    draft_manager.current_state = DraftState.CANCELLED
+                    success = True
+                    message = "Draft cancelled."
+                    outcome = CommandOutcome.SUCCESS
+
+            # ---------------------------------------------------------
             # VISION & SCREEN INTELLIGENCE
             # ---------------------------------------------------------
             elif intent in ["screen.analyze", "screen_understanding.analyze", "screen_understanding"]:
@@ -617,7 +775,6 @@ class CommandExecutor:
                 if action_k == "save_file" and hasattr(self, "last_created_file") and self.last_created_file:
                     dest_f = intent_node.get("destination") or target or "DSA"
                     import shutil
-                    from pathlib import Path
                     src_p = Path(self.last_created_file)
                     dest_dir = Path.home() / "Desktop" / dest_f if not Path(dest_f).is_absolute() else Path(dest_f)
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -1746,6 +1903,153 @@ class CommandExecutor:
         except Exception as ex:
             logger.error(f"Unexpected error executing Spotify command: {ex}", exc_info=True)
             return {"success": False, "message": f"Failed to execute Spotify command: {ex}"}
+
+    def _execute_typing_command(self, intent_node: dict) -> dict:
+        """Executes universal voice typing operations."""
+        from core.typing import typing_coordinator, TypingMode
+        intent = intent_node.get("intent", "")
+        action = intent_node.get("action", "")
+
+        if intent == "typing.start":
+            mode_str = intent_node.get("mode", "continuous")
+            syntax = intent_node.get("code_syntax", "python")
+            mode = TypingMode.CODE if mode_str == "code" else (TypingMode.DRAFT if mode_str == "draft" else TypingMode.CONTINUOUS)
+            res = typing_coordinator.start_typing(mode=mode, code_syntax=syntax)
+        elif intent == "typing.stop":
+            res = typing_coordinator.stop_typing()
+        elif intent == "typing.pause":
+            res = typing_coordinator.pause_typing()
+        elif intent == "typing.resume":
+            res = typing_coordinator.resume_typing()
+        elif intent == "typing.feed_speech":
+            text = intent_node.get("text", "")
+            res = typing_coordinator.feed_speech(text)
+        elif intent == "typing.correct":
+            cmd = intent_node.get("command", "")
+            res = typing_coordinator.handle_correction(cmd)
+        elif intent == "typing.set_mode":
+            mode_str = intent_node.get("mode", "continuous")
+            mode = TypingMode.CODE if mode_str == "code" else (TypingMode.DRAFT if mode_str == "draft" else TypingMode.CONTINUOUS)
+            res = typing_coordinator.set_mode(mode)
+        else:
+            res = {"success": False, "message": f"Unknown typing action: {action}"}
+
+        outcome = CommandOutcome.SUCCESS.value if res.get("success") else CommandOutcome.EXECUTION_FAILED.value
+        return {
+            "success": res.get("success", False),
+            "outcome": outcome,
+            "message": res.get("message", ""),
+            "intent": intent,
+            "action": action,
+            "spoken": True,
+            "data": res
+        }
+
+    def _execute_message_command(self, intent_node: dict) -> dict:
+        """Executes ask-before-send message preparation and gated submission."""
+        from core.interaction.message_workflow import message_workflow_manager
+        intent = intent_node.get("intent", "")
+        action = intent_node.get("action", "")
+
+        if intent == "message.prepare":
+            text = intent_node.get("text", "")
+            app = intent_node.get("target_app") or intent_node.get("target")
+            res = message_workflow_manager.prepare_message(message_text=text, target_app=app)
+        elif intent == "message.approve_send":
+            user_utterance = intent_node.get("user_utterance", "yes")
+            res = message_workflow_manager.process_approval_response(user_utterance)
+        elif intent == "message.cancel":
+            res = message_workflow_manager.cancel()
+        else:
+            res = {"success": False, "message": f"Unknown message workflow action: {action}"}
+
+        outcome = CommandOutcome.SUCCESS.value if res.get("success") else CommandOutcome.EXECUTION_FAILED.value
+        return {
+            "success": res.get("success", False),
+            "outcome": outcome,
+            "message": res.get("message", ""),
+            "intent": intent,
+            "action": action,
+            "spoken": True,
+            "data": res
+        }
+
+    def _execute_project_command(self, intent_node: dict, confirm: bool = False) -> dict:
+        """Executes project intelligence, indexing, symbol search, and file engineering."""
+        from core.project_intelligence import project_context_engine, file_engineer
+        from config import BASE_DIR
+        intent = intent_node.get("intent", "")
+        action = intent_node.get("action", "")
+        root_path = intent_node.get("project_path") or str(BASE_DIR)
+
+        if intent == "project.scan":
+            overview = project_context_engine.index_project(root_path)
+            msg = f"Scanned project '{overview.project_name}'. Indexed {overview.total_files} files and {overview.total_lines:,} lines of code across {len(overview.languages)} languages."
+            res = {"success": True, "message": msg, "overview": overview.to_dict()}
+
+        elif intent == "project.explain":
+            explanation = project_context_engine.explain_project(root_path)
+            res = {"success": True, "message": explanation}
+
+        elif intent == "project.search_code":
+            query = intent_node.get("query", "")
+            matches = project_context_engine.search_code(query)
+            if matches:
+                top = matches[:3]
+                snippets = [f"{m['relative_path']}" for m in top]
+                msg = f"Found {len(matches)} matches for '{query}' in: {', '.join(snippets)}."
+            else:
+                msg = f"No code matches found for '{query}' in project."
+            res = {"success": True, "message": msg, "matches": matches}
+
+        elif intent == "project.find_symbol":
+            sym = intent_node.get("symbol_name") or intent_node.get("target", "")
+            matches = project_context_engine.find_symbol(sym)
+            if matches:
+                m0 = matches[0]
+                msg = f"Symbol '{sym}' is defined as a {m0['symbol_type']} in {m0['relative_path']} at line {m0['line_number']}."
+            else:
+                msg = f"Symbol '{sym}' could not be located in the project index."
+            res = {"success": bool(matches), "message": msg, "matches": matches}
+
+        elif intent == "project.find_dependencies":
+            mod = intent_node.get("module_name") or intent_node.get("target", "")
+            deps = project_context_engine.find_dependents(mod)
+            if deps:
+                sources = list(set(Path(d["source_file"]).name for d in deps[:5]))
+                msg = f"Module '{mod}' is imported by {len(deps)} locations, including: {', '.join(sources)}."
+            else:
+                msg = f"No project modules depend on '{mod}'."
+            res = {"success": True, "message": msg, "dependencies": deps}
+
+        elif intent == "project.create_file":
+            file_path = intent_node.get("file_path", "")
+            content = intent_node.get("content", "")
+            res = file_engineer.create_file(file_path, content, overwrite=intent_node.get("overwrite", False))
+
+        elif intent == "project.patch_file":
+            file_path = intent_node.get("file_path", "")
+            target_str = intent_node.get("target_content", "")
+            repl_str = intent_node.get("replacement_content", "")
+            res = file_engineer.apply_patch(file_path, target_str, repl_str)
+
+        elif intent == "project.rollback_patch":
+            patch_id = intent_node.get("patch_id", "")
+            res = file_engineer.rollback_patch(patch_id)
+
+        else:
+            res = {"success": False, "message": f"Unknown project command: {intent}"}
+
+        outcome = CommandOutcome.SUCCESS.value if res.get("success") else CommandOutcome.EXECUTION_FAILED.value
+        return {
+            "success": res.get("success", False),
+            "outcome": outcome,
+            "message": res.get("message", res.get("error", "")),
+            "intent": intent,
+            "action": action,
+            "spoken": True,
+            "data": res
+        }
 
     def _record_history(self, intent_node: dict, result: dict):
         if self.history_tracker:

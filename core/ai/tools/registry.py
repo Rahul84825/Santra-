@@ -119,6 +119,14 @@ class ToolRegistry:
             category="Browser",
             examples=["Open another Chrome window", "New browser window"]
         )
+        self.register(
+            name="analyze_page",
+            description="Analyzes and extracts the text content and structure of the currently active browser page.",
+            func=self._analyze_page,
+            parameters={},
+            category="Browser",
+            examples=["Analyze this Chrome page", "Summarize active webpage", "Explain this page"]
+        )
 
         # 3. FILESYSTEM TOOLS
         self.register(
@@ -212,6 +220,14 @@ class ToolRegistry:
             parameters={},
             category="System",
             examples=["What is my CPU usage?", "How much RAM do I have?"]
+        )
+        self.register(
+            name="get_battery_info",
+            description="Returns Windows laptop battery percentage, charging status, AC power connection, and estimated remaining runtime.",
+            func=self._get_battery_info,
+            parameters={},
+            category="System",
+            examples=["How much battery do I have?", "Is my laptop charging?", "What is my battery level?"]
         )
 
         # 6. GIT & TESTING TOOLS
@@ -582,6 +598,16 @@ class ToolRegistry:
             "data": res
         }
 
+    def _analyze_page(self) -> Dict[str, Any]:
+        res = self.executor.execute({"intent": "browser_action", "action": "analyze_page", "target": "current_page"})
+        return {
+            "success": res.get("success", False),
+            "tool": "analyze_page",
+            "target": "browser",
+            "message": res.get("message", "Analyzed active page"),
+            "data": res
+        }
+
     def _execute_system_intent(self, intent_name: str) -> Dict[str, Any]:
         res = self.executor.execute({"intent": "system_control", "action": intent_name, "target": "system"})
         return {
@@ -692,6 +718,14 @@ class ToolRegistry:
         disk = self.telemetry.get_disk_info()
         os_info = self.telemetry.get_os_info()
         summary = f"{cpu.get('text', '')} {ram.get('text', '')} {disk.get('text', '')}"
+        try:
+            from core.os.power_manager import power_manager
+            battery = power_manager.get_battery_telemetry()
+            if battery and battery.get("has_battery") and battery.get("status"):
+                summary += f" Battery: {battery.get('status')}"
+        except Exception:
+            battery = None
+
         return {
             "success": True,
             "tool": "get_system_info",
@@ -702,8 +736,20 @@ class ToolRegistry:
                 "cpu": cpu,
                 "ram": ram,
                 "disk": disk,
-                "os": os_info
+                "os": os_info,
+                "battery": battery
             }
+        }
+
+    def _get_battery_info(self) -> Dict[str, Any]:
+        from core.os.power_manager import power_manager
+        telemetry = power_manager.get_battery_telemetry()
+        return {
+            "success": telemetry.get("telemetry_available", False),
+            "tool": "get_battery_info",
+            "target": "battery",
+            "message": telemetry.get("message", "Battery telemetry retrieved."),
+            "data": telemetry
         }
 
     def _git_status(self, repo_path: Optional[str] = None) -> Dict[str, Any]:

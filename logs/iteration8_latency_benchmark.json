@@ -1,0 +1,11 @@
+{
+  "stt_cold_load_ms": 324.03629999316763,
+  "stt_cold_infer_ms": 167.27999999420717,
+  "stt_warm_median_ms": 111.7169999924954,
+  "stt_warm_min_ms": 95.93080000195187,
+  "routing_median_ms": 1.298050003242679,
+  "routing_p95_ms": 63.72679999913089,
+  "conv_median_ms": 0.28809999639634043,
+  "tts_median_ms": 120.0,
+  "total_round_trip_ms": 233.30314999213442
+}

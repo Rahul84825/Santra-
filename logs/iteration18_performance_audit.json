@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-11-01T23:36:14.983248",
+  "hardware_environment": {
+    "os": "Windows 11 Build 26300",
+    "cpu_cores": 12,
+    "ram_total_gb": 15.7,
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU (6GB VRAM)"
+  },
+  "metrics": {
+    "warm_startup_ms": {
+      "trials": 5,
+      "median": 36.386,
+      "p95": 949.008,
+      "max": 949.008,
+      "min": 19.083
+    },
+    "idle_cpu_percent": {
+      "trials": 6,
+      "median": 0.0,
+      "p95": 0.0,
+      "max": 0.0,
+      "min": 0.0
+    },
+    "layer1_dispatch_latency_ms": {
+      "trials": 15,
+      "median": 0.892,
+      "p95": 225.225,
+      "max": 225.225,
+      "min": 0.544
+    },
+    "active_cpu_percent": {
+      "trials": 4,
+      "median": 108.1,
+      "p95": 1591.1,
+      "max": 1591.1,
+      "min": 70.6
+    },
+    "ui_paint_duration_ms": {
+      "trials": 50,
+      "median": 0.014,
+      "p95": 0.023,
+      "max": 0.129,
+      "min": 0.014
+    },
+    "effective_ui_fps": 60.2,
+    "tool_execution_lookup_ms": {
+      "trials": 10,
+      "median": 0.0,
+      "p95": 0.002,
+      "max": 0.002,
+      "min": 0.0
+    },
+    "cancellation_ack_latency_ms": {
+      "trials": 10,
+      "median": 1.812,
+      "p95": 3.672,
+      "max": 3.672,
+      "min": 1.226
+    },
+    "playback_termination_latency_ms": {
+      "trials": 10,
+      "median": 1.816,
+      "p95": 3.674,
+      "max": 3.674,
+      "min": 1.229
+    },
+    "first_token_latency_ms": {
+      "trials": 5,
+      "median": 4273.616,
+      "p95": 5173.258,
+      "max": 5173.258,
+      "min": 574.268
+    },
+    "full_response_duration_ms": {
+      "trials": 5,
+      "median": 9496.925,
+      "p95": 11496.128,
+      "max": 11496.128,
+      "min": 1276.152
+    },
+    "memory_mb": {
+      "baseline_interpreter": 58.77,
+      "post_initialization": 928.66,
+      "peak_working_set": 1020.82,
+      "delta_post_init_mb": 869.9,
+      "delta_peak_mb": 962.05
+    }
+  }
+}

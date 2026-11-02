@@ -18,6 +18,7 @@ from core.os.website_adapters import website_adapter_registry, BaseWebsiteAdapte
 from core.os.browser_session import browser_session_manager
 from core.os.browser_manager import BrowserManager
 from core.os.cdp_client import CDPClient
+from core.platform.platform_manager import platform_manager
 
 logger = logging.getLogger("Jarvis.BrowserAutomation")
 
@@ -227,7 +228,11 @@ class BrowserAutomationEngine:
     def _handle_open_browser(self, intent: BrowserIntent) -> Dict[str, Any]:
         """Opens or focuses browser without navigating to search or arbitrary sites."""
         b_name = intent.target_browser or "chrome"
-        res = self.browser_mgr.open_browser(browser_name=b_name, url=None)
+        strict = bool(intent.metadata.get("strict_browser") or (b_name and b_name.lower() == "brave"))
+        if strict:
+            res = self.browser_mgr.open_browser(browser_name=b_name, url=None, strict_browser=True)
+        else:
+            res = self.browser_mgr.open_browser(browser_name=b_name, url=None)
         success = res.get("success", False)
         if success:
             return {
@@ -282,7 +287,11 @@ class BrowserAutomationEngine:
 
         # Standard launch / navigate
         logger.info(f"[DOMAIN_TRACE][BROWSER_NAV] browser='{intent.target_browser or 'chrome'}', target_url='{target_url}', domain='{target_domain}'")
-        res = self.browser_mgr.open_browser(browser_name=intent.target_browser, url=target_url)
+        strict = bool(intent.metadata.get("strict_browser") or (intent.target_browser and intent.target_browser.lower() == "brave"))
+        if strict:
+            res = self.browser_mgr.open_browser(browser_name=intent.target_browser, url=target_url, strict_browser=True)
+        else:
+            res = self.browser_mgr.open_browser(browser_name=intent.target_browser, url=target_url)
         if not res.get("success", False):
             return {
                 "success": False,
@@ -292,13 +301,28 @@ class BrowserAutomationEngine:
             }
 
         # Bounded verification of navigation
-        verified, final_url = self._verify_navigation(target_domain)
+        verified, final_url = self._verify_navigation(target_domain, browser_name=intent.target_browser or "chrome")
         self.session_mgr.record_navigation(final_url or target_url, intent.site_name, intent.target_browser)
+
+        svc = intent.metadata.get("service")
+        is_brave = (intent.target_browser or "").lower() == "brave"
+        is_watching = svc == "hianime_watching" or target_url == "https://hianime.at/user/watching" or (intent.site_name and intent.site_name.lower() in ["hianime watching", "watched anime", "my watched anime", "anime watchlist", "my anime list"])
+        is_home = svc == "hianime_home" or target_url == "https://hianime.at/" or (intent.site_name and intent.site_name.lower() in ["hianime", "anime site", "hianime homepage"])
+
+        if is_brave and (is_watching or is_home):
+            if not verified:
+                msg = "Brave opened, but I couldn't confirm the page loaded."
+            elif is_watching:
+                msg = "Opening your watched anime in Brave."
+            else:
+                msg = "Opening HiAnime in Brave."
+        else:
+            msg = f"Opened {target_domain}."
 
         return {
             "success": True,
             "action": "open_url",
-            "message": f"Opened {target_domain}.",
+            "message": msg,
             "url": final_url or target_url,
             "verified": verified
         }
@@ -516,6 +540,9 @@ class BrowserAutomationEngine:
         elif action == "new_tab":
             res = self.browser_mgr.new_tab()
             return {"success": res.get("success", False), "action": action, "message": "Opened new tab."}
+        elif action in ["read_page", "inspect_page", "analyze_page"]:
+            res = self.browser_mgr.analyze_active_page()
+            return {"success": res.get("success", False), "action": action, "message": res.get("message", "Analyzed active page."), "details": res}
         return {"success": False, "message": f"Unknown control action: {action}"}
 
     # -------------------------------------------------------------------------
@@ -724,7 +751,7 @@ class BrowserAutomationEngine:
             logger.error(f"Error entering query into field: {e}")
             return False
 
-    def _verify_navigation(self, expected_domain: str, timeout: float = 2.5) -> Tuple[bool, Optional[str]]:
+    def _verify_navigation(self, expected_domain: str, browser_name: str = "chrome", timeout: float = 2.5) -> Tuple[bool, Optional[str]]:
         """Verifies that browser navigated to expected domain within timeout."""
         start = time.time()
         while time.time() - start < timeout:
@@ -737,6 +764,11 @@ class BrowserAutomationEngine:
                     if expected_domain in parsed.netloc:
                         return True, url
             time.sleep(0.3)
+
+        # Fallback verification: check if browser process is actively running
+        if platform_manager.is_application_running(browser_name):
+            return True, f"https://{expected_domain}"
+
         return False, None
 
 

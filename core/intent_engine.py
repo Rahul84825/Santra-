@@ -187,7 +187,7 @@ class IntentEngine:
 
         return False
 
-    def parse(self, text: str, raw_text: str = None) -> dict:
+    def parse(self, text: str, raw_text: str = None, normalized: str = None, is_substep: bool = False) -> dict:
         """Analyzes speech transcript or text and extracts structured intent with confidence scoring."""
         if not text or not isinstance(text, str) or not text.strip():
             return {
@@ -202,20 +202,31 @@ class IntentEngine:
 
         effective_raw = raw_text or text
         raw_text = effective_raw.strip() if effective_raw else ""
-        norm_res = self.normalizer.normalize(text)
-        clean = norm_res["normalized"].lower().strip()
+        if normalized:
+            clean = normalized.lower().strip()
+        else:
+            norm_res = self.normalizer.normalize(text)
+            clean = norm_res["normalized"].lower().strip()
 
         # -------------------------------------------------------------
-        # 0. UNIVERSAL INTENT-BASED BROWSER & WEBSITE AUTOMATION (PHASE 8)
+        # MULTI-STEP COMPOUND TASK DECOMPOSITION
         # -------------------------------------------------------------
-        try:
-            b_ctx = browser_session_manager.get_context_for_parser()
-            b_res = self.browser_intent_parser.parse(effective_raw, session_context=b_ctx)
-            if b_res.action_type != BrowserActionType.UNKNOWN:
-                logger.info(f"[BROWSER_INTENT] Matched '{b_res.action_type.value}' for '{effective_raw}'")
-                return b_res.to_dict()
-        except Exception as b_err:
-            logger.debug(f"[BROWSER_INTENT] Parser error: {b_err}")
+        if not is_substep:
+            chained = self.normalizer.split_chained_commands(effective_raw)
+            if len(chained) > 1:
+                step_nodes = [self.parse(cmd, is_substep=True) for cmd in chained]
+                actionable_count = sum(1 for s in step_nodes if s.get("intent") not in ["unknown", "conversation", "none"])
+                if actionable_count >= 2 or (len(step_nodes) >= 2 and all(s.get("intent") != "unknown" for s in step_nodes)):
+                    logger.info(f"[INTENT_MULTI_STEP] Decomposed compound request into {len(step_nodes)} steps: {chained}")
+                    return {
+                        "intent": "multi_step_task",
+                        "action": "orchestrate",
+                        "steps": step_nodes,
+                        "sub_commands": chained,
+                        "confidence": 0.98,
+                        "raw_text": effective_raw,
+                        "count": len(step_nodes)
+                    }
 
         # -------------------------------------------------------------
         # 0A. DEDICATED YOUTUBE SEARCH INTENT (TOP PRECEDENCE)
@@ -231,7 +242,7 @@ class IntentEngine:
                 "intent": "web_search",
                 "action": "search",
                 "provider": "youtube",
-                "target": clean_yt,
+                "target": clean_yt.lower(),
                 "query": clean_yt,
                 "browser": yt_browser,
                 "empty_query": not bool(clean_yt),
@@ -239,6 +250,23 @@ class IntentEngine:
                 "raw_text": effective_raw,
                 "is_explicit_search": True
             }
+
+        # -------------------------------------------------------------
+        # 0. UNIVERSAL INTENT-BASED BROWSER & WEBSITE AUTOMATION (PHASE 8)
+        # -------------------------------------------------------------
+        try:
+            b_ctx = browser_session_manager.get_context_for_parser()
+            b_res = self.browser_intent_parser.parse(effective_raw, session_context=b_ctx)
+            if b_res.action_type != BrowserActionType.UNKNOWN:
+                logger.info(f"[BROWSER_INTENT] Matched '{b_res.action_type.value}' for '{effective_raw}'")
+                b_dict = b_res.to_dict()
+                if b_dict.get("target"):
+                    self.last_app_target = b_dict.get("target")
+                elif b_dict.get("app_name"):
+                    self.last_app_target = b_dict.get("app_name")
+                return b_dict
+        except Exception as b_err:
+            logger.debug(f"[BROWSER_INTENT] Parser error: {b_err}")
 
         # -------------------------------------------------------------
         # 0B. GENERAL EXPLICIT SEARCH INTENT (HIGHEST PRIORITY)
@@ -338,6 +366,11 @@ class IntentEngine:
         if panel_node:
             return panel_node
 
+        # Check Workspace & Application Interaction Commands (Antigravity, ChatGPT, Folder Management)
+        workspace_node = self._parse_workspace_interaction_command(raw_text, clean, effective_raw)
+        if workspace_node:
+            return workspace_node
+
         # -------------------------------------------------------------
         # 1. DIAGNOSTICS & SYSTEM TESTING
         # -------------------------------------------------------------
@@ -426,8 +459,8 @@ class IntentEngine:
         # -------------------------------------------------------------
         # 2. TIME & DATE INTENTS
         # -------------------------------------------------------------
-        time_triggers = ["what time is it", "what's the time", "tell me the time", "current time", "what is the time", "time now", "time", "the time", "what time do you have"]
-        if clean in time_triggers or any(clean.startswith(t) for t in ["what time", "tell me what time", "tell me the time", "current time", "what is the current time"]):
+        time_triggers = ["what time is it", "what's the time", "what s the time", "whats the time", "tell me the time", "current time", "what is the time", "time now", "time", "the time", "what time do you have"]
+        if (clean in time_triggers or any(clean.startswith(t) for t in ["what time", "what s the time", "whats the time", "tell me what time", "tell me the time", "current time", "what is the current time"])) and not any(k in clean for k in ["time complexity", "time-complexity", "time series", "time limit", "time constant", "time travel", "time required", "time taken", "running time"]):
             return {"intent": "time_query", "action": "get_time", "target": None, "confidence": 0.98, "query": clean, "raw_text": raw_text}
 
         if any(kw in clean for kw in ["today s date", "todays date", "today date", "what is the date", "what is today's date", "what day is it", "current date", "what is today", "which day is today", "what date is", "tell me the date", "tell me today's date", "tell me todays date", "date today"]):
@@ -679,7 +712,7 @@ class IntentEngine:
             return {"intent": "system_telemetry", "action": "ip_info", "target": None, "confidence": 0.95, "query": clean, "raw_text": raw_text}
         if "system uptime" in clean or "how long has the system" in clean or "system running" in clean:
             return {"intent": "system_telemetry", "action": "uptime_info", "target": None, "confidence": 0.95, "query": clean, "raw_text": raw_text}
-        if any(b in clean for b in ["battery status", "battery level", "how much battery", "check battery", "battery percentage", "is the laptop charging", "battery info"]):
+        if any(b in clean for b in ["battery status", "battery level", "how much battery", "check battery", "battery percentage", "is the laptop charging", "is my laptop charging", "am i plugged in", "how long can i use the laptop", "battery life", "battery info"]):
             return {"intent": "system_telemetry", "action": "battery_info", "target": "battery", "confidence": 0.95, "query": clean, "raw_text": raw_text}
         if any(p in clean for p in ["power profile", "power plan", "power scheme", "laptop power modes", "acer power", "performance mode status", "laptop performance profile"]):
             return {"intent": "power_control", "action": "report", "target": "power", "confidence": 0.95, "query": clean, "raw_text": raw_text}
@@ -820,7 +853,7 @@ class IntentEngine:
             r"^where\s+did\s+i\s+save\b",
             r"^where\s+is\s+my\s+.*(?:program|file|code|repository|project|folder|readme)\b",
             r"^find\s+(?:the\s+)?.*(?:created|saved|written)\b",
-            r"^find\s+(?:the\s+)?(?:readme|file|document|script|project)\b",
+            r"^find\s+(?:the\s+)?(?:readme|file|document|script|project)(?!\s+in\s+project)\b",
             r"^search\s+(?:my\s+)?files\b"
         ]
         if any(re.search(pat, clean, re.IGNORECASE) for pat in file_search_patterns) or \
@@ -1450,7 +1483,7 @@ class IntentEngine:
             "explain the page", "summarize this page", "summarize the page", "summarize current tab",
             "summarize this tab", "summarize the current tab", "read this page", "read the page",
             "what does this page say", "what is on this page", "what does this website say",
-            "read webpage", "read page"
+            "read webpage", "read page", "analyze this chrome page", "analyze chrome page", "analyze this brave page", "analyze brave page"
         ]:
             return {"intent": "browser_action", "action": "analyze_page", "target": "current_page", "confidence": 0.98, "query": clean, "raw_text": effective_raw}
 
@@ -1486,7 +1519,8 @@ class IntentEngine:
         save_dest_m = re.match(r"^(?:save|move|put)\s+(?:it|this|that|the\s+file)\s+(?:in|into|to)\s+(?:my\s+|the\s+)?(.+?)(?:\s+folder)?$", clean, re.IGNORECASE)
         if save_dest_m:
             dest_name = save_dest_m.group(1).strip()
-            return {"intent": "file_management.create_file", "action": "save_file", "target": dest_name, "destination": dest_name, "confidence": 0.98, "query": clean, "raw_text": effective_raw}
+            if not any(ui_kw in dest_name for ui_kw in ["field", "box", "input", "subject", "search bar", "body"]):
+                return {"intent": "file_management.create_file", "action": "save_file", "target": dest_name, "destination": dest_name, "confidence": 0.98, "query": clean, "raw_text": effective_raw}
 
         # Wake acknowledgment when assistant name is addressed alone
         if clean in ["santra", "samtra", "suntra", "jarvis", "hey santra", "hey samtra", "hey jarvis"]:
@@ -2078,6 +2112,10 @@ class IntentEngine:
         """Parses natural-language Spotify commands for playback, playlists, and device management."""
         import re
 
+        # Exclude workspace, files, and folder operations
+        if any(w in clean for w in ["folder", "directory", "project"]):
+            return None
+
         # Exclude OS-level app launching or closing commands
         if re.match(r"^(?:open|launch|start|run|close|terminate|kill|switch to)\s+spotify\b", clean, re.IGNORECASE):
             return None
@@ -2382,7 +2420,7 @@ class IntentEngine:
         play_p_match = re.match(r"^play\s+(?:my\s+)?(?:the\s+)?(?:playlist\s+(?:called\s+)?)?(.+?)(?:\s+playlist)?$", clean, re.IGNORECASE)
         if play_p_match and not any(kw in clean for kw in ["on youtube", "youtube", "video", "browser", "chrome"]):
             p_cand = play_p_match.group(1).strip()
-            if p_cand not in ["music", "song", "audio", "spotify", "it"]:
+            if p_cand not in ["music", "song", "audio", "it"] and not (p_cand == "spotify" and "playlist" not in clean):
                 raw_p = re.match(r"^play\s+(?:my\s+)?(?:the\s+)?(?:playlist\s+(?:called\s+)?)?(.+?)(?:\s+playlist)?$", effective_raw, re.IGNORECASE)
                 if raw_p:
                     p_cand = raw_p.group(1).strip()
@@ -2474,6 +2512,223 @@ class IntentEngine:
                     }
 
         return None
+
+
+    def _parse_workspace_interaction_command(self, raw_text: str, clean: str, effective_raw: str) -> Optional[dict]:
+            """Parses workspace folder management, Antigravity project loading, ChatGPT navigation, and draft approval."""
+            import re
+            from core.workspace_interaction.draft_manager import draft_manager, DraftState
+
+            clean_clean = clean.lower().strip()
+            raw_clean = (effective_raw or "").lower().strip()
+            candidates = [t for t in (clean_clean, raw_clean) if t]
+
+            # 1. Active Draft State: Awaiting Approval (Top Precedence)
+            if draft_manager.current_state == DraftState.AWAITING_APPROVAL:
+                for cand in candidates:
+                    c_strip = cand.rstrip(".?!,; ")
+                    verdict = draft_manager.evaluate_approval_utterance(c_strip)
+                    if verdict in ["approve", "cancel", "ambiguous"]:
+                        return {
+                            "intent": "draft.approve_submission",
+                            "action": "process_approval",
+                            "utterance": effective_raw or clean,
+                            "verdict": verdict,
+                            "target": "draft",
+                            "confidence": 1.0,
+                            "raw_text": effective_raw,
+                            "spoken": True
+                        }
+
+            # 2. Active Draft State: Drafting Mode (Captures dictated content)
+            if draft_manager.current_state in [DraftState.INPUT_FOCUSED, DraftState.DRAFTING]:
+                # Guard against cancellation while drafting
+                for cand in candidates:
+                    if draft_manager.evaluate_approval_utterance(cand) == "cancel":
+                        draft_manager.current_state = DraftState.CANCELLED
+                        return {
+                            "intent": "draft.cancel",
+                            "action": "cancel",
+                            "target": "draft",
+                            "confidence": 1.0,
+                            "raw_text": effective_raw,
+                            "spoken": True
+                        }
+                # Otherwise, the entire utterance is treated as dictated draft content
+                dictated = effective_raw or raw_text or clean
+                if dictated and len(dictated.strip()) > 0:
+                    return {
+                        "intent": "draft.enter_text",
+                        "action": "enter_text",
+                        "text": dictated.strip(),
+                        "target": "prompt",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+            # 3. Standalone Voice Commands for Workspace, Apps & Dictation Initiation
+            for cand in candidates:
+                # 3.1 Folder Creation: "create a folder called X on my desktop" / "create a folder called X inside Projects"
+                m_create_parent = re.match(r"^(?:create|make)\s+(?:a\s+)?folder\s+called\s+['\"]?(.+?)['\"]?\s+(?:on|in|inside)\s+(?:my\s+)?(.+?)\.?$", cand, re.IGNORECASE)
+                if m_create_parent:
+                    f_name = m_create_parent.group(1).strip()
+                    m_raw = re.match(r"^(?:create|make)\s+(?:a\s+)?folder\s+called\s+['\"]?(.+?)['\"]?\s+(?:on|in|inside)\s+(?:my\s+)?(.+?)\.?$", raw_clean, re.IGNORECASE)
+                    if m_raw:
+                        f_name = m_raw.group(1).strip()
+                    p_loc = m_create_parent.group(2).strip()
+                    return {
+                        "intent": "workspace.create_folder",
+                        "action": "create_folder",
+                        "folder_name": f_name,
+                        "parent": p_loc,
+                        "target": f_name,
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                m_create_simple = re.match(r"^(?:create|make)\s+(?:a\s+)?folder\s+called\s+['\"]?(.+?)['\"]?\.?$", cand, re.IGNORECASE)
+                if m_create_simple:
+                    f_name = m_create_simple.group(1).strip()
+                    return {
+                        "intent": "workspace.create_folder",
+                        "action": "create_folder",
+                        "folder_name": f_name,
+                        "parent": None,
+                        "target": f_name,
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                # 3.2 Folder Renaming: "rename that folder to Mithai World" / "rename folder X to Y"
+                m_rename_that = re.match(r"^rename\s+(?:that|this|the)\s+(?:folder|project)\s+to\s+['\"]?(.+?)['\"]?\.?$", cand, re.IGNORECASE)
+                if m_rename_that:
+                    new_n = m_rename_that.group(1).strip()
+                    return {
+                        "intent": "workspace.rename_folder",
+                        "action": "rename_folder",
+                        "source": "that folder",
+                        "new_name": new_n,
+                        "target": new_n,
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                m_rename_explicit = re.match(r"^rename\s+(?:folder\s+)?['\"]?(.+?)['\"]?\s+to\s+['\"]?(.+?)['\"]?\.?$", cand, re.IGNORECASE)
+                if m_rename_explicit:
+                    src_n = m_rename_explicit.group(1).strip()
+                    new_n = m_rename_explicit.group(2).strip()
+                    return {
+                        "intent": "workspace.rename_folder",
+                        "action": "rename_folder",
+                        "source": src_n,
+                        "new_name": new_n,
+                        "target": new_n,
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                # 3.3 Open in Antigravity: "open the folder in Antigravity" / "open this project in Antigravity" / "open the Santra project folder in Antigravity"
+                m_open_antigravity_that = re.match(r"^(?:open|launch)\s+(?:the\s+)?(?:folder|project|this\s+project|that\s+project|it)\s+in\s+antigravity\.?$", cand, re.IGNORECASE)
+                if m_open_antigravity_that:
+                    return {
+                        "intent": "workspace.open_folder",
+                        "action": "open_in_antigravity",
+                        "target": "that folder",
+                        "app": "antigravity",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                m_open_antigravity_named = re.match(r"^(?:open|launch)\s+(?:the\s+)?(.+?)\s+(?:folder|project)?\s*in\s+antigravity\.?$", cand, re.IGNORECASE)
+                if m_open_antigravity_named:
+                    target_f = m_open_antigravity_named.group(1).strip()
+                    return {
+                        "intent": "workspace.open_folder",
+                        "action": "open_in_antigravity",
+                        "target": target_f,
+                        "app": "antigravity",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                # 3.4 Show Folder in Explorer: "show me the folder" / "show the folder"
+                if cand in ["show me the folder", "show the folder", "show me that folder", "show that folder", "open that folder"]:
+                    return {
+                        "intent": "workspace.open_folder",
+                        "action": "reveal_folder",
+                        "target": "that folder",
+                        "app": "explorer",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+
+                # 3.6 Pinned Conversation: "open my pinned SANTRA chat" / "open pinned SANTRA chat"
+                m_pinned = re.match(r"^open\s+(?:my\s+)?pinned\s+(?:santra\s+)?chat\.?$", cand, re.IGNORECASE)
+                if m_pinned:
+                    return {
+                        "intent": "browser.open_pinned_chat",
+                        "action": "open_pinned_chat",
+                        "target": "SANTRA",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                m_pinned_named = re.match(r"^open\s+(?:my\s+)?pinned\s+(.+?)\s+chat\.?$", cand, re.IGNORECASE)
+                if m_pinned_named:
+                    return {
+                        "intent": "browser.open_pinned_chat",
+                        "action": "open_pinned_chat",
+                        "target": m_pinned_named.group(1).strip(),
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                # 3.7 Named Conversation in ChatGPT: "open conversation X in ChatGPT"
+                m_conv = re.match(r"^open\s+(?:the\s+)?conversation\s+(?:called\s+|named\s+)?['\"]?(.+?)['\"]?\s*(?:in\s+chatgpt)?\.?$", cand, re.IGNORECASE)
+                if m_conv:
+                    return {
+                        "intent": "browser.open_named_conversation",
+                        "action": "open_named_conversation",
+                        "target": m_conv.group(1).strip(),
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                # 3.8 Dictation Initiation: "write a prompt" / "write a message"
+                if re.match(r"^(?:write|draft|enter)\s+(?:a\s+)?prompt\.?$", cand, re.IGNORECASE):
+                    return {
+                        "intent": "draft.start_prompt",
+                        "action": "start_prompt",
+                        "target_app": "antigravity",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+                if re.match(r"^(?:write|draft|enter)\s+(?:a\s+)?message\.?$", cand, re.IGNORECASE):
+                    return {
+                        "intent": "draft.start_message",
+                        "action": "start_message",
+                        "target_app": "chatgpt",
+                        "confidence": 1.0,
+                        "raw_text": effective_raw,
+                        "spoken": True
+                    }
+
+            return None
+
 
     def classify_intent(self, text: str) -> tuple:
         """Helper method returning (intent, target) tuple for concise evaluation."""

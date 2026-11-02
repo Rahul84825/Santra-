@@ -1,0 +1,11 @@
+{
+  "total_discovered": 1253,
+  "passed": 1253,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "expected_failures": 0,
+  "unexpected_successes": 0,
+  "total_execution_time_seconds": 110.284,
+  "status": "PASSED"
+}

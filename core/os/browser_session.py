@@ -126,6 +126,10 @@ class BrowserSessionManager:
     def is_cancelled(self) -> bool:
         return self._state.operation_cancelled
 
+    def reset(self):
+        """Resets active session state to default clean state."""
+        self._state = BrowserSessionState()
+
     def reset_cancellation(self):
         self._state.operation_cancelled = False
 

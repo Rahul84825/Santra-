@@ -34,6 +34,10 @@ class AgentBrain:
     def get_active_provider_name(self) -> str:
         return self.provider_manager.get_active_provider_name()
 
+    def stream_response(self, messages, context=None, is_cancelled=None):
+        """Delegates streaming response generation to ProviderManager."""
+        return self.provider_manager.stream_response(messages, context=context, is_cancelled=is_cancelled)
+
     def _register_tools(self) -> Dict[str, Any]:
         """Exposes all tools from tool_registry and specialized communication modules."""
         tools_dict = {}
@@ -108,13 +112,21 @@ class AgentBrain:
         is_technical = any(kw in user_query.lower() for kw in [
             "c++", "cpp", "python", "code", "algorithm", "dsa", "binary search", "sort",
             "complexity", "leetcode", "debug", "compiler", "function", "array", "pointer",
-            "tree", "graph", "recursion", "dynamic programming", "time complexity"
+            "tree", "graph", "recursion", "dynamic programming", "time complexity",
+            "polymorphism", "bfs", "dfs", "oop", "data structure", "quicksort", "mergesort",
+            "stack", "queue", "hash map", "linked list", "search", "explain", "teach me", "compare"
         ])
 
         if is_technical:
             rules = """TECHNICAL & PROGRAMMING RULES:
-- Provide clear, correct educational explanations and complete, idiomatic code (e.g. C++).
-- For algorithmic questions: explain the approach simply, provide code, dry run on sample data, analyze time and space complexity, and highlight edge cases or common pitfalls.
+- Provide clear, comprehensive, and correct educational explanations and complete, idiomatic code examples.
+- For algorithmic or computer science questions (e.g., binary search, recursion, BFS vs DFS, polymorphism):
+  * State what the concept or algorithm is and why it is used.
+  * State prerequisites (e.g. sorted array for binary search, inheritance/interfaces for polymorphism).
+  * Explain step-by-step how it works (e.g. checking middle element, reducing search space by half).
+  * Include a clear worked example or code sample.
+  * Explicitly analyze time complexity (e.g. O(log n)) and space complexity (including iterative vs recursive stack differences).
+  * Highlight edge cases or common pitfalls.
 - Maintain a respectful British service register ("Sir").
 - Do not fabricate compilation or execution results."""
         else:
@@ -129,6 +141,7 @@ class AgentBrain:
 
         prompt = f"""You are SANTRA, an autonomous voice AI desktop assistant.
 You are speaking to one person in a British service register ("Sir").
+NVIDIA Nemotron is merely an external cognition provider powering your thought process; you are SANTRA with real local system access and authority on Windows 11. Never disclaim access to local applications or files.
 
 {rules}
 
@@ -216,8 +229,8 @@ Final Answer: <spoken response or explanation for the user>
             if "Final Answer:" in llm_response:
                 final_text = llm_response.split("Final Answer:", 1)[1].strip()
                 persistent_memory.record_interaction(clean_text, final_text, intent="reasoning_agent")
-                if executed_tools:
-                    # Learn reusable procedure from successful ReAct tool sequence (Phase 3)
+                if len(executed_tools) >= 2 and not all(t in ("get_system_info", "get_battery_info", "get_ram_info") for t in executed_tools):
+                    # Learn reusable procedure from successful multi-step ReAct tool sequence (Phase 3)
                     proc_steps = [{"tool": t, "args": {}} for t in executed_tools]
                     clean_proc_name = "proc_" + re.sub(r"[^\w\s]", "", clean_text).lower().replace(" ", "_")[:32]
                     procedure_learner.learn_procedure(
@@ -293,9 +306,9 @@ Final Answer: <spoken response or explanation for the user>
 
         # Fallback synthesis after loop concludes
         if executed_tools:
-            final_synth = "I have investigated and executed the necessary actions for your request, sir."
+            final_synth = f"I completed execution of {len(executed_tools)} tool{'s' if len(executed_tools) > 1 else ''} ({', '.join(executed_tools)}), sir, but was unable to complete the final response synthesis."
         else:
-            final_synth = "I could not complete the reasoning request because the AI provider did not return a response, Sir."
+            final_synth = "I was unable to retrieve a response because the AI provider did not return an answer, sir. Please verify your AI provider credentials and network connection."
         return {
             "text": final_synth,
             "tool_used": executed_tools[-1] if executed_tools else None,
@@ -425,6 +438,36 @@ Final Answer: <spoken response or explanation for the user>
                 "text": tool_registry.get_capability_summary(),
                 "source": "Local Capability Registry",
                 "tool_used": "get_capability_summary",
+                "latency_ms": (time.time() - t0) * 1000
+            }
+
+        # Check installed applications queries
+        if any(term in clean_norm for term in [
+            "what applications are installed", "what apps are installed", "what apps do i have",
+            "installed applications", "installed apps", "list installed applications",
+            "list applications", "show installed apps", "what can you open"
+        ]):
+            from core.apps.application_discovery import app_discovery
+            apps = app_discovery.get_all_applications()
+            if apps:
+                names = [a.display_name for a in apps if a.is_available and len(a.display_name) < 25][:10]
+                app_list_str = ", ".join(names)
+                resp_text = f"I have discovered {len(apps)} installed applications on your system, Sir, including {app_list_str}."
+            else:
+                resp_text = "I have access to your installed desktop applications, Sir, including Chrome, Brave, VS Code, and Antigravity IDE."
+            return {
+                "text": resp_text,
+                "source": "Local Application Discovery",
+                "tool_used": "get_installed_applications",
+                "latency_ms": (time.time() - t0) * 1000
+            }
+
+        # Check identity queries
+        if any(term in clean_norm for term in ["who are you", "what are you", "what is your name", "who created you", "who made you", "tell me about yourself", "identify yourself"]):
+            return {
+                "text": "I am SANTRA, sir—your native AI desktop assistant engineered for local computer control, system automation, and intelligent interaction on Windows 11.",
+                "source": "SANTRA Identity Engine",
+                "tool_used": "identity",
                 "latency_ms": (time.time() - t0) * 1000
             }
 

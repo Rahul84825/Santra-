@@ -1,0 +1,23 @@
+{
+  "input_sample_rate_hz": 48000,
+  "output_sample_rate_hz": 16000,
+  "input_chunk_samples": 3840,
+  "output_chunk_samples": 1280,
+  "exact_ratio_preserved": true,
+  "inband_tone_hz": 1000.0,
+  "outband_alias_tone_hz": 14000.0,
+  "folded_alias_frequency_hz": 2000.0,
+  "measured_alias_level_interp_db": -12.1,
+  "measured_alias_level_polyphase_db": -76.4,
+  "measured_stopband_rejection_gain_db": 64.3,
+  "theoretical_stopband_attenuation_db": 80.0,
+  "measured_stopband_attenuation_db": 76.4,
+  "chunk_boundary_max_phase_err": 0.002758,
+  "chunk_boundary_continuous": true,
+  "median_latency_ms": 0.446,
+  "chunk_budget_ms": 80.0,
+  "cpu_overhead_percent": 0.56,
+  "nan_detected": false,
+  "inf_detected": false,
+  "clipped_in_bounds": true
+}

@@ -1,0 +1,131 @@
+{
+  "timestamp": 1793507273.7528653,
+  "host_os": "win32",
+  "scenarios": {
+    "scenario_a_folder_and_antigravity": {
+      "steps": [
+        {
+          "step": 1,
+          "action": "create_folder",
+          "phrase": "Create a folder called Santra Live Projects Test on my desktop.",
+          "intent": "workspace.create_folder",
+          "success": true,
+          "physical_evidence": "C:\\Users\\activ\\Desktop\\Santra Live Projects Test",
+          "parse_latency_ms": 75.61220000206959,
+          "exec_latency_ms": 33.353300008457154
+        },
+        {
+          "step": 2,
+          "action": "overwrite_prevention_test",
+          "success": true,
+          "message": "A folder named 'santra live projects test' already exists at C:\\Users\\activ\\Desktop. What would you like to do?",
+          "latency_ms": 36.617300007492304
+        },
+        {
+          "step": 3,
+          "action": "rename_folder",
+          "phrase": "Rename that folder to Mithai World Live Test.",
+          "intent": "workspace.rename_folder",
+          "success": true,
+          "physical_evidence": "C:\\Users\\activ\\Desktop\\Mithai World Live Test",
+          "parse_latency_ms": 1.256100003956817,
+          "exec_latency_ms": 19.524599993019365
+        },
+        {
+          "step": 4,
+          "action": "open_in_antigravity",
+          "phrase": "Open the folder in Antigravity.",
+          "intent": "workspace.open_folder",
+          "executable_found": "C:\\Users\\activ\\AppData\\Local\\Programs\\Antigravity IDE\\Antigravity IDE.exe",
+          "success": true,
+          "parse_latency_ms": 2.2708000033162534,
+          "exec_latency_ms": 538.7331999954768
+        },
+        {
+          "step": 5,
+          "action": "start_prompt",
+          "phrase": "Write a prompt.",
+          "draft_state": "DRAFTING",
+          "success": true,
+          "latency_ms": 158.7119000032544
+        },
+        {
+          "step": 6,
+          "action": "enter_prompt_text",
+          "dictated_text": "Build a complete authentication system with Google login and email login.",
+          "content_hash": "d91797c58b57d171a8d82b2035caaf691d0b4d060682565bbfdd277c84ea245b",
+          "hash_verified": true,
+          "requires_approval": true,
+          "assistant_prompt": "Your prompt is ready. Should I send it?",
+          "latency_ms": 746.5264000056777
+        },
+        {
+          "step": 7,
+          "action": "ambiguous_approval_defense",
+          "phrase": "Okay.",
+          "blocked_submission": true,
+          "draft_state": "AWAITING_APPROVAL",
+          "latency_ms": 13.981000010971911
+        },
+        {
+          "step": 8,
+          "action": "explicit_approval_submission",
+          "phrase": "Yes, send it.",
+          "submitted_and_verified": true,
+          "draft_state": "VERIFIED",
+          "latency_ms": 70.91779999609571
+        }
+      ],
+      "success": true
+    },
+    "scenario_b_chrome_chatgpt": {
+      "steps": [
+        {
+          "step": 1,
+          "action": "open_chatgpt_in_chrome",
+          "phrase": "Open ChatGPT in Chrome.",
+          "intent": "open_website",
+          "chrome_executable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+          "success": true,
+          "parse_latency_ms": 27.663399989251047,
+          "exec_latency_ms": 50.62519999046344
+        },
+        {
+          "step": 2,
+          "action": "open_pinned_chat",
+          "phrase": "Open my pinned SANTRA chat.",
+          "target": "SANTRA",
+          "success": true,
+          "parse_latency_ms": 0.7291999936569482,
+          "exec_latency_ms": 876.5852000069572
+        },
+        {
+          "step": 3,
+          "action": "start_message",
+          "phrase": "Write a message.",
+          "draft_state": "DRAFTING",
+          "success": true,
+          "latency_ms": 67.20380000479054
+        },
+        {
+          "step": 4,
+          "action": "enter_message_text",
+          "dictated_text": "I want to improve the voice recognition system and reduce response latency.",
+          "content_hash": "0334c3a10b8dcc3e857ce9d7ef3bee8c9da58227ce5ff5fd1d42e8538e434f39",
+          "requires_approval": true,
+          "latency_ms": 386.36740000220016
+        },
+        {
+          "step": 5,
+          "action": "send_approved_message",
+          "phrase": "Send it.",
+          "success": true,
+          "draft_state": "VERIFIED",
+          "latency_ms": 72.17609998770058
+        }
+      ],
+      "success": true
+    }
+  },
+  "latencies_ms": {}
+}

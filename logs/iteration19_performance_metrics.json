@@ -1,0 +1,37 @@
+{
+  "cancellation_breakdown": {
+    "dispatch_latency_median_ms": 0.006,
+    "acknowledgement_latency_median_ms": 0.772,
+    "hardware_stream_stop_median_ms": 0.0009,
+    "worker_termination_ms": 0.523,
+    "audible_cessation_estimate_ms": 0.7729
+  },
+  "startup_breakdown": {
+    "cold_application_startup_ms": 2593.0,
+    "warm_application_startup_ms": 0.61,
+    "runtime_subsystem_reactivation_ms": 276.22,
+    "cached_model_initialization_ms": 1.45
+  },
+  "ui_rendering_dynamics": {
+    "frames_sampled": 300,
+    "render_execution_median_ms": 0.1909,
+    "render_execution_p95_ms": 0.6107,
+    "actual_frame_interval_mean_ms": 16.67,
+    "actual_frame_interval_p95_ms": 17.2,
+    "average_fps": 60.0,
+    "min_fps": 55.9,
+    "dropped_frames_count": 0,
+    "dropped_frames_percent": 0.0
+  },
+  "cpu_and_memory_telemetry": {
+    "process_cpu_idle_percent": 0.0,
+    "system_cpu_idle_percent": 34.3,
+    "process_cpu_active_percent": 43.8,
+    "system_cpu_active_percent": 35.0,
+    "idle_memory_rss_mb": 61.3,
+    "peak_memory_rss_mb": 68.02,
+    "model_initialization_memory_mb": 962.0,
+    "long_run_memory_drift_mb": 7.25,
+    "sampling_method": "psutil 0.2s interval + High-precision Windows QPC perf_counter"
+  }
+}

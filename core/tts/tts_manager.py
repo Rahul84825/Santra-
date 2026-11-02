@@ -5,7 +5,7 @@ import logging
 import threading
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from core.lazy_loader import lazy_import
 
 sd = lazy_import("sounddevice")
@@ -84,6 +84,8 @@ class TTSManager:
         self._total_sentences: int = 0
         self._current_sentence_text: str = ""
         self._last_playback_success = False
+        self._prefetch_cache: Dict[Tuple[int, str], Tuple[str, bool, float]] = {}
+        self._prefetch_lock = threading.Lock()
 
         # Providers
         self._providers: Dict[str, BaseTTS] = {
@@ -229,6 +231,10 @@ class TTSManager:
         if not text or not text.strip():
             return
 
+        clean_text = sanitize_speech_text(text)
+        if not clean_text:
+            return
+
         if interrupt:
             self.interrupt()
 
@@ -240,16 +246,21 @@ class TTSManager:
         self._interrupt_event.clear()
         if job_id:
             self._current_job_id = job_id
-            logger.info(f"[TTS_ENQUEUED][{job_id}] Text: '{text}' (Interrupt={interrupt}, Gen={gen_id})")
-            self._queue.put(("text", text, job_id, gen_id, 0, 1))
+            logger.info(f"[TTS_ENQUEUED][{job_id}] Text: '{clean_text}' (Interrupt={interrupt}, Gen={gen_id})")
+            self._queue.put(("text", clean_text, job_id, gen_id, 0, 1))
         else:
             self._current_job_id = None
-            logger.info(f"[TTS_ENQUEUED] Text: '{text}' (Interrupt={interrupt}, Gen={gen_id})")
-            self._queue.put(("text", text, None, gen_id, 0, 1))
+            logger.info(f"[TTS_ENQUEUED] Text: '{clean_text}' (Interrupt={interrupt}, Gen={gen_id})")
+            self._queue.put(("text", clean_text, None, gen_id, 0, 1))
 
     def speak_sentences(self, sentences: list, interrupt: bool = True, job_id: Optional[str] = None):
         """Enqueues a sequence of sentences for ordered speech playback, tracking sentence indices."""
-        clean_sentences = [s.strip() for s in sentences if s and s.strip()]
+        clean_sentences = []
+        for s in sentences:
+            if s and s.strip():
+                cs = sanitize_speech_text(s)
+                if cs:
+                    clean_sentences.append(cs)
         if not clean_sentences:
             return
 
@@ -265,6 +276,43 @@ class TTSManager:
             sub_id = f"{job_id}_{idx}" if job_id else f"sent_{idx}"
             self._queue.put(("text", sentence, sub_id, gen_id, idx, total))
         logger.info(f"[TTS_ENQUEUED_BATCH] {total} sentences enqueued under generation {gen_id}.")
+
+    def enqueue_stream_sentence(
+        self,
+        sentence: str,
+        stream_job_id: Optional[str] = None,
+        sentence_index: int = 0,
+        interrupt: bool = False,
+        total_estimate: Optional[int] = None
+    ):
+        """Enqueues an incremental sentence chunk arriving from a real-time LLM stream.
+        Maintains stream generation continuity across arriving chunks without halting in-flight sentences.
+        """
+        if not sentence or not sentence.strip():
+            return
+
+        clean_text = sanitize_speech_text(sentence)
+        if not clean_text:
+            return
+
+        if interrupt:
+            self.interrupt()
+
+        gen_id = self._current_generation_id
+        self._interrupt_event.clear()
+
+        with self._lock:
+            if stream_job_id:
+                self._current_job_id = stream_job_id
+            if total_estimate is not None:
+                self._total_sentences = total_estimate
+            else:
+                self._total_sentences = max(self._total_sentences, sentence_index + 1)
+            self._current_sentence_idx = sentence_index
+
+        sub_id = f"{stream_job_id}_{sentence_index}" if stream_job_id else f"stream_{sentence_index}"
+        logger.info(f"[TTS_ENQUEUED_STREAM][{sub_id}] Index: {sentence_index} | Text: '{clean_text}' (Gen={gen_id})")
+        self._queue.put(("text", clean_text, sub_id, gen_id, sentence_index, self._total_sentences))
 
     def play_wav(self, file_path: str, interrupt: bool = True, job_id: Optional[str] = None):
         """Enqueues an audio file for playback."""
@@ -317,15 +365,21 @@ class TTSManager:
         logger.info(f"[TTS_INTERRUPTED] Audio playback silenced and queue cleared in {elapsed_ms:.2f}ms.")
 
     def clear_queue(self):
-        """Empties pending speech items in queue."""
+        """Empties pending speech items in queue and cleans any prefetched files."""
         try:
             while not self._queue.empty():
                 item = self._queue.get_nowait()
-                if item and item[0] == "temp_file":
+                if item and item[0] in ["temp_file", "file"]:
                     self._delete_file_safely(item[1])
                 self._queue.task_done()
         except queue.Empty:
             pass
+
+        with self._prefetch_lock:
+            for key, (path, is_temp, _) in list(self._prefetch_cache.items()):
+                if is_temp:
+                    self._delete_file_safely(path)
+            self._prefetch_cache.clear()
 
     def is_speaking(self) -> bool:
         return self._is_speaking or not self._queue.empty() or self._state in ["TTS_SYNTHESIZING", "TTS_PLAYING"]
@@ -414,6 +468,73 @@ class TTSManager:
         h = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
         return self._cache_dir / f"tts_{h}.wav"
 
+    def _synthesize_text(self, text: str, item_job_id: Optional[str], item_gen_id: int) -> Tuple[Optional[str], bool, float]:
+        """Synthesizes text to an audio file using cache, primary provider, or fallback providers.
+        Returns: (file_path, is_temp, synth_ms)
+        """
+        t0_synth = time.time()
+        # Check Cache
+        cache_file = self._get_cache_path(text)
+        if cache_file and cache_file.exists() and cache_file.stat().st_size > 0:
+            synth_ms = (time.time() - t0_synth) * 1000
+            logger.info(f"[TTS_CACHE_HIT][{item_job_id}] Cached audio found in {synth_ms:.1f}ms: {cache_file}")
+            return str(cache_file), False, synth_ms
+
+        temp_file_to_clean = None
+        # 1. Try primary active provider
+        primary_p = self.provider
+        try:
+            temp_file_to_clean = primary_p.synthesize_to_file(text)
+        except Exception as prim_err:
+            logger.warning(f"Primary TTS provider '{primary_p.get_name()}' failed: {prim_err}")
+            temp_file_to_clean = None
+
+        # 2. Fallback providers
+        if not temp_file_to_clean and not self._interrupt_event.is_set() and item_gen_id == self._current_generation_id:
+            for p_key, p_inst in self._providers.items():
+                if p_inst is not primary_p:
+                    try:
+                        logger.info(f"Attempting fallback TTS synthesis with: {p_inst.get_name()}")
+                        temp_file_to_clean = p_inst.synthesize_to_file(text)
+                        if temp_file_to_clean:
+                            logger.info(f"Fallback TTS synthesis succeeded using: {p_inst.get_name()}")
+                            break
+                    except Exception as fb_err:
+                        logger.debug(f"Fallback TTS '{p_inst.get_name()}' failed: {fb_err}")
+
+        synth_ms = (time.time() - t0_synth) * 1000
+
+        # Save to cache if eligible
+        if cache_file and temp_file_to_clean and os.path.exists(temp_file_to_clean):
+            try:
+                import shutil
+                shutil.copy2(temp_file_to_clean, str(cache_file))
+            except Exception:
+                pass
+
+        return temp_file_to_clean, True, synth_ms
+
+    def _run_prefetch(self, candidate_item):
+        """Asynchronously pre-synthesizes the next text item during active audio playback."""
+        try:
+            cand_type = candidate_item[0]
+            cand_payload = candidate_item[1]
+            cand_job_id = candidate_item[2] if len(candidate_item) > 2 else None
+            cand_gen_id = candidate_item[3] if len(candidate_item) > 3 else self._current_generation_id
+
+            if cand_type != "text" or cand_gen_id != self._current_generation_id or self._interrupt_event.is_set():
+                return
+
+            res_path, is_temp, synth_ms = self._synthesize_text(cand_payload, cand_job_id, cand_gen_id)
+            if res_path and cand_gen_id == self._current_generation_id and not self._interrupt_event.is_set():
+                with self._prefetch_lock:
+                    self._prefetch_cache[(cand_gen_id, cand_payload)] = (res_path, is_temp, synth_ms)
+                    logger.debug(f"[TTS_PREFETCH_READY][{cand_job_id}] Prefetched audio in {synth_ms:.1f}ms for Gen {cand_gen_id}")
+            elif res_path and is_temp:
+                self._delete_file_safely(res_path)
+        except Exception as e:
+            logger.debug(f"[TTS_PREFETCH_ERROR] Background prefetch error: {e}")
+
     def _process_queue(self):
         while self._running:
             try:
@@ -457,54 +578,22 @@ class TTSManager:
 
                 try:
                     if item_type == "text":
-                        self._state = "TTS_SYNTHESIZING"
-                        if self.on_start_synthesizing_cb:
-                            self._trigger_callback(self.on_start_synthesizing_cb)
-                        logger.info(f"[TTS_SYNTHESIS_STARTED][{item_job_id}][Gen {item_gen_id}][{s_idx+1}/{s_total}] Text: '{payload}'")
-                        t0_synth = time.time()
+                        cached_entry = None
+                        with self._prefetch_lock:
+                            cached_entry = self._prefetch_cache.pop((item_gen_id, payload), None)
 
-                        # Check Cache
-                        cache_file = self._get_cache_path(payload)
-                        cached_audio_path = None
-                        if cache_file and cache_file.exists() and cache_file.stat().st_size > 0:
-                            cached_audio_path = str(cache_file)
-                            synth_ms = (time.time() - t0_synth) * 1000
-                            logger.info(f"[TTS_CACHE_HIT][{item_job_id}] Cached audio found in {synth_ms:.1f}ms: {cached_audio_path}")
-
-                        if cached_audio_path:
-                            audio_file_to_play = cached_audio_path
+                        if cached_entry:
+                            audio_file_to_play, is_temp_result, synth_ms = cached_entry
+                            temp_file_to_clean = audio_file_to_play if is_temp_result else None
+                            logger.info(f"[TTS_PIPELINE_PREFETCH_HIT][{item_job_id}] Seamless playback ready in 0.0ms (pre-synthesized in {synth_ms:.1f}ms)")
                         else:
-                            # 1. Try primary active provider
-                            primary_p = self.provider
-                            try:
-                                temp_file_to_clean = primary_p.synthesize_to_file(payload)
-                            except Exception as prim_err:
-                                logger.warning(f"Primary TTS provider '{primary_p.get_name()}' failed: {prim_err}")
-                                temp_file_to_clean = None
+                            self._state = "TTS_SYNTHESIZING"
+                            if self.on_start_synthesizing_cb:
+                                self._trigger_callback(self.on_start_synthesizing_cb)
+                            logger.info(f"[TTS_SYNTHESIS_STARTED][{item_job_id}][Gen {item_gen_id}][{s_idx+1}/{s_total}] Text: '{payload}'")
 
-                            # 2. Fallback providers
-                            if not temp_file_to_clean and not self._interrupt_event.is_set() and item_gen_id == self._current_generation_id:
-                                for p_key, p_inst in self._providers.items():
-                                    if p_inst is not primary_p:
-                                        try:
-                                            logger.info(f"Attempting fallback TTS synthesis with: {p_inst.get_name()}")
-                                            temp_file_to_clean = p_inst.synthesize_to_file(payload)
-                                            if temp_file_to_clean:
-                                                logger.info(f"Fallback TTS synthesis succeeded using: {p_inst.get_name()}")
-                                                break
-                                        except Exception as fb_err:
-                                            logger.debug(f"Fallback TTS '{p_inst.get_name()}' failed: {fb_err}")
-
-                            synth_ms = (time.time() - t0_synth) * 1000
-                            audio_file_to_play = temp_file_to_clean
-
-                            # Save to cache if eligible
-                            if cache_file and temp_file_to_clean and os.path.exists(temp_file_to_clean):
-                                try:
-                                    import shutil
-                                    shutil.copy2(temp_file_to_clean, str(cache_file))
-                                except Exception:
-                                    pass
+                            audio_file_to_play, is_temp_result, synth_ms = self._synthesize_text(payload, item_job_id, item_gen_id)
+                            temp_file_to_clean = audio_file_to_play if is_temp_result else None
 
                         # Double check generation has not been cancelled during synthesis
                         if self._interrupt_event.is_set() or item_gen_id != self._current_generation_id:
@@ -514,6 +603,15 @@ class TTSManager:
                         if audio_file_to_play:
                             logger.info(f"[TTS_SYNTHESIS_FINISHED][{item_job_id}] Succeeded in {synth_ms:.1f}ms -> {audio_file_to_play}")
                             if not self._interrupt_event.is_set() and item_gen_id == self._current_generation_id:
+                                # Look ahead into queue: if next item is queued, launch background prefetch
+                                with self._queue.mutex:
+                                    if len(self._queue.queue) > 0:
+                                        next_candidate = self._queue.queue[0]
+                                        if next_candidate and next_candidate[0] == "text":
+                                            next_gen = next_candidate[3] if len(next_candidate) > 3 else self._current_generation_id
+                                            if next_gen == self._current_generation_id:
+                                                threading.Thread(target=self._run_prefetch, args=(next_candidate,), daemon=True).start()
+
                                 self._state = "TTS_PLAYING"
                                 self._is_speaking = True
                                 self._trigger_callback(self.on_start_speaking_cb)
@@ -542,7 +640,7 @@ class TTSManager:
                 except Exception as e:
                     logger.error(f"Error in TTS processing: {e}", exc_info=True)
                 finally:
-                    if temp_file_to_clean and (not cache_file or str(cache_file) != temp_file_to_clean):
+                    if temp_file_to_clean:
                         self._delete_file_safely(temp_file_to_clean)
 
                     self._state = "IDLE"

@@ -231,7 +231,9 @@ class TestCommandResponseRegistry(unittest.TestCase):
 
             self.assertTrue(res["success"])
             self.assertEqual(res["action"], "search")
-            mock_search.assert_called_once_with("python tutorials", provider="youtube")
+            call_args, call_kwargs = mock_search.call_args
+            self.assertEqual(call_args[0].lower(), "python tutorials")
+            self.assertEqual(call_kwargs.get("provider"), "youtube")
 
     # ==========================================
     # 12. Capability summary generation

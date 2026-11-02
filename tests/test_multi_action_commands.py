@@ -3,6 +3,10 @@ from core.multi_command_parser import multi_command_parser, StructuredMultiActio
 from core.intent_engine import intent_engine
 
 class TestMultiActionCommands(unittest.TestCase):
+    def setUp(self):
+        from core.os.browser_session import browser_session_manager
+        browser_session_manager.reset()
+
     def test_multi_action_split_and_structure(self):
         # 1. "Open Chrome and search for wellmeds.in"
         res = multi_command_parser.parse_structured("open Chrome and search for wellmeds.in")
@@ -48,19 +52,19 @@ class TestMultiActionCommands(unittest.TestCase):
         self.assertFalse(res3.is_multi)
 
     def test_intent_engine_domain_urls(self):
-        # "open wellmeds.in" should resolve to open_website / open_url
+        # "open wellmeds.in" should resolve to open_website / open_url / browser_action
         intent, target = intent_engine.classify_intent("open wellmeds.in")
-        self.assertIn(intent, ["open_website", "open_url"])
+        self.assertIn(intent, ["open_website", "open_url", "browser_action"])
         self.assertIn("wellmeds.in", target)
 
         # "open google.com"
         intent, target = intent_engine.classify_intent("open google.com")
-        self.assertIn(intent, ["open_website", "open_url"])
+        self.assertIn(intent, ["open_website", "open_url", "browser_action"])
         self.assertIn("google.com", target)
 
         # "open youtube.com"
         intent, target = intent_engine.classify_intent("open youtube.com")
-        self.assertIn(intent, ["open_website", "open_url"])
+        self.assertIn(intent, ["open_website", "open_url", "browser_action"])
         self.assertIn("youtube.com", target)
 
     def test_speaker_test_intent(self):

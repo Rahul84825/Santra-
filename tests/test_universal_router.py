@@ -41,9 +41,12 @@ from modules.system.permissions import get_action_risk_level, RiskLevel
 class TestUniversalRouter(unittest.TestCase):
 
     def setUp(self):
+        from core.os.browser_session import browser_session_manager
+        browser_session_manager.reset()
         self.normalizer = CommandNormalizer()
         self.intent_engine = IntentEngine()
         self.executor = CommandExecutor()
+        self.executor.content_gen.provider_mgr = None
         self.planner = MultiStepPlanner(intent_engine=self.intent_engine, executor=self.executor)
         self.test_dir = Path("tests_scratch_workspace")
         self.test_dir.mkdir(exist_ok=True)
@@ -64,14 +67,14 @@ class TestUniversalRouter(unittest.TestCase):
         self.assertIn("Files & Folders", res["message"])
 
     # 2. "Open Chrome." -> Application launch
-    @patch("modules.system.app_control.open_app", return_value=True)
-    def test_02_open_chrome(self, mock_open_app):
+    @patch("modules.system.app_control.launch_application", return_value={"success": True, "message": "Chrome is open, Sir.", "outcome": "SUCCESS"})
+    def test_02_open_chrome(self, mock_launch_app):
         node = self.intent_engine.parse("Open Chrome")
         self.assertEqual(node["intent"], "open_app")
         self.assertEqual(node["target"], "chrome")
         res = self.executor.execute(node)
         self.assertTrue(res["success"])
-        mock_open_app.assert_called_once_with("chrome")
+        mock_launch_app.assert_called_once_with("chrome")
 
     # 3. "Search the web for the latest AI news." -> General web search (Google)
     @patch.object(BrowserManager, "search", return_value={"success": True, "message": "Searching Google."})
@@ -214,6 +217,7 @@ class TestUniversalRouter(unittest.TestCase):
     # 15. Request requiring unavailable provider -> Truthful local execution without fake output
     def test_15_unavailable_provider_fallback(self):
         content_gen = ContentGenerator()
+        content_gen.provider_mgr = None
         # provider is None or inactive
         res = content_gen.draft_content("Neural Network Architectures", content_type="report")
         self.assertTrue(res["success"])

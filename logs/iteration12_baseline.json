@@ -1,0 +1,755 @@
+{
+  "total_discovered": 1253,
+  "passed": 1147,
+  "failed": 106,
+  "errors": 0,
+  "skipped": 0,
+  "expected_failures": 0,
+  "unexpected_successes": 0,
+  "total_execution_time_seconds": 114.298,
+  "failure_count_parsed": 106,
+  "failures": [
+    {
+      "status": "FAIL",
+      "test_id": "test_battery_telemetry_service.TestBatteryIntentRouting.test_battery_life_question_intents",
+      "header": "test_battery_life_question_intents (test_battery_telemetry_service.TestBatteryIntentRouting.test_battery_life_question_intents)",
+      "error_summary": ": Failed intent on: 'Is my laptop charging?'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_battery_telemetry_service.py\", line 133, in \ntest_battery_life_question_intents\n    self.assertEqual(node.get(\"intent\"), \"system_telemetry\", f\"Failed intent on: '{q}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'question' != 'system_telemetry'\n- question\n+ system_telemetry\n : Failed intent on: 'Is my laptop charging?'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_browser_manager.TestBrowserManager.test_intent_parsing_find_on_youtube",
+      "header": "test_intent_parsing_find_on_youtube (test_browser_manager.TestBrowserManager.test_intent_parsing_find_on_youtube)",
+      "error_summary": "? ^",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_browser_manager.py\", line 56, in \ntest_intent_parsing_find_on_youtube\n    self.assertEqual(node[\"target\"], \"python tutorials\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'Python tutorials' != 'python tutorials'\n- Python tutorials\n? ^\n+ python tutorials\n? ^"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_browser_manager.TestBrowserManager.test_intent_parsing_youtube_search",
+      "header": "test_intent_parsing_youtube_search (test_browser_manager.TestBrowserManager.test_intent_parsing_youtube_search)",
+      "error_summary": "? ^   ^   ^",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_browser_manager.py\", line 44, in \ntest_intent_parsing_youtube_search\n    self.assertEqual(node[\"target\"], \"codewithharry\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'CodeWithHarry' != 'codewithharry'\n- CodeWithHarry\n? ^   ^   ^\n+ codewithharry\n? ^   ^   ^"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for machine learning') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for machine learning'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for machine learning'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for Python tutorials') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for Python tutorials'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for Python tutorials'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for HiAnime') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for HiAnime'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for HiAnime'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for GitHub repositories') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for GitHub repositories'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for GitHub repositories'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for anime streaming') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for anime streaming'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for anime streaming'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for FastAPI documentation') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for FastAPI documentation'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for FastAPI documentation'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for Rust programming') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for Rust programming'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for Rust programming'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for deep learning research') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for deep learning research'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for deep learning research'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for latest tech news') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for latest tech news'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for latest tech news'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for docker containers') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for docker containers'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for docker containers'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for kubernetes architecture') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for kubernetes architecture'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for kubernetes architecture'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for quantum computing') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for quantum computing'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for quantum computing'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for linux kernel source') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for linux kernel source'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for linux kernel source'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for sqlite documentation') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for sqlite documentation'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for sqlite documentation'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for web scraping python') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for web scraping python'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for web scraping python'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for pyqt6 tutorial') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for pyqt6 tutorial'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for pyqt6 tutorial'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for async python programming') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for async python programming'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for async python programming'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for artificial intelligence papers') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for artificial intelligence papers'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for artificial intelligence papers'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for brave browser extensions') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for brave browser extensions'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for brave browser extensions'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for numpy tutorials') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for numpy tutorials'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for numpy tutorials'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for ctranslate2 cuda') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for ctranslate2 cuda'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for ctranslate2 cuda'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for whisper models') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for whisper models'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for whisper models'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for git commands cheat sheet') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for git commands cheat sheet'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for git commands cheat sheet'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Chrome and search for vscode shortcuts') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Chrome and search for vscode shortcuts'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and search for vscode shortcuts'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases",
+      "header": "test_app_and_search_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_app_and_search_chaining_25_cases) (cmd='Open Brave and search for python unittest documentation') Test 25 requests combining app launch or browser with search actions.",
+      "error_summary": ": Failed for 'Open Brave and search for python unittest documentation'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 86, in \ntest_app_and_search_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and search for python unittest documentation'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open GitHub') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open GitHub'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open GitHub'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open HiAnime') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open HiAnime'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open HiAnime'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open VS Code and open Terminal') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open VS Code and open Terminal'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Terminal'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open YouTube') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open YouTube'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open YouTube'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open Reddit') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open Reddit'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open Reddit'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open VS Code and open GitHub') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open VS Code and open GitHub'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open GitHub'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open Downloads') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open Downloads'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open Downloads'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open Twitter') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open Twitter'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open Twitter'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Notepad and open Calculator') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Notepad and open Calculator'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Notepad and open Calculator'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open VS Code and open Chrome') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open VS Code and open Chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open YouTube') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open YouTube'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open YouTube'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Spotify and open Chrome') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Spotify and open Chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Spotify and open Chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open Gmail') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open Gmail'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open Gmail'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open Stack Overflow') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open Stack Overflow'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open Stack Overflow'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open VS Code and open Notepad') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open VS Code and open Notepad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Notepad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open LinkedIn') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open LinkedIn'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open LinkedIn'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open Wikipedia') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open Wikipedia'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open Wikipedia'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Terminal and open Chrome') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Terminal and open Chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Terminal and open Chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open VS Code and open Brave') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open VS Code and open Brave'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Brave'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open Google Drive') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open Google Drive'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open Google Drive'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open Discord') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open Discord'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open Discord'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Spotify and open YouTube') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Spotify and open YouTube'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Spotify and open YouTube'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open VS Code and open Spotify') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open VS Code and open Spotify'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Spotify'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Chrome and open Netflix') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Chrome and open Netflix'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open Netflix'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases",
+      "header": "test_mixed_browser_and_task_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_mixed_browser_and_task_chaining_25_cases) (cmd='Open Brave and open Twitch') Test 25 complex workflows chaining browser, applications, and productivity tools.",
+      "error_summary": ": Failed for 'Open Brave and open Twitch'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 158, in \ntest_mixed_browser_and_task_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open Twitch'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Chrome and open VS Code') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Chrome and open VS Code'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open VS Code'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Notepad and open Calculator') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Notepad and open Calculator'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Notepad and open Calculator'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Spotify and open Chrome') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Spotify and open Chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Spotify and open Chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open VS Code and open Notepad') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open VS Code and open Notepad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Notepad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Terminal and open Calculator') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Terminal and open Calculator'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Terminal and open Calculator'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Downloads and open Chrome') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Downloads and open Chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Downloads and open Chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Close Chrome and open Brave') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Close Chrome and open Brave'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'close_app' != 'multi_step_task'\n- close_app\n+ multi_step_task\n : Failed for 'Close Chrome and open Brave'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Close Notepad and open Wordpad') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Close Notepad and open Wordpad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'close_app' != 'multi_step_task'\n- close_app\n+ multi_step_task\n : Failed for 'Close Notepad and open Wordpad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open GitHub and open YouTube') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open GitHub and open YouTube'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open GitHub and open YouTube'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Brave and open VS Code') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Brave and open VS Code'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open VS Code'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Spotify and increase volume') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Spotify and increase volume'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Spotify and increase volume'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Close Calculator and volume up') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Close Calculator and volume up'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'close_app' != 'multi_step_task'\n- close_app\n+ multi_step_task\n : Failed for 'Close Calculator and volume up'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Chrome, open VS Code and open Notepad') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Chrome, open VS Code and open Notepad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome, open VS Code and open Notepad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Brave, open YouTube and open Spotify') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Brave, open YouTube and open Spotify'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave, open YouTube and open Spotify'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Close Chrome and close Notepad') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Close Chrome and close Notepad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'close_app' != 'multi_step_task'\n- close_app\n+ multi_step_task\n : Failed for 'Close Chrome and close Notepad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Terminal and open VS Code') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Terminal and open VS Code'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Terminal and open VS Code'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Notepad and open Downloads') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Notepad and open Downloads'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Notepad and open Downloads'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Chrome and open Spotify') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Chrome and open Spotify'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome and open Spotify'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Calculator and open Notepad') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Calculator and open Notepad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Calculator and open Notepad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open VS Code and open Terminal') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open VS Code and open Terminal'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open VS Code and open Terminal'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Close Spotify and open YouTube') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Close Spotify and open YouTube'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'close_app' != 'multi_step_task'\n- close_app\n+ multi_step_task\n : Failed for 'Close Spotify and open YouTube'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Brave and open GitHub') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Brave and open GitHub'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Brave and open GitHub'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Chrome, open Spotify and volume up') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Chrome, open Spotify and volume up'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Chrome, open Spotify and volume up'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open Downloads and open VS Code') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open Downloads and open VS Code'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open Downloads and open VS Code'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases",
+      "header": "test_multi_app_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_multi_app_chaining_25_cases) (cmd='Open YouTube and open Chrome') Test 25 sequential multi-application opening and closing requests.",
+      "error_summary": ": Failed for 'Open YouTube and open Chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 51, in \ntest_multi_app_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'open_app' != 'multi_step_task'\n- open_app\n+ multi_step_task\n : Failed for 'Open YouTube and open Chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open downloads') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open downloads'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open downloads'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Lock computer and mute volume') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Lock computer and mute volume'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'system_control' != 'multi_step_task'\n- system_control\n+ multi_step_task\n : Failed for 'Lock computer and mute volume'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open chrome') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume up and take screenshot') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume up and take screenshot'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume up and take screenshot'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume down and take screenshot') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume down and take screenshot'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume down and take screenshot'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Mute volume and lock computer') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Mute volume and lock computer'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Mute volume and lock computer'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Unmute volume and open spotify') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Unmute volume and open spotify'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Unmute volume and open spotify'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open vs code') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open vs code'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open vs code'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume up and open spotify') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume up and open spotify'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume up and open spotify'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume down and open notepad') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume down and open notepad'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume down and open notepad'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open paint') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open paint'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open paint'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Lock computer and volume down') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Lock computer and volume down'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'system_control' != 'multi_step_task'\n- system_control\n+ multi_step_task\n : Failed for 'Lock computer and volume down'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Mute volume and take screenshot') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Mute volume and take screenshot'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Mute volume and take screenshot'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Unmute volume and volume up') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Unmute volume and volume up'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Unmute volume and volume up'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open calculator') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open calculator'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open calculator'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume up and open youtube') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume up and open youtube'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume up and open youtube'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume down and mute volume') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume down and mute volume'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume down and mute volume'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Lock computer and close chrome') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Lock computer and close chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'system_control' != 'multi_step_task'\n- system_control\n+ multi_step_task\n : Failed for 'Lock computer and close chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open terminal') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open terminal'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open terminal'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume up and open brave') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume up and open brave'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume up and open brave'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open pictures') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open pictures'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open pictures'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Lock computer and mute') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Lock computer and mute'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'system_control' != 'multi_step_task'\n- system_control\n+ multi_step_task\n : Failed for 'Lock computer and mute'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Volume down and open chrome') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Volume down and open chrome'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Volume down and open chrome'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Take screenshot and open folder') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Take screenshot and open folder'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'multi_step_task'\n- conversation\n+ multi_step_task\n : Failed for 'Take screenshot and open folder'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases",
+      "header": "test_system_and_media_chaining_25_cases (test_multistep_orchestration_100.TestMultiStepOrchestration100.test_system_and_media_chaining_25_cases) (cmd='Lock computer and turn off monitor') Test 25 requests chaining system operations with volume, screenshots, or lock.",
+      "error_summary": ": Failed for 'Lock computer and turn off monitor'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_multistep_orchestration_100.py\", line 123, in \ntest_system_and_media_chaining_25_cases\n    self.assertEqual(res.get(\"intent\"), \"multi_step_task\", f\"Failed for '{cmd}'\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'system_control' != 'multi_step_task'\n- system_control\n+ multi_step_task\n : Failed for 'Lock computer and turn off monitor'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_natural_language_commands.TestNaturalLanguageCommands.test_context_awareness",
+      "header": "test_context_awareness (test_natural_language_commands.TestNaturalLanguageCommands.test_context_awareness)",
+      "error_summary": "+ close_app",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_natural_language_commands.py\", line 301, in \ntest_context_awareness\n    self.assertEqual(res2[\"intent\"], \"close_app\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'conversation' != 'close_app'\n- conversation\n+ close_app"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_zero_delay_routing.TestZeroDelayRouting.test_scenario_7_analyze_chrome_page",
+      "header": "test_scenario_7_analyze_chrome_page (test_zero_delay_routing.TestZeroDelayRouting.test_scenario_7_analyze_chrome_page) 'Analyze this Chrome page.' -> Retrieve actual page content and analyze it.",
+      "error_summary": "[HOST ANTIGRAVITY DETECTED] HWND: 67074, PID: 19844, Title: 'jarvis - Antigravity IDE - main.py'",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_zero_delay_routing.py\", line 202, in \ntest_scenario_7_analyze_chrome_page\n    self.assertEqual(req.layer, LAYER_1)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^\nAssertionError: 2 != 1\n\n--- ACTUAL WINDOWS 11 HARDWARE TELEMETRY ---\nHas Battery: True\nTelemetry Available: True\nPercentage: 31%\nPower Plugged: True\nIs Charging: True\nTime Remaining Formatted: None\nMessage: Battery is at 31%, currently plugged in and charging.\n-------------------------------------------\n\n\n[LIVE SMOKE TEST PASSED] Model: nvidia/nemotron-3.5-super-vl-120b-a12b | Duration: 1.31s | Output: Time complexity measures how the running time of an algorithm grows relative to the size of its inpu...\n\n[HOST ANTIGRAVITY DETECTED] HWND: 67074, PID: 19844, Title: 'jarvis - Antigravity IDE - main.py'"
+    },
+    {
+      "status": "FAIL",
+      "test_id": "test_zero_delay_routing.TestZeroDelayRouting.test_scenario_9_play_spotify_playlist",
+      "header": "test_scenario_9_play_spotify_playlist (test_zero_delay_routing.TestZeroDelayRouting.test_scenario_9_play_spotify_playlist) 'Play my Spotify playlist.' -> Use configured Spotify integration.",
+      "error_summary": "AssertionError: 2 != 1",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\activ\\OneDrive\\Attachments\\Desktop\\jarvis\\tests\\test_zero_delay_routing.py\", line 242, in \ntest_scenario_9_play_spotify_playlist\n    self.assertEqual(req.layer, LAYER_1)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^\nAssertionError: 2 != 1"
+    }
+  ]
+}

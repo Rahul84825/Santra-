@@ -181,7 +181,7 @@ class TestPerformanceAndResourceRegression(unittest.TestCase):
         """Verifies get_app_command constructs a valid path containing --minimized."""
         cmd = get_app_command()
         self.assertIn("--minimized", cmd)
-        self.assertIn("main.py", cmd)
+        self.assertTrue("launcher.py" in cmd or "main.py" in cmd)
         # Should prefer pythonw.exe if it exists on Windows
         if sys.platform == "win32":
             self.assertTrue("python.exe" in cmd or "pythonw.exe" in cmd)

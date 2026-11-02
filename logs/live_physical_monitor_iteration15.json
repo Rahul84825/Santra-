@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-11-01T18:54:14",
+  "duration_sec": 5.0,
+  "active_device_index": 2,
+  "active_device_name": "Headset (Noise Buds N1 Pro)",
+  "total_pcm_frames_captured": 33,
+  "mean_acoustic_rms": 4589.993381,
+  "max_acoustic_rms": 9698.34082,
+  "physical_switches_observed": [],
+  "stream_health_final": {
+    "healthy": true,
+    "reason": "Stopped",
+    "running": false,
+    "stream_active": false,
+    "device_index": 2,
+    "device_name": "Headset (Noise Buds N1 Pro)",
+    "hardware_sample_rate": 16000,
+    "target_sample_rate": 16000,
+    "resampling_active": false,
+    "ambient_rms": 0.0231,
+    "last_callback_ago": 0.75,
+    "zero_frames": 0,
+    "is_recovering": false,
+    "watcher_active": false
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "timestamp": "2026-11-01T10:51:08+0530",
+  "platform": "win32",
+  "scenarios": {
+    "scenario_a": {
+      "steps": [
+        {
+          "step": "A1_create_folder_with_content",
+          "success": true,
+          "path": "C:\\Users\\activ\\Desktop\\Santra Test Project"
+        },
+        {
+          "step": "A2_rename_content_fidelity_100pct",
+          "success": true,
+          "files": 5,
+          "latency_ms": 69.92270000046119
+        },
+        {
+          "step": "A3_open_antigravity_and_identity",
+          "success": true,
+          "hwnd": 0,
+          "ws_id": "WorkspaceIdentity(workspace_path='', workspace_name='', window_title='', process_id=2204, target_control='Desktop 1', timestamp=1793510469.1938481)"
+        },
+        {
+          "step": "A4_dictate_long_prompt",
+          "success": true,
+          "word_count": 30,
+          "hash": "0aa84b89801275283fd4f20aaab4b6b574c1e16c760ba9c425d61317dd001956"
+        },
+        {
+          "step": "A5_composer_hash_verification",
+          "success": true
+        },
+        {
+          "step": "A6_ambiguous_approval_rejected",
+          "success": true,
+          "status": "UNRELATED_SPEECH"
+        },
+        {
+          "step": "A7_explicit_approval_accepted",
+          "success": true
+        },
+        {
+          "step": "A8_multi_stage_submission_verified",
+          "success": true,
+          "status": "SUBMISSION_UNCONFIRMED"
+        }
+      ],
+      "success": true
+    },
+    "scenario_b": {
+      "steps": [
+        {
+          "step": "B1_capture_pinned_identity",
+          "success": true,
+          "conversation_id": "3d994362-e61a-4933-bf46-12c8a7123456"
+        },
+        {
+          "step": "B2_dictate_chatgpt_message",
+          "success": true,
+          "words": 15
+        },
+        {
+          "step": "B3_divergence_detected",
+          "success": true,
+          "reason": "ChatGPT conversation mismatch: expected '3d994362-e61a-4933-bf46-12c8a7123456', got '99999999-0000-0000-0000-000000000000'"
+        },
+        {
+          "step": "B4_divergence_approval_rejected",
+          "success": true,
+          "reason": "CONVERSATION_IDENTITY_CHANGED: ChatGPT conversation mismatch: expected '3d994362-e61a-4933-bf46-12c8a7123456', got '99999999-0000-0000-0000-000000000000'"
+        },
+        {
+          "step": "B6_return_and_revalidate",
+          "success": true
+        },
+        {
+          "step": "B8_final_approval_executed",
+          "success": true
+        },
+        {
+          "step": "B10_chatgpt_submission_verified",
+          "success": true,
+          "status": "SUBMISSION_UNCONFIRMED"
+        }
+      ],
+      "success": true
+    },
+    "scenario_c": {
+      "steps": [
+        {
+          "step": "C1_closed_window_detected",
+          "success": true,
+          "reason": "window_not_found"
+        },
+        {
+          "step": "C2_workspace_divergence_detected",
+          "success": true,
+          "reason": "Workspace path mismatch: expected 'C:\\Projects\\Santra', got 'C:\\Projects\\Other'"
+        },
+        {
+          "step": "C3_closed_tab_detected",
+          "success": true,
+          "reason": "Chrome tab mismatch: expected tab ID '999', got '888'"
+        },
+        {
+          "step": "C4_manual_alteration_rejected",
+          "success": true,
+          "reason": "CONTENT_HASH_MISMATCH"
+        },
+        {
+          "step": "C5_restart_invalidation_verified",
+          "success": true,
+          "invalidated_count": 3
+        }
+      ],
+      "success": true
+    }
+  },
+  "latencies_ms": {
+    "folder_create_ms": 19.3,
+    "folder_rename_with_verification_ms": 69.92,
+    "antigravity_open_ms": 523.82,
+    "workspace_identity_check_ms": 564.4,
+    "draft_creation_ms": 0.47,
+    "composer_inspection_ms": 0.01,
+    "explicit_approval_ms": 2151.61,
+    "submission_verification_ms": 2010.23,
+    "conversation_identity_match_ms": 0.38
+  },
+  "all_scenarios_passed": true
+}

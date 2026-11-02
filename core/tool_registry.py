@@ -712,5 +712,149 @@ class ToolRegistry:
             verification_strategy="ui_state"
         ))
 
+        # Universal Voice Typing
+        self.register(ToolDefinition(
+            name="typing.start",
+            category="typing",
+            description="Activate universal voice typing mode in the focused application.",
+            args={"mode": Optional[str], "code_syntax": Optional[str]},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="typing.stop",
+            category="typing",
+            description="Stop universal voice typing mode.",
+            args={},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="typing.pause",
+            category="typing",
+            description="Pause voice typing without ending the session.",
+            args={},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="typing.resume",
+            category="typing",
+            description="Resume voice typing into the active application.",
+            args={},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="typing.feed_speech",
+            category="typing",
+            description="Feed transcribed speech into the active typing session.",
+            args={"text": str},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="typing.correct",
+            category="typing",
+            description="Perform spoken correction or undo in the active typing session.",
+            args={"command": str},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+
+        # Ask-Before-Send Message Workflow
+        self.register(ToolDefinition(
+            name="message.prepare",
+            category="messaging",
+            description="Insert a message draft into target application and await send approval.",
+            args={"text": str, "target_app": Optional[str]},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="message.approve_send",
+            category="messaging",
+            description="Execute sending of pending message draft upon explicit user confirmation.",
+            args={"user_utterance": str},
+            risk_level="HIGH",
+            requires_confirmation=True,
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="message.cancel",
+            category="messaging",
+            description="Cancel pending message send and leave draft in place.",
+            args={},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+
+        # Project Intelligence & File Engineering
+        self.register(ToolDefinition(
+            name="project.scan",
+            category="project_intelligence",
+            description="Recursively scan and index project files, symbols, and dependencies.",
+            args={"project_path": str},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="project.explain",
+            category="project_intelligence",
+            description="Generate architectural explanation of a scanned project.",
+            args={"project_path": str},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="project.search_code",
+            category="project_intelligence",
+            description="BM25 full-text code search across project files.",
+            args={"query": str, "project_name": Optional[str]},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="project.find_symbol",
+            category="project_intelligence",
+            description="Find definition file and line numbers for code symbol (function, class, method).",
+            args={"symbol_name": str, "project_name": Optional[str]},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="project.find_dependencies",
+            category="project_intelligence",
+            description="Find which project files depend on or import a given module.",
+            args={"module_name": str},
+            risk_level="LOW",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="project.create_file",
+            category="file_engineering",
+            description="Atomically create a new project file with syntax verification.",
+            args={"file_path": str, "content": str, "overwrite": Optional[bool]},
+            risk_level="MEDIUM",
+            verification_strategy="file_exists"
+        ))
+        self.register(ToolDefinition(
+            name="project.patch_file",
+            category="file_engineering",
+            description="Safely apply a targeted text patch with syntax check and conflict detection.",
+            args={"file_path": str, "target_content": str, "replacement_content": str},
+            risk_level="MEDIUM",
+            verification_strategy="status_code"
+        ))
+        self.register(ToolDefinition(
+            name="project.rollback_patch",
+            category="file_engineering",
+            description="Reverse a previously applied file patch.",
+            args={"patch_id": str},
+            risk_level="MEDIUM",
+            verification_strategy="status_code"
+        ))
+
+
 # Global singleton
 tool_registry = ToolRegistry()

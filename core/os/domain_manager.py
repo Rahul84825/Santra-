@@ -186,6 +186,15 @@ class DomainManager:
             return False, hostname, "Missing top-level domain extension"
 
         tld = parts[-1]
+        KNOWN_FILE_EXTS = {
+            "pdf", "txt", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "csv", "json",
+            "py", "c", "cpp", "h", "java", "html", "css", "js", "ts", "md", "xml",
+            "yaml", "yml", "zip", "tar", "gz", "7z", "rar", "exe", "bat", "sh", "ps1",
+            "png", "jpg", "jpeg", "gif", "svg", "bmp", "mp3", "wav", "mp4", "mkv", "avi"
+        }
+        if tld in KNOWN_FILE_EXTS:
+            return False, hostname, f"'{tld}' is a file extension, not a top-level domain"
+
         if not tld.isalpha() or len(tld) < 2 or len(tld) > 10:
             return False, hostname, f"Invalid top-level domain '{tld}'"
 

@@ -1,7 +1,7 @@
 import os
 import re
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Generator
 from config import config
 from core.ai.base_provider import BaseAIProvider
 from core.ai.providers.local_provider import LocalAIProvider
@@ -169,14 +169,28 @@ class ProviderManager:
             messages = [dict(m) for m in messages[:-1]] + [{"role": "user", "content": clean_query}]
 
         # Include eligible configured providers from settings manager for priority routing & failover
-        eligible_cfgs = self.settings.get_eligible_providers(req_capability)
-        if eligible_cfgs:
-            explicit_prov_cfg = getattr(config, "ai_provider", "").lower().strip()
-            if explicit_prov_cfg in ["nvidia", "nemotron"]:
-                explicit_prov_key = "nvidia"
-            else:
-                explicit_prov_key = explicit_prov_cfg
+        explicit_prov_cfg = getattr(config, "ai_provider", "").lower().strip()
+        if explicit_prov_cfg in ["nvidia", "nemotron"]:
+            explicit_prov_key = "nvidia"
+        else:
+            explicit_prov_key = explicit_prov_cfg
 
+        if explicit_prov_key == "none":
+            return None
+
+        eligible_cfgs = self.settings.get_eligible_providers(req_capability)
+        eligible_pids = {c.provider_id for c in eligible_cfgs} if eligible_cfgs else set()
+
+        # If user explicitly requested a non-default provider that is unconfigured or unavailable,
+        # fail safe without leaking to unrequested providers
+        if explicit_prov_key and explicit_prov_key not in ["default", "auto", "nvidia"]:
+            if explicit_prov_key not in eligible_pids:
+                prov_obj = self._providers.get(explicit_prov_key)
+                if not prov_obj or not prov_obj.is_available():
+                    logger.info(f"[ProviderManager] Selected provider '{explicit_prov_key}' is unconfigured or unavailable.")
+                    return None
+
+        if eligible_cfgs:
             sorted_cfgs = list(eligible_cfgs)
             if explicit_prov_key and explicit_prov_key not in ["default", "auto", "none"]:
                 sorted_cfgs.sort(key=lambda c: 0 if c.provider_id == explicit_prov_key else 1)
@@ -307,3 +321,99 @@ class ProviderManager:
 
         logger.error("[ProviderManager] All candidate AI providers failed or were unavailable.")
         return None
+
+    def stream_response(
+        self,
+        messages: List[Dict[str, str]],
+        context: Optional[Dict[str, Any]] = None,
+        is_cancelled: Optional[Any] = None
+    ) -> Generator[str, None, None]:
+        """Streams response tokens from the best available provider with cancellation and privacy enforcement."""
+        if not messages:
+            return
+
+        self._sync_with_settings()
+        last_user_msg = messages[-1].get("content", "")
+        forced_prov_key, clean_query = self.extract_model_prefix(last_user_msg)
+
+        ctx = context or {}
+        req_capability = "text"
+
+        candidates: List[Tuple[str, BaseAIProvider]] = []
+        seen_keys = set()
+
+        if forced_prov_key and forced_prov_key in self._providers:
+            prov = self._providers[forced_prov_key]
+            if prov.is_available():
+                candidates.append((forced_prov_key, prov))
+                seen_keys.add(forced_prov_key)
+            messages = [dict(m) for m in messages[:-1]] + [{"role": "user", "content": clean_query}]
+
+        eligible_cfgs = self.settings.get_eligible_providers(req_capability)
+        if eligible_cfgs:
+            sorted_cfgs = list(eligible_cfgs)
+            explicit_prov_cfg = getattr(config, "ai_provider", "").lower().strip()
+            if explicit_prov_cfg in ["nvidia", "nemotron"]:
+                explicit_prov_key = "nvidia"
+            else:
+                explicit_prov_key = explicit_prov_cfg
+
+            if explicit_prov_key and explicit_prov_key not in ["default", "auto", "none"]:
+                sorted_cfgs.sort(key=lambda c: 0 if c.provider_id == explicit_prov_key else 1)
+
+            for cfg in sorted_cfgs:
+                pid = cfg.provider_id
+                if pid not in seen_keys and pid in self._providers:
+                    p = self._providers[pid]
+                    if p.is_available():
+                        candidates.append((pid, p))
+                        seen_keys.add(pid)
+        else:
+            act = self.get_active_provider()
+            if act and act.is_available() and self.active_provider_key not in seen_keys:
+                candidates.append((self.active_provider_key, act))
+
+        if not candidates:
+            return
+
+        for prov_key, provider in candidates:
+            is_cloud = provider.get_name() not in ["LocalAIProvider", "Ollama Local"] and not isinstance(provider, (LocalAIProvider, OllamaProvider))
+            if is_cloud and not privacy_guard.is_cloud_allowed():
+                continue
+
+            sanitized_messages = []
+            for msg in messages:
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    clean_c, _, _ = privacy_guard.redact_text(content)
+                    sanitized_messages.append({"role": msg.get("role", "user"), "content": clean_c})
+                else:
+                    sanitized_messages.append(msg)
+
+            try:
+                if hasattr(provider, "stream_response"):
+                    yielded = False
+                    # Check signature of stream_response
+                    import inspect
+                    sig = inspect.signature(provider.stream_response)
+                    if "is_cancelled" in sig.parameters:
+                        stream_gen = provider.stream_response(sanitized_messages, context=ctx, is_cancelled=is_cancelled)
+                    else:
+                        stream_gen = provider.stream_response(sanitized_messages, context=ctx)
+
+                    for chunk in stream_gen:
+                        if is_cancelled and callable(is_cancelled) and is_cancelled():
+                            logger.info(f"[ProviderManager] Stream cancelled for {provider.get_name()}.")
+                            return
+                        if chunk:
+                            yielded = True
+                            yield chunk
+
+                    if yielded:
+                        return
+            except Exception as e:
+                err_clean = str(e)
+                if hasattr(provider, "api_key") and provider.api_key and len(provider.api_key) > 5:
+                    err_clean = err_clean.replace(provider.api_key, "[REDACTED_KEY]")
+                logger.warning(f"[ProviderManager] Stream error from {provider.get_name()}: {err_clean}.")
+

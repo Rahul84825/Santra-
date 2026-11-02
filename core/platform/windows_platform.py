@@ -814,6 +814,10 @@ class WindowsPlatform(BasePlatform):
                 logger.error(f"[Windows] Failed to open browser '{browser_name}': {e}")
                 return False
 
+        if b_key == "brave":
+            logger.warning("[Windows] Brave browser not found. Strict enforcement prevented fallback.")
+            return False
+
         return self.open_url(url) if url else True
 
     def open_new_browser_tab(self, browser_name: str = "chrome", url: str = None) -> bool:

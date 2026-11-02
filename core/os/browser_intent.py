@@ -77,8 +77,8 @@ class BrowserIntent:
                 "metadata": {"launch_only": True}
             }
 
-        if self.action_type == BrowserActionType.SEARCH_WEB or (self.action_type == BrowserActionType.SEARCH_WEBSITE and self.site_name in ["google", "youtube"]):
-            prov = "youtube" if self.site_name == "youtube" else "google"
+        if self.action_type == BrowserActionType.SEARCH_WEB or (self.action_type == BrowserActionType.SEARCH_WEBSITE and (self.site_name or "").lower() in ["google", "youtube", "github", "reddit", "stackoverflow"]):
+            prov = (self.site_name or "").lower() if (self.site_name or "").lower() in ["youtube", "github", "reddit", "stackoverflow"] else "google"
             browser_target = self.target_browser if self.metadata.get("explicit_browser") else "default"
             return {
                 "intent": "web_search",
@@ -86,8 +86,8 @@ class BrowserIntent:
                 "action_type": self.action_type.value,
                 "provider": prov,
                 "browser": browser_target,
-                "target": self.search_query,
-                "query": self.search_query,
+                "target": self.search_query.lower() if self.search_query else "",
+                "query": self.metadata.get("raw_query") or self.search_query,
                 "site_name": self.site_name,
                 "empty_query": not bool(self.search_query),
                 "confidence": 1.0,
@@ -95,10 +95,68 @@ class BrowserIntent:
                 "is_explicit_search": True
             }
 
+        if self.action_type == BrowserActionType.OPEN_URL:
+            raw_l = (self.raw_text or "").lower().strip()
+            named_sites = {"youtube", "chatgpt", "google", "github", "gmail", "claude", "gemini", "netflix", "spotify", "discord", "whatsapp", "twitter", "reddit"}
+            is_named_site = bool(self.site_name and self.site_name.lower() in named_sites)
+            if is_named_site:
+                return {
+                    "intent": "open_website",
+                    "action": "open_url",
+                    "action_type": "open_url",
+                    "target_browser": self.target_browser,
+                    "browser": self.target_browser,
+                    "url": self.url,
+                    "site_name": self.site_name,
+                    "target": self.site_name or self.domain or self.url or "website",
+                    "domain": self.domain,
+                    "search_query": "",
+                    "query": "",
+                    "prompt_query": "",
+                    "search_scope": "website",
+                    "tab_preference": "default",
+                    "input_purpose": "address_bar",
+                    "submit": False,
+                    "requires_confirmation": False,
+                    "confirmation_reason": None,
+                    "clarification_prompt": None,
+                    "verification_method": "cdp_or_title",
+                    "confidence": 1.0,
+                    "raw_text": self.raw_text,
+                    "normalized_text": self.normalized_text,
+                    "metadata": {}
+                }
+            return {
+                "intent": "browser_action",
+                "action_type": self.action_type.value,
+                "action": self.metadata.get("control_action") if self.metadata.get("control_action") in ["read_page", "inspect_page", "analyze_page"] else self.action_type.value,
+                "target_browser": self.target_browser,
+                "browser": self.target_browser,
+                "url": self.url,
+                "site_name": self.site_name,
+                "target": self.site_name or self.domain or self.url,
+                "domain": self.domain,
+                "search_query": self.search_query,
+                "query": self.search_query or self.prompt_query,
+                "prompt_query": self.prompt_query,
+                "search_scope": self.search_scope.value if hasattr(self.search_scope, "value") else str(self.search_scope),
+                "tab_preference": self.tab_preference.value if hasattr(self.tab_preference, "value") else str(self.tab_preference),
+                "input_purpose": self.input_purpose,
+                "submit": self.submit,
+                "requires_confirmation": self.requires_confirmation,
+                "confirmation_reason": self.confirmation_reason,
+                "clarification_prompt": self.clarification_prompt,
+                "verification_method": self.verification_method,
+                "confidence": self.confidence,
+                "raw_text": self.raw_text,
+                "normalized_text": self.normalized_text,
+                "metadata": self.metadata
+            }
+
         return {
             "intent": "browser_action",
             "action_type": self.action_type.value,
-            "action": self.action_type.value,
+            "action": self.metadata.get("control_action") if self.metadata.get("control_action") in ["read_page", "inspect_page", "analyze_page"] else self.action_type.value,
             "target_browser": self.target_browser,
             "browser": self.target_browser,
             "url": self.url,
@@ -160,8 +218,13 @@ class BrowserIntentParser:
         "wikipedia": "https://www.wikipedia.org",
         "amazon": "https://www.amazon.com",
         "netflix": "https://www.netflix.com",
-        "hianime": "https://hianime.to",
-        "anime": "https://hianime.to",
+        "hianime": "https://hianime.at/",
+        "anime site": "https://hianime.at/",
+        "hianime homepage": "https://hianime.at/",
+        "watched anime": "https://hianime.at/user/watching",
+        "my watched anime": "https://hianime.at/user/watching",
+        "anime watchlist": "https://hianime.at/user/watching",
+        "my anime list": "https://hianime.at/user/watching",
         "twitter": "https://x.com",
         "x": "https://x.com",
         "facebook": "https://www.facebook.com",
@@ -216,11 +279,18 @@ class BrowserIntentParser:
         b_end_match = re.search(r"\b(chrome|chromium|edge|firefox|brave|opera)\s*$", text, re.IGNORECASE)
         if b_end_match and len(text.strip().split()) > 1:
             prefix = text[:b_end_match.start()].strip()
-            if prefix.lower() not in ["open", "launch", "start", "focus"]:
+            if prefix.lower() not in ["open", "launch", "start", "focus", "close", "stop", "quit", "exit", "kill", "shut", "shut down", "terminate"]:
                 browser = b_end_match.group(1).lower()
                 return browser, prefix, True
 
         return "chrome", text, False
+
+    KNOWN_FILE_EXTENSIONS = {
+        "pdf", "txt", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "csv", "json",
+        "py", "c", "cpp", "h", "java", "html", "css", "js", "ts", "md", "xml",
+        "yaml", "yml", "zip", "tar", "gz", "7z", "rar", "exe", "bat", "sh", "ps1",
+        "png", "jpg", "jpeg", "gif", "svg", "bmp", "mp3", "wav", "mp4", "mkv", "avi"
+    }
 
     def is_explicit_url_or_domain(self, target: str) -> bool:
         """Determines if a target string represents an explicit URL or domain name."""
@@ -229,7 +299,7 @@ class BrowserIntentParser:
             return True
         if "." in clean and " " not in clean:
             parts = clean.split(".")
-            if len(parts) >= 2 and parts[-1] in self.KNOWN_TLDS:
+            if len(parts) >= 2 and parts[-1] in self.KNOWN_TLDS and parts[-1] not in self.KNOWN_FILE_EXTENSIONS:
                 return True
         return False
 
@@ -252,6 +322,14 @@ class BrowserIntentParser:
         if re.search(r"\b(?:in|on)\s+(?:this\s+application|this\s+app|the\s+current\s+application|current\s+app|this\s+window|current\s+window)\s*$", clean, re.IGNORECASE):
             return BrowserIntent(action_type=BrowserActionType.UNKNOWN, raw_text=raw_text, normalized_text=norm_text)
 
+        # 0A. Bypass browser intent parsing for local file/folder operations (e.g. "open resume.pdf")
+        if re.search(r"\b(?:open|view|show|read|inspect|edit)\s+(?:the\s+|my\s+|that\s+)?[a-zA-Z0-9_\-\s]+\.(?:pdf|txt|docx?|xlsx?|pptx?|csv|json|py|html|png|jpg|jpeg|mp4|mp3|zip)\b", clean, re.IGNORECASE):
+            return BrowserIntent(action_type=BrowserActionType.UNKNOWN, raw_text=raw_text, normalized_text=norm_text)
+
+        # 0B. Bypass browser intent parsing for application lifecycle/close commands (e.g. "stop chrome", "close chrome")
+        if re.match(r"^(?:close|stop|quit|exit|kill|terminate|shut\s*down)\s+(?:the\s+|my\s+)?(?:google\s+chrome|chrome|chromium|edge|microsoft\s+edge|firefox|opera|brave|browser)$", clean, re.IGNORECASE):
+            return BrowserIntent(action_type=BrowserActionType.UNKNOWN, raw_text=raw_text, normalized_text=norm_text)
+
         # 1. Check for tab preference (new tab vs current tab)
         tab_pref = TabPreference.DEFAULT
         if re.search(r"\b(?:in\s+a\s+new\s+tab|in\s+another\s+tab|new\s+tab|another\s+tab)\b", clean):
@@ -261,13 +339,72 @@ class BrowserIntentParser:
             tab_pref = TabPreference.CURRENT_TAB
             clean = re.sub(r"\b(?:in\s+this\s+tab|in\s+current\s+tab|current\s+tab|this\s+tab|same\s+tab)\b", "", clean).strip()
 
+                # Dedicated HiAnime Voice Navigation Mapping (Brave-first)
+        hianime_watching_phrases = {
+            "open watched anime", "open my watched anime", "open anime watchlist", "open my anime list",
+            "watched anime", "my watched anime", "anime watchlist", "my anime list"
+        }
+        hianime_home_phrases = {
+            "open anime site", "open hianime", "open hianime homepage",
+            "anime site", "hianime", "hianime homepage"
+        }
+
+        # Ambiguous anime phrases rejection
+        if clean in ["open anime", "open anime watching", "open anime page"]:
+            return BrowserIntent(
+                action_type=BrowserActionType.CLARIFICATION_NEEDED,
+                target_browser="brave",
+                clarification_prompt="Did you mean your watched anime or the anime site homepage?",
+                raw_text=raw_text,
+                normalized_text=norm_text,
+                metadata={"ambiguous_anime": True}
+            )
+
+        if clean in hianime_watching_phrases:
+            return BrowserIntent(
+                action_type=BrowserActionType.OPEN_URL,
+                target_browser="brave",
+                url="https://hianime.at/user/watching",
+                site_name="HiAnime Watching",
+                domain="hianime.at",
+                search_scope=SearchScope.WEBSITE,
+                tab_preference=tab_pref,
+                submit=False,
+                verification_method="cdp_or_title",
+                raw_text=raw_text,
+                normalized_text=norm_text,
+                metadata={"strict_browser": "brave", "service": "hianime_watching"}
+            )
+
+        if clean in hianime_home_phrases:
+            return BrowserIntent(
+                action_type=BrowserActionType.OPEN_URL,
+                target_browser="brave",
+                url="https://hianime.at/",
+                site_name="HiAnime",
+                domain="hianime.at",
+                search_scope=SearchScope.WEBSITE,
+                tab_preference=tab_pref,
+                submit=False,
+                verification_method="cdp_or_title",
+                raw_text=raw_text,
+                normalized_text=norm_text,
+                metadata={"strict_browser": "brave", "service": "hianime_home"}
+            )
+
         # 2. Check for Browser Launch FIRST (e.g. "open chrome", "launch chrome")
         # Must take precedence before browser stripping or URL matching!
-        browser_launch_match = re.match(r"^(?:open|launch|start|focus)\s+(chrome|chromium|edge|firefox|brave|opera|browser)$", clean, re.IGNORECASE)
+        browser_launch_match = re.match(r"^(?:open|launch|start|focus)\s+(google\s+chrome|chrome|chromium|edge|microsoft\s+edge|firefox|mozilla\s+firefox|brave|opera|browser)$", clean, re.IGNORECASE)
         if browser_launch_match:
-            b_target = browser_launch_match.group(1).lower()
-            if b_target == "browser":
+            raw_b = browser_launch_match.group(1).lower()
+            if "chrome" in raw_b or raw_b == "browser":
                 b_target = "chrome"
+            elif "edge" in raw_b:
+                b_target = "edge"
+            elif "firefox" in raw_b:
+                b_target = "firefox"
+            else:
+                b_target = raw_b
             return BrowserIntent(
                 action_type=BrowserActionType.OPEN_BROWSER,
                 target_browser=b_target,
@@ -340,6 +477,14 @@ class BrowserIntentParser:
                 raw_text=raw_text,
                 normalized_text=norm_text,
                 metadata={"control_action": "new_tab"}
+            )
+        if clean in ["read the current webpage", "read current webpage", "read webpage", "read the webpage", "read page", "inspect page", "read the page", "analyze the page", "analyze page", "summarize the page", "summarize webpage"]:
+            return BrowserIntent(
+                action_type=BrowserActionType.BROWSER_CONTROL,
+                target_browser=browser_name,
+                raw_text=raw_text,
+                normalized_text=norm_text,
+                metadata={"control_action": "read_page"}
             )
 
         # -------------------------------------------------------------
@@ -515,7 +660,10 @@ class BrowserIntentParser:
         # e.g. "open hianime.at on chrome", "navigate to https://hianime.to", "open google.com",
         # "search hianime.at", "search for hianime.at", "visit hianime.at", "hianime.at"
         # -------------------------------------------------------------
-        domain_direct_match = re.match(r"^(?:open|launch|navigate\s+to|go\s+to|visit|browse\s+to|search(?:\s+for)?\s+)?([a-zA-Z0-9_\-\.]+\.[a-zA-Z]{2,10}|https?://\S+)$", clean, re.IGNORECASE)
+        if clean.startswith("search for ") or clean.startswith("find "):
+            domain_direct_match = None
+        else:
+            domain_direct_match = re.match(r"^(?:(?:open|launch|navigate\s+to|go\s+to|visit|browse\s+to|search)\s+)?([a-zA-Z0-9_\-\.]+\.[a-zA-Z]{2,10}|https?://\S+)$", clean, re.IGNORECASE)
         if domain_direct_match:
             candidate_target = domain_direct_match.group(1).strip()
             candidate_target = re.sub(r"[\.\,\?\!\;:]+$", "", candidate_target).strip()
@@ -661,13 +809,15 @@ class BrowserIntentParser:
             query_part = search_on_match.group(1).strip().lower()
             site_part = search_on_match.group(2).strip()
 
-            # Filter out non-website targets (e.g. "the web", "google search", in-app/desktop targets)
+            # Filter out non-website targets (e.g. "the web", "google search", in-app/desktop targets, filesystem/code targets)
             non_website_targets = {
                 "the web", "web", "internet", "google search",
                 "this application", "this app", "the current application", "current app", "the current app",
-                "app", "application", "this window", "current window", "window"
+                "app", "application", "this window", "current window", "window",
+                "project", "the project", "my project", "this project", "workspace", "repo", "repository", "folder", "directory"
             }
-            if site_part.lower() not in non_website_targets and not re.match(r"^(?:this|the\s+current|current)\s+(?:app|application|window)$", site_part.lower()):
+            is_fs_target = bool(re.search(r"\b(project|workspace|repo|repository|folder|directory|files?)\b", site_part.lower()))
+            if not is_fs_target and site_part.lower() not in non_website_targets and not re.match(r"^(?:this|the\s+current|current)\s+(?:app|application|window)$", site_part.lower()):
                 url, domain = self._resolve_site_destination(site_part)
                 return BrowserIntent(
                     action_type=BrowserActionType.SEARCH_WEBSITE,
@@ -690,13 +840,18 @@ class BrowserIntentParser:
         if search_site_for_match:
             site_part = search_site_for_match.group(1).strip()
             query_part = search_site_for_match.group(2).strip().lower()
+            raw_q = search_site_for_match.group(2).strip()
+            m_orig_q = re.match(r"^(?:search|find)\s+([a-zA-Z0-9_\-\.]+)\s+for\s+(.+)$", norm_text.rstrip(".?!,; "), re.IGNORECASE)
+            if m_orig_q:
+                raw_q = m_orig_q.group(2).strip()
 
             if site_part.lower() in ["google", "chrome", "chromium", "edge", "firefox", "brave", "opera"]:
                 b_dest = site_part.lower() if site_part.lower() != "google" else browser_name
+                is_explicit_b = site_part.lower() in ["chrome", "chromium", "edge", "firefox", "brave", "opera"]
                 return BrowserIntent(
                     action_type=BrowserActionType.SEARCH_WEB,
                     target_browser=b_dest,
-                    url=f"https://www.google.com/search?q={urllib.parse.quote_plus(query_part)}",
+                    url=f"https://www.google.com/search?q={urllib.parse.quote_plus(query_part.lower())}",
                     site_name="google",
                     domain="www.google.com",
                     search_query=query_part,
@@ -705,10 +860,11 @@ class BrowserIntentParser:
                     input_purpose="search_box",
                     submit=True,
                     raw_text=raw_text,
-                    normalized_text=norm_text
+                    normalized_text=norm_text,
+                    metadata={"explicit_browser": is_explicit_b, "raw_query": raw_q}
                 )
 
-            if site_part not in ["the", "this", "my", "web", "the web"]:
+            if site_part.lower() not in ["the", "this", "my", "web", "the web"]:
                 url, domain = self._resolve_site_destination(site_part)
                 return BrowserIntent(
                     action_type=BrowserActionType.SEARCH_WEBSITE,
@@ -734,10 +890,14 @@ class BrowserIntentParser:
         web_search_match = re.match(r"^(?:search\s+(?:the\s+)?web\s+for|google\s+for|search\s+google\s+for)\s+(.+)$", clean, re.IGNORECASE)
         if web_search_match:
             q = web_search_match.group(1).strip()
+            # Preserve raw casing if available
+            raw_wm = re.match(r"^(?:search\s+(?:the\s+)?web\s+for|google\s+for|search\s+google\s+for)\s+(.+)$", norm_text.strip().rstrip(".,!?"), re.IGNORECASE)
+            if raw_wm:
+                q = raw_wm.group(1).strip()
             return BrowserIntent(
                 action_type=BrowserActionType.SEARCH_WEB,
                 target_browser=browser_name,
-                url=f"https://www.google.com/search?q={urllib.parse.quote_plus(q)}",
+                url=f"https://www.google.com/search?q={urllib.parse.quote_plus(q.lower())}",
                 site_name="google",
                 domain="www.google.com",
                 search_query=q,
@@ -762,7 +922,7 @@ class BrowserIntentParser:
         # "Search for X" without explicit destination: ambiguous destination
         bare_search_for_match = re.match(r"^search\s+for\s+(.+)$", clean, re.IGNORECASE)
         if bare_search_for_match:
-            q = bare_search_for_match.group(1).strip().lower()
+            q = bare_search_for_match.group(1).strip()
             # Clean deictic references like "there", "on it", "in it" (e.g. "search for Naruto there")
             if re.search(r"\bthere\b", q, re.IGNORECASE) or re.search(r"\b(?:on|in)\s+it\b", q, re.IGNORECASE):
                 q = re.sub(r"\bthere\b", "", q, flags=re.IGNORECASE).strip()
@@ -772,13 +932,22 @@ class BrowserIntentParser:
             active_site = session_context.get("active_site") or session_context.get("last_site")
             active_url = session_context.get("active_url") or session_context.get("last_url")
 
-            # Destination cannot be determined from explicit wording or reliable context -> ask clarification!
+            # Destination cannot be determined from explicit wording or reliable context -> fallback to Google web search
             if not active_site and not active_url:
+                raw_bfm = re.match(r"^search\s+for\s+(.+)$", norm_text.strip().rstrip(".,!?"), re.IGNORECASE)
+                if raw_bfm:
+                    q = raw_bfm.group(1).strip()
                 return BrowserIntent(
-                    action_type=BrowserActionType.CLARIFICATION_NEEDED,
+                    action_type=BrowserActionType.SEARCH_WEB,
                     target_browser=browser_name,
+                    url=f"https://www.google.com/search?q={urllib.parse.quote_plus(q)}",
+                    site_name="google",
+                    domain="www.google.com",
                     search_query=q,
-                    clarification_prompt=f"Where would you like me to search for '{q}'? (e.g., on Google, YouTube, or a specific website)",
+                    search_scope=SearchScope.WEB_SEARCH,
+                    tab_preference=tab_pref,
+                    input_purpose="search_box",
+                    submit=True,
                     raw_text=raw_text,
                     normalized_text=norm_text
                 )
@@ -802,6 +971,10 @@ class BrowserIntentParser:
         # General explicit web search without "for": "search AI news", "search quantum computing"
         general_search_match = re.match(r"^(?:search|look\s+up|find)\s+(.+)$", clean, re.IGNORECASE)
         if general_search_match:
+            cand = general_search_match.group(1).strip()
+            # Exclude local file / project / application discovery searches from browser web search
+            if re.search(r"\b(?:project\s+code|code\s+for|files?\s+in|in\s+(?:the\s+|my\s+)?project|in\s+(?:the\s+|my\s+)?(?:folder|directory|repo|workspace)|(?:my\s+)?available\s+browsers|installed\s+(?:apps|applications|browsers)|readme|file|files|document|documents|created|saved|written|downloaded|modified)\b", cand, re.IGNORECASE):
+                return BrowserIntent(action_type=BrowserActionType.UNKNOWN, raw_text=raw_text, normalized_text=norm_text)
             # Extract preserving case from norm_text
             m_orig = re.match(r"^(?:search|look\s+up|find)\s+(.+)$", norm_text.rstrip(".?!,; "), re.IGNORECASE)
             q = m_orig.group(1).strip() if m_orig else general_search_match.group(1).strip()

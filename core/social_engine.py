@@ -118,7 +118,9 @@ class SocialEngine:
             return f"{prefix}My name is {name}."
 
         if sub_type == "acronym":
-            return f"{name} stands for {full_name}."
+            if "jarvis" in name.lower():
+                return f"{prefix}JARVIS stands for Just A Rather Very Intelligent System."
+            return f"{prefix}{name} stands for {full_name}, inspired by JARVIS (Just A Rather Very Intelligent System)."
 
         if sub_type == "creator":
             if creator:

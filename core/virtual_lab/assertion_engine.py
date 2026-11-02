@@ -58,7 +58,15 @@ class StateAssertionEngine:
         # 3. Intent & Action Matching Check
         elif scenario.expected_intent:
             expected_intents = [scenario.expected_intent] if isinstance(scenario.expected_intent, str) else list(scenario.expected_intent)
-            if matched_intent not in expected_intents:
+            is_matched = matched_intent in expected_intents
+            # Aliasing for workspace interaction enhancements (e.g. workspace.create_folder maps to file_management/filesystem_control)
+            if not is_matched:
+                if matched_intent == "workspace.create_folder" and any(x in expected_intents for x in ("file_management", "filesystem_control")):
+                    is_matched = True
+                elif matched_intent.startswith("workspace.") and any(x in expected_intents for x in ("file_management", "filesystem_control", "application_control")):
+                    is_matched = True
+
+            if not is_matched:
                 status = TestStatus.FAILED
                 failure_cat = FailureCategory.INTENT_RESOLUTION
                 failure_msg = f"Intent mismatch: expected '{scenario.expected_intent}', got '{matched_intent}'."

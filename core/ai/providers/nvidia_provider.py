@@ -64,7 +64,7 @@ class NvidiaNemotronProvider(BaseAIProvider):
             "User-Agent": "JARVIS-Assistant/1.1"
         }
         try:
-            resp = requests.get(url, headers=headers, timeout=min(5.0, self.timeout))
+            resp = requests.get(url, headers=headers, timeout=min(15.0, self.timeout))
             return resp.status_code == 200
         except Exception as e:
             logger.debug(f"[NVIDIA] Health check failed: {self._sanitize_error_message(str(e))}")
@@ -144,14 +144,13 @@ class NvidiaNemotronProvider(BaseAIProvider):
                     if content and isinstance(content, str) and content.strip():
                         return content.strip()
 
-                    # Nemotron reasoning fallback: if content is empty but reasoning finished
-                    reasoning_content = msg_obj.get("reasoning_content")
-                    if reasoning_content and isinstance(reasoning_content, str):
-                        # Extract the final concluding section from reasoning if content was omitted
-                        logger.warning("[NVIDIA] Response content was empty; extracting summary from reasoning.")
-                        lines = [line.strip() for line in reasoning_content.strip().split("\n") if line.strip()]
-                        if lines:
-                            return lines[-1]
+                    # Security Policy (Iteration 19): Never treat internal reasoning as a substitute for final answer.
+                    # Raw reasoning traces (<thought>, chain-of-thought tokens) must never leak into UI, TTS, or logs.
+                    if msg_obj.get("reasoning_content"):
+                        logger.warning(
+                            "[NVIDIA] Provider response omitted user-facing content (reasoning-only payload received). "
+                            "Internal reasoning suppressed for security and output integrity."
+                        )
 
                     return None
 

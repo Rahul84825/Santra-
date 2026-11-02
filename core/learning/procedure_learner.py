@@ -121,19 +121,20 @@ class ProcedureLearner:
             for p in patterns:
                 p_clean = p.lower().strip()
                 p_norm = re.sub(r"[^\w\s]", "", p_clean)
-                if p_clean == clean or p_norm == norm_query or p_clean in clean or clean in p_clean:
+                if p_clean == clean or p_norm == norm_query:
                     matches = True
                     break
-                # Try regex matching safely
+                # Try word-boundary regex matching safely
                 try:
-                    if re.search(rf"\b{re.escape(p_clean)}\b", clean):
+                    if re.search(rf"\b{re.escape(p_clean)}\b", clean) or re.search(rf"\b{re.escape(clean)}\b", p_clean):
                         matches = True
                         break
                 except Exception:
                     pass
 
-            if not matches and intent and proc.get("intent") == intent:
-                matches = True
+            # Intent compatibility check (if procedure specifies an intent, it must match)
+            if matches and intent and proc.get("intent") and proc.get("intent") != intent:
+                matches = False
 
             if matches:
                 # Validate Prerequisites against Real-World OS State

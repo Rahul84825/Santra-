@@ -22,6 +22,8 @@ class ProactiveDaemon:
         
         # State tracking to prevent notification spam
         self._last_battery_alert_time = 0.0
+        self._battery_alert_dispatched = False
+        self._battery_alert_cooldown = 600.0  # 10 minutes repeat cooldown if continuously low
         self._last_email_check_time = 0.0
         self._known_unread_count = 0
 
@@ -61,19 +63,60 @@ class ProactiveDaemon:
                 time.sleep(1.0)
 
     def _check_battery(self):
-        """Checks if battery is critically low and not plugged in."""
+        """Checks if battery is critically low and discharging using power_manager telemetry.
+        - Respects configurable low threshold (default 15%).
+        - Alerts once upon crossing threshold while discharging.
+        - Does not spam every polling cycle (has 10-min cooldown if continuously discharging below threshold).
+        - Re-arms immediately when plugged in or when charged above threshold + hysteresis.
+        - Emits no spurious warnings on missing or invalid telemetry.
+        """
         try:
-            battery = psutil.sensors_battery()
-            if battery and not battery.power_plugged:
-                if battery.percent <= 15:
-                    now = time.time()
-                    if now - self._last_battery_alert_time > 600:  # alert every 10 min
-                        self._last_battery_alert_time = now
-                        msg = f"Battery warning: Your battery is at {battery.percent}%. Please connect the charger."
-                        logger.warning(f"[PROACTIVE ALERT] {msg}")
-                        self._dispatch_alert("Low Battery", msg, speak=True)
+            from core.os.power_manager import power_manager
+            telemetry = power_manager.get_battery_telemetry()
+        except Exception as te:
+            logger.debug(f"[PROACTIVE_BATTERY] Failed to get battery telemetry: {te}")
+            return
+
+        if not telemetry or not telemetry.get("has_battery") or not telemetry.get("telemetry_available"):
+            # Missing or invalid telemetry: Do NOT generate an alert
+            return
+
+        percent = telemetry.get("percentage")
+        if percent is None:
+            return
+
+        power_plugged = telemetry.get("power_plugged", False)
+        is_charging = telemetry.get("is_charging", False)
+
+        try:
+            from config.settings import config
+            threshold = getattr(config, "low_battery_threshold", 15)
         except Exception:
-            pass
+            threshold = 15
+
+        # 1. Re-arm if plugged into AC power or actively charging
+        if power_plugged or is_charging:
+            if self._battery_alert_dispatched:
+                logger.info("[PROACTIVE_BATTERY] Power connected; re-arming low-battery alert.")
+                self._battery_alert_dispatched = False
+            return
+
+        # 2. Re-arm if battery recovered above threshold + hysteresis (e.g. 15% + 3% = 18%)
+        if percent > (threshold + 3):
+            if self._battery_alert_dispatched:
+                logger.info(f"[PROACTIVE_BATTERY] Battery recovered to {percent}%; re-arming low-battery alert.")
+                self._battery_alert_dispatched = False
+            return
+
+        # 3. Discharging and at or below threshold: trigger alert
+        if percent <= threshold:
+            now = time.time()
+            if not self._battery_alert_dispatched or (now - self._last_battery_alert_time > self._battery_alert_cooldown):
+                self._battery_alert_dispatched = True
+                self._last_battery_alert_time = now
+                msg = f"Battery warning: Your battery is at {percent}%. Please connect the charger."
+                logger.warning(f"[PROACTIVE ALERT] {msg}")
+                self._dispatch_alert("Low Battery", msg, speak=True)
 
     def _check_email_updates(self):
         """Checks for new unread emails periodically."""

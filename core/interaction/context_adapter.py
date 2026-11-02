@@ -368,7 +368,8 @@ class WindowsDesktopContextAdapter(BaseDesktopContextAdapter):
             pyperclip.copy(text)
             time.sleep(0.02)
             pyautogui.hotkey("ctrl", "v")
-            time.sleep(0.05)
+            # Wait for target application message loop to consume paste before restoring
+            time.sleep(0.12)
 
             # Restore original clipboard
             try:
@@ -386,6 +387,13 @@ class WindowsDesktopContextAdapter(BaseDesktopContextAdapter):
                 "message": f"Text inserted into {target_disp}."
             }
         except Exception as e:
+            if "FailSafeException" in type(e).__name__:
+                logger.critical("[EMERGENCY_STOP] Fail-safe triggered by mouse corner gesture. Aborting insertion.")
+                return {
+                    "success": False,
+                    "reason": "emergency_stop",
+                    "message": "Emergency stop activated."
+                }
             logger.error(f"[DESKTOP] Text insertion failed: {e}")
             return {
                 "success": False,

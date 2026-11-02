@@ -1,0 +1,13 @@
+{
+  "baseline_memory_mb": 19.41,
+  "startup_duration_ms": 2299.64,
+  "post_init_memory_mb": 108.54,
+  "idle_cpu_percent": 0.0,
+  "ui_render_tick_ms": 0.0005,
+  "simulated_fps": 1843317.9,
+  "cancellation_latency_us": 27.1,
+  "active_cpu_percent": 0.0,
+  "command_dispatch_avg_ms": 10.63,
+  "local_sapi_synth_ms": 317.72,
+  "peak_memory_mb": 113.62
+}

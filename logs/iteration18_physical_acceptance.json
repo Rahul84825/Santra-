@@ -1,0 +1,206 @@
+{
+  "timestamp_start": "2026-11-01T23:29:42.534891",
+  "platform": "win32",
+  "steps": [
+    {
+      "step": 1,
+      "name": "Start SANTRA",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:45.128056",
+      "details": {
+        "summary": "Runtime initialized and started in 2593.13ms",
+        "duration_ms": 2593.13
+      }
+    },
+    {
+      "step": 2,
+      "name": "Verify Initial Runtime State",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:45.128142",
+      "details": {
+        "summary": "Initial state is 'STANDBY' (Healthy=True)",
+        "current_status": "STANDBY",
+        "mic_active": true,
+        "mic_device": "Microphone (Realtek(R) Audio)",
+        "tts_provider": "EdgeTTS (Neural Cloud)"
+      }
+    },
+    {
+      "step": 3,
+      "name": "Say 'Santra' (Wake-Word Trigger)",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:45.129858",
+      "details": {
+        "summary": "Transitioned to 'LISTENING' in 1.68ms",
+        "post_wake_state": "LISTENING",
+        "latency_ms": 1.68
+      }
+    },
+    {
+      "step": 4,
+      "name": "Conversational Question: 'What is quicksort?'",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:47.036438",
+      "details": {
+        "summary": "Answer received (2519 chars, 1906.5ms)",
+        "snippet": "Certainly, Sir. Quicksort is a comparison-based, divide-and-conquer sorting algorithm devised by C. A. R. Hoare in 1959. It is widely used b...",
+        "topic": "quicksort",
+        "source": "Exact Response Cache"
+      }
+    },
+    {
+      "step": 5,
+      "name": "Continuation: 'Explain in detail.'",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:48.327309",
+      "details": {
+        "summary": "Topic preserved: 'quicksort', response 1187 chars (1290.8ms)",
+        "snippet": "Certainly, Sir. Below is a comprehensive technical treatment of quicksort, covering its mechanics, complexity analysis, and the practical nu...",
+        "topic": "quicksort"
+      }
+    },
+    {
+      "step": 6,
+      "name": "Continuation: 'Give an example.'",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:49.603221",
+      "details": {
+        "summary": "Example received (1468 chars, 1275.8ms)",
+        "snippet": "Certainly, Sir. Below is a complete, idiomatic Python implementation of quicksort using the **Lomuto partition scheme**, followed by a detai...",
+        "topic": "quicksort"
+      }
+    },
+    {
+      "step": 7,
+      "name": "Continuation: 'Re-explain.'",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:50.894007",
+      "details": {
+        "summary": "Re-explanation received (3305 chars, 1290.6ms)",
+        "snippet": "Certainly, Sir. Imagine you are a librarian faced with a long shelf of books arranged in no particular order. Your task is to arrange them b...",
+        "topic": "quicksort"
+      }
+    },
+    {
+      "step": 8,
+      "name": "Deterministic Local Command ('check battery')",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.246807",
+      "details": {
+        "summary": "Intent parsed in 352.69ms: intent=system_telemetry, action=battery_info",
+        "intent": "system_telemetry",
+        "action": "battery_info",
+        "confidence": 0.95
+      }
+    },
+    {
+      "step": 9,
+      "name": "Open HiAnime using Brave (Strict Browser Target)",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.303667",
+      "details": {
+        "summary": "Brave available=True, Home URL=https://hianime.at/, Watchlist URL=https://hianime.at/user/watching",
+        "brave_available": true,
+        "home_intent": "browser_action",
+        "home_url": "https://hianime.at/",
+        "watch_url": "https://hianime.at/user/watching"
+      }
+    },
+    {
+      "step": 10,
+      "name": "Query Installed Applications",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.304181",
+      "details": {
+        "summary": "Installed apps query answered in 0.4ms",
+        "snippet": "I have discovered 109 installed applications on your system, Sir, including chrome, notepad, Calculator, Spotify, Explorer, Administrative T...",
+        "source": "Application Discovery Registry"
+      }
+    },
+    {
+      "step": 11,
+      "name": "Verify Grounding Against logs/applications.db",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.304242",
+      "details": {
+        "summary": "Indexed database contains 109 applications (109 available)",
+        "samples": [
+          "chrome",
+          "notepad",
+          "Calculator",
+          "Spotify",
+          "Explorer"
+        ]
+      }
+    },
+    {
+      "step": 12,
+      "name": "Cancel Active Response",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.309834",
+      "details": {
+        "summary": "Cancel acknowledged in 5.547ms",
+        "latency_ms": 5.547
+      }
+    },
+    {
+      "step": 13,
+      "name": "Interrupt TTS (Barge-in)",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.388689",
+      "details": {
+        "summary": "Interruption stopped playback (Ack latency: 2.786ms, Active before=True, after=False)",
+        "ack_latency_ms": 2.786,
+        "speaking_before": true,
+        "speaking_after": false
+      }
+    },
+    {
+      "step": 14,
+      "name": "Enter Sleep Mode",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.830927",
+      "details": {
+        "summary": "Runtime state is 'SLEEPING', UI title is 'SYSTEM SLEEPING' (Zero STANDBY leak)",
+        "state": "SLEEPING",
+        "ui_title": "SYSTEM SLEEPING"
+      }
+    },
+    {
+      "step": 15,
+      "name": "Wake SANTRA",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.841096",
+      "details": {
+        "summary": "Woken up, state is 'LISTENING'",
+        "state": "LISTENING"
+      }
+    },
+    {
+      "step": 16,
+      "name": "Audio Device Watcher & Microphone Resolver Check",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.923309",
+      "details": {
+        "summary": "Resolved Audio Input: index=1 ('Microphone (Realtek(R) Audio)', Rate=16000Hz, Resample=False)",
+        "device_name": "Microphone (Realtek(R) Audio)",
+        "sample_rate": 16000,
+        "requires_resampling": false,
+        "total_audio_devices": 15
+      }
+    },
+    {
+      "step": 17,
+      "name": "Confirm Wake-Word Recognition After Recovery",
+      "status": "PASS",
+      "timestamp": "2026-11-01T23:29:51.923529",
+      "details": {
+        "summary": "Wake-word engine available=True, State transitioned to 'LISTENING'",
+        "available": true,
+        "state": "LISTENING"
+      }
+    }
+  ],
+  "overall_status": "PASSED",
+  "timestamp_end": "2026-11-01T23:29:54.137981"
+}

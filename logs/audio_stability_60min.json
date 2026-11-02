@@ -1,0 +1,1077 @@
+{
+  "timestamp": "2026-11-01T13:24:04",
+  "total_intervals": 60,
+  "total_hotswaps": 20,
+  "successful_hotswaps": 20,
+  "hotswap_success_rate_percent": 100.0,
+  "total_recognitions": 60,
+  "successful_recognitions": 60,
+  "recognition_success_rate_percent": 100.0,
+  "hotswap_latency_stats": {
+    "min_ms": 761.99,
+    "median_ms": 828.25,
+    "p95_ms": 887.08,
+    "max_ms": 903.16
+  },
+  "recognition_latency_stats": {
+    "min_ms": 856.82,
+    "median_ms": 948.01,
+    "p95_ms": 1095.62,
+    "max_ms": 1248.13
+  },
+  "resource_stability": {
+    "initial_memory_mb": 33.92,
+    "final_memory_mb": 896.49,
+    "memory_drift_mb": 862.57,
+    "initial_handles": 162,
+    "final_handles": 553,
+    "handle_leak_count": 391,
+    "initial_threads": 15,
+    "final_threads": 33,
+    "leak_detected": true
+  },
+  "unhandled_exceptions_count": 0,
+  "unhandled_exceptions": [],
+  "telemetry_intervals": [
+    {
+      "minute": 1,
+      "memory_rss_mb": 894.32,
+      "delta_rss_mb": 860.4,
+      "kernel_handles": 564,
+      "delta_handles": 402,
+      "thread_count": 39,
+      "cpu_percent": 0.0,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 1248.13,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 2,
+      "memory_rss_mb": 894.51,
+      "delta_rss_mb": 860.59,
+      "kernel_handles": 564,
+      "delta_handles": 402,
+      "thread_count": 39,
+      "cpu_percent": 401.1,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 872.41,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 3,
+      "memory_rss_mb": 895.94,
+      "delta_rss_mb": 862.02,
+      "kernel_handles": 569,
+      "delta_handles": 407,
+      "thread_count": 40,
+      "cpu_percent": 233.0,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 984.03,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 828.38,
+        "success": true
+      }
+    },
+    {
+      "minute": 4,
+      "memory_rss_mb": 896.11,
+      "delta_rss_mb": 862.19,
+      "kernel_handles": 568,
+      "delta_handles": 406,
+      "thread_count": 40,
+      "cpu_percent": 368.8,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 1183.49,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 5,
+      "memory_rss_mb": 896.12,
+      "delta_rss_mb": 862.2,
+      "kernel_handles": 568,
+      "delta_handles": 406,
+      "thread_count": 40,
+      "cpu_percent": 385.7,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 1094.65,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 6,
+      "memory_rss_mb": 896.21,
+      "delta_rss_mb": 862.29,
+      "kernel_handles": 570,
+      "delta_handles": 408,
+      "thread_count": 40,
+      "cpu_percent": 233.5,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 987.02,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 790.7,
+        "success": true
+      }
+    },
+    {
+      "minute": 7,
+      "memory_rss_mb": 896.29,
+      "delta_rss_mb": 862.37,
+      "kernel_handles": 569,
+      "delta_handles": 407,
+      "thread_count": 40,
+      "cpu_percent": 391.1,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 955.29,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 8,
+      "memory_rss_mb": 896.29,
+      "delta_rss_mb": 862.37,
+      "kernel_handles": 571,
+      "delta_handles": 409,
+      "thread_count": 40,
+      "cpu_percent": 411.4,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 929.0,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 9,
+      "memory_rss_mb": 896.3,
+      "delta_rss_mb": 862.38,
+      "kernel_handles": 572,
+      "delta_handles": 410,
+      "thread_count": 40,
+      "cpu_percent": 227.5,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 926.57,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 796.58,
+        "success": true
+      }
+    },
+    {
+      "minute": 10,
+      "memory_rss_mb": 896.29,
+      "delta_rss_mb": 862.37,
+      "kernel_handles": 572,
+      "delta_handles": 410,
+      "thread_count": 40,
+      "cpu_percent": 380.2,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 1012.55,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 11,
+      "memory_rss_mb": 896.3,
+      "delta_rss_mb": 862.38,
+      "kernel_handles": 572,
+      "delta_handles": 410,
+      "thread_count": 40,
+      "cpu_percent": 396.6,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 983.43,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 12,
+      "memory_rss_mb": 896.3,
+      "delta_rss_mb": 862.38,
+      "kernel_handles": 573,
+      "delta_handles": 411,
+      "thread_count": 40,
+      "cpu_percent": 231.4,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 1019.89,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 797.92,
+        "success": true
+      }
+    },
+    {
+      "minute": 13,
+      "memory_rss_mb": 896.3,
+      "delta_rss_mb": 862.38,
+      "kernel_handles": 572,
+      "delta_handles": 410,
+      "thread_count": 40,
+      "cpu_percent": 389.1,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 1013.21,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 14,
+      "memory_rss_mb": 896.29,
+      "delta_rss_mb": 862.37,
+      "kernel_handles": 573,
+      "delta_handles": 411,
+      "thread_count": 40,
+      "cpu_percent": 408.0,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 907.32,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 15,
+      "memory_rss_mb": 896.31,
+      "delta_rss_mb": 862.39,
+      "kernel_handles": 575,
+      "delta_handles": 413,
+      "thread_count": 40,
+      "cpu_percent": 216.9,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 961.43,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 884.96,
+        "success": true
+      }
+    },
+    {
+      "minute": 16,
+      "memory_rss_mb": 896.39,
+      "delta_rss_mb": 862.47,
+      "kernel_handles": 574,
+      "delta_handles": 412,
+      "thread_count": 40,
+      "cpu_percent": 381.6,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 893.33,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 17,
+      "memory_rss_mb": 896.39,
+      "delta_rss_mb": 862.47,
+      "kernel_handles": 574,
+      "delta_handles": 412,
+      "thread_count": 40,
+      "cpu_percent": 386.5,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 992.41,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 18,
+      "memory_rss_mb": 896.39,
+      "delta_rss_mb": 862.47,
+      "kernel_handles": 575,
+      "delta_handles": 413,
+      "thread_count": 40,
+      "cpu_percent": 221.9,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 935.19,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 799.55,
+        "success": true
+      }
+    },
+    {
+      "minute": 19,
+      "memory_rss_mb": 896.4,
+      "delta_rss_mb": 862.48,
+      "kernel_handles": 575,
+      "delta_handles": 413,
+      "thread_count": 40,
+      "cpu_percent": 374.4,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 1091.3,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 20,
+      "memory_rss_mb": 896.39,
+      "delta_rss_mb": 862.47,
+      "kernel_handles": 573,
+      "delta_handles": 411,
+      "thread_count": 39,
+      "cpu_percent": 394.6,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 876.07,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 21,
+      "memory_rss_mb": 896.4,
+      "delta_rss_mb": 862.48,
+      "kernel_handles": 574,
+      "delta_handles": 412,
+      "thread_count": 39,
+      "cpu_percent": 223.3,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 999.95,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 875.67,
+        "success": true
+      }
+    },
+    {
+      "minute": 22,
+      "memory_rss_mb": 896.28,
+      "delta_rss_mb": 862.36,
+      "kernel_handles": 574,
+      "delta_handles": 412,
+      "thread_count": 39,
+      "cpu_percent": 410.6,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 866.92,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 23,
+      "memory_rss_mb": 896.42,
+      "delta_rss_mb": 862.5,
+      "kernel_handles": 574,
+      "delta_handles": 412,
+      "thread_count": 39,
+      "cpu_percent": 377.4,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 946.52,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 24,
+      "memory_rss_mb": 896.43,
+      "delta_rss_mb": 862.51,
+      "kernel_handles": 575,
+      "delta_handles": 413,
+      "thread_count": 39,
+      "cpu_percent": 217.0,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 893.14,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 874.66,
+        "success": true
+      }
+    },
+    {
+      "minute": 25,
+      "memory_rss_mb": 896.42,
+      "delta_rss_mb": 862.5,
+      "kernel_handles": 575,
+      "delta_handles": 413,
+      "thread_count": 39,
+      "cpu_percent": 394.2,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 907.52,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 26,
+      "memory_rss_mb": 896.42,
+      "delta_rss_mb": 862.5,
+      "kernel_handles": 575,
+      "delta_handles": 413,
+      "thread_count": 39,
+      "cpu_percent": 387.5,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 941.07,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 27,
+      "memory_rss_mb": 896.49,
+      "delta_rss_mb": 862.57,
+      "kernel_handles": 576,
+      "delta_handles": 414,
+      "thread_count": 39,
+      "cpu_percent": 230.1,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 949.5,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 836.94,
+        "success": true
+      }
+    },
+    {
+      "minute": 28,
+      "memory_rss_mb": 896.49,
+      "delta_rss_mb": 862.57,
+      "kernel_handles": 576,
+      "delta_handles": 414,
+      "thread_count": 39,
+      "cpu_percent": 404.9,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 938.43,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 29,
+      "memory_rss_mb": 896.49,
+      "delta_rss_mb": 862.57,
+      "kernel_handles": 576,
+      "delta_handles": 414,
+      "thread_count": 39,
+      "cpu_percent": 374.8,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 856.82,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 30,
+      "memory_rss_mb": 896.52,
+      "delta_rss_mb": 862.6,
+      "kernel_handles": 577,
+      "delta_handles": 415,
+      "thread_count": 39,
+      "cpu_percent": 225.2,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 933.67,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 843.23,
+        "success": true
+      }
+    },
+    {
+      "minute": 31,
+      "memory_rss_mb": 896.53,
+      "delta_rss_mb": 862.61,
+      "kernel_handles": 577,
+      "delta_handles": 415,
+      "thread_count": 39,
+      "cpu_percent": 388.7,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 865.32,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 32,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 577,
+      "delta_handles": 415,
+      "thread_count": 39,
+      "cpu_percent": 390.0,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 976.42,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 33,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 578,
+      "delta_handles": 416,
+      "thread_count": 39,
+      "cpu_percent": 216.0,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 892.73,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 879.34,
+        "success": true
+      }
+    },
+    {
+      "minute": 34,
+      "memory_rss_mb": 896.53,
+      "delta_rss_mb": 862.61,
+      "kernel_handles": 578,
+      "delta_handles": 416,
+      "thread_count": 39,
+      "cpu_percent": 390.2,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 994.16,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 35,
+      "memory_rss_mb": 896.48,
+      "delta_rss_mb": 862.56,
+      "kernel_handles": 578,
+      "delta_handles": 416,
+      "thread_count": 39,
+      "cpu_percent": 392.7,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 921.28,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 36,
+      "memory_rss_mb": 896.48,
+      "delta_rss_mb": 862.56,
+      "kernel_handles": 580,
+      "delta_handles": 418,
+      "thread_count": 39,
+      "cpu_percent": 221.5,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 958.53,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 886.23,
+        "success": true
+      }
+    },
+    {
+      "minute": 37,
+      "memory_rss_mb": 896.55,
+      "delta_rss_mb": 862.63,
+      "kernel_handles": 579,
+      "delta_handles": 417,
+      "thread_count": 39,
+      "cpu_percent": 388.7,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 909.12,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 38,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 579,
+      "delta_handles": 417,
+      "thread_count": 39,
+      "cpu_percent": 392.5,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 916.73,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 39,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 580,
+      "delta_handles": 418,
+      "thread_count": 39,
+      "cpu_percent": 218.2,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 907.76,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 903.16,
+        "success": true
+      }
+    },
+    {
+      "minute": 40,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 580,
+      "delta_handles": 418,
+      "thread_count": 39,
+      "cpu_percent": 399.2,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 910.14,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 41,
+      "memory_rss_mb": 896.53,
+      "delta_rss_mb": 862.61,
+      "kernel_handles": 580,
+      "delta_handles": 418,
+      "thread_count": 39,
+      "cpu_percent": 388.7,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 978.29,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 42,
+      "memory_rss_mb": 896.38,
+      "delta_rss_mb": 862.46,
+      "kernel_handles": 578,
+      "delta_handles": 416,
+      "thread_count": 36,
+      "cpu_percent": 225.8,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 915.71,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 811.33,
+        "success": true
+      }
+    },
+    {
+      "minute": 43,
+      "memory_rss_mb": 896.5,
+      "delta_rss_mb": 862.58,
+      "kernel_handles": 578,
+      "delta_handles": 416,
+      "thread_count": 36,
+      "cpu_percent": 374.7,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 1002.75,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 44,
+      "memory_rss_mb": 896.37,
+      "delta_rss_mb": 862.45,
+      "kernel_handles": 578,
+      "delta_handles": 416,
+      "thread_count": 36,
+      "cpu_percent": 415.8,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 864.52,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 45,
+      "memory_rss_mb": 896.5,
+      "delta_rss_mb": 862.58,
+      "kernel_handles": 579,
+      "delta_handles": 417,
+      "thread_count": 36,
+      "cpu_percent": 238.7,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 946.37,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 765.17,
+        "success": true
+      }
+    },
+    {
+      "minute": 46,
+      "memory_rss_mb": 896.52,
+      "delta_rss_mb": 862.6,
+      "kernel_handles": 579,
+      "delta_handles": 417,
+      "thread_count": 36,
+      "cpu_percent": 395.0,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 892.79,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 47,
+      "memory_rss_mb": 896.52,
+      "delta_rss_mb": 862.6,
+      "kernel_handles": 579,
+      "delta_handles": 417,
+      "thread_count": 36,
+      "cpu_percent": 387.4,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 932.12,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 48,
+      "memory_rss_mb": 896.6,
+      "delta_rss_mb": 862.68,
+      "kernel_handles": 581,
+      "delta_handles": 419,
+      "thread_count": 36,
+      "cpu_percent": 238.0,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 976.58,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 790.35,
+        "success": true
+      }
+    },
+    {
+      "minute": 49,
+      "memory_rss_mb": 896.49,
+      "delta_rss_mb": 862.57,
+      "kernel_handles": 580,
+      "delta_handles": 418,
+      "thread_count": 36,
+      "cpu_percent": 396.2,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 937.71,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 50,
+      "memory_rss_mb": 896.57,
+      "delta_rss_mb": 862.65,
+      "kernel_handles": 580,
+      "delta_handles": 418,
+      "thread_count": 36,
+      "cpu_percent": 392.8,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 945.4,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 51,
+      "memory_rss_mb": 896.44,
+      "delta_rss_mb": 862.52,
+      "kernel_handles": 581,
+      "delta_handles": 419,
+      "thread_count": 36,
+      "cpu_percent": 231.3,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 1114.11,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 802.63,
+        "success": true
+      }
+    },
+    {
+      "minute": 52,
+      "memory_rss_mb": 896.41,
+      "delta_rss_mb": 862.49,
+      "kernel_handles": 581,
+      "delta_handles": 419,
+      "thread_count": 36,
+      "cpu_percent": 390.4,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 1017.27,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 53,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 581,
+      "delta_handles": 419,
+      "thread_count": 36,
+      "cpu_percent": 382.8,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 1006.04,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 54,
+      "memory_rss_mb": 896.54,
+      "delta_rss_mb": 862.62,
+      "kernel_handles": 582,
+      "delta_handles": 420,
+      "thread_count": 36,
+      "cpu_percent": 237.7,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 941.44,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 761.99,
+        "success": true
+      }
+    },
+    {
+      "minute": 55,
+      "memory_rss_mb": 896.55,
+      "delta_rss_mb": 862.63,
+      "kernel_handles": 582,
+      "delta_handles": 420,
+      "thread_count": 36,
+      "cpu_percent": 391.5,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 1031.86,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 56,
+      "memory_rss_mb": 896.5,
+      "delta_rss_mb": 862.58,
+      "kernel_handles": 582,
+      "delta_handles": 420,
+      "thread_count": 36,
+      "cpu_percent": 392.1,
+      "speech_recognition": {
+        "sample": "cmd_open_chrome.wav",
+        "hyp": "Open Chrome.",
+        "latency_ms": 990.07,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 57,
+      "memory_rss_mb": 896.51,
+      "delta_rss_mb": 862.59,
+      "kernel_handles": 583,
+      "delta_handles": 421,
+      "thread_count": 36,
+      "cpu_percent": 229.4,
+      "speech_recognition": {
+        "sample": "cmd_open_vscode.wav",
+        "hyp": "Open VS Code.",
+        "latency_ms": 1001.99,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 842.1,
+        "success": true
+      }
+    },
+    {
+      "minute": 58,
+      "memory_rss_mb": 896.56,
+      "delta_rss_mb": 862.64,
+      "kernel_handles": 583,
+      "delta_handles": 421,
+      "thread_count": 36,
+      "cpu_percent": 391.5,
+      "speech_recognition": {
+        "sample": "cmd_take_screenshot.wav",
+        "hyp": "Take screenshot.",
+        "latency_ms": 987.31,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 59,
+      "memory_rss_mb": 896.57,
+      "delta_rss_mb": 862.65,
+      "kernel_handles": 583,
+      "delta_handles": 421,
+      "thread_count": 36,
+      "cpu_percent": 391.1,
+      "speech_recognition": {
+        "sample": "cmd_lock_computer.wav",
+        "hyp": "Lock computer.",
+        "latency_ms": 954.51,
+        "success": true
+      },
+      "hotswap": null
+    },
+    {
+      "minute": 60,
+      "memory_rss_mb": 896.57,
+      "delta_rss_mb": 862.65,
+      "kernel_handles": 585,
+      "delta_handles": 423,
+      "thread_count": 36,
+      "cpu_percent": 231.5,
+      "speech_recognition": {
+        "sample": "cmd_open_downloads.wav",
+        "hyp": "Open downloads.",
+        "latency_ms": 961.95,
+        "success": true
+      },
+      "hotswap": {
+        "occurred": true,
+        "latency_ms": 828.13,
+        "success": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-11-01T12:20:09+0530",
+  "total_utterances": 52,
+  "exact_match_count": 32,
+  "exact_match_percentage": 61.54,
+  "false_command_execution_rate": 0.0,
+  "safety_word_preservation_count": 5,
+  "stage_latency_breakdown_ms": {
+    "stage_a_audio_capture_ms": 2464.0,
+    "stage_b_vad_ms": 4.2,
+    "stage_c_whisper_stt_ms": 1094.0,
+    "stage_d_validation_ms": 0.63,
+    "stage_e_formatting_ms": 8.08,
+    "stage_f_insertion_ms": 8.5,
+    "total_e2e_latency_ms": 3579.42
+  },
+  "category_summary": {
+    "short_sentences": {
+      "count": 5,
+      "exact": 5,
+      "wer": 1.0999999999999999,
+      "cer": 0.185970695970696,
+      "dropped": 5,
+      "dup": 0
+    },
+    "long_technical": {
+      "count": 4,
+      "exact": 4,
+      "wer": 0.11074838674017881,
+      "cer": 0.01455567817644841,
+      "dropped": 4,
+      "dup": 0
+    },
+    "indian_english": {
+      "count": 5,
+      "exact": 5,
+      "wer": 0.7678571428571428,
+      "cer": 0.12367885737450955,
+      "dropped": 5,
+      "dup": 0
+    },
+    "code_snippets": {
+      "count": 4,
+      "exact": 1,
+      "wer": 1.9714285714285715,
+      "cer": 1.1311445508435933,
+      "dropped": 5,
+      "dup": 0
+    },
+    "file_paths": {
+      "count": 4,
+      "exact": 3,
+      "wer": 1.2,
+      "cer": 0.22174428281951078,
+      "dropped": 4,
+      "dup": 0
+    },
+    "urls": {
+      "count": 4,
+      "exact": 2,
+      "wer": 2.5,
+      "cer": 0.16414320685434516,
+      "dropped": 4,
+      "dup": 0
+    },
+    "numbers_versions": {
+      "count": 4,
+      "exact": 0,
+      "wer": 3.7666666666666666,
+      "cer": 3.2816532258064512,
+      "dropped": 6,
+      "dup": 0
+    },
+    "natural_pauses": {
+      "count": 4,
+      "exact": 0,
+      "wer": 1.5892857142857144,
+      "cer": 0.5708585200110624,
+      "dropped": 11,
+      "dup": 0
+    },
+    "self_corrections": {
+      "count": 4,
+      "exact": 1,
+      "wer": 2.583333333333333,
+      "cer": 1.532857142857143,
+      "dropped": 4,
+      "dup": 0
+    },
+    "noise_rejection": {
+      "count": 4,
+      "exact": 1,
+      "wer": 4.0,
+      "cer": 4.0,
+      "dropped": 0,
+      "dup": 0
+    },
+    "safety_commands": {
+      "count": 5,
+      "exact": 5,
+      "wer": 0.0,
+      "cer": 0.0,
+      "dropped": 0,
+      "dup": 0
+    },
+    "safety_word_preservation": {
+      "count": 5,
+      "exact": 5,
+      "wer": 0.6468253968253967,
+      "cer": 0.11157343842698533,
+      "dropped": 5,
+      "dup": 0
+    }
+  }
+}

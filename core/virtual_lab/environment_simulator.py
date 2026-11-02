@@ -224,7 +224,7 @@ class VirtualBrowser:
             "wikipedia": "https://en.wikipedia.org/wiki/Special:Search?search="
         }
         base_endpoint = site_endpoints.get(site_lower, f"https://www.{site_lower}.com/search?q=")
-        q_enc = query.strip().replace(' ', '+') if query else ""
+        q_enc = query.strip().lower().replace(' ', '+') if query else ""
         dest_url = f"{base_endpoint}{q_enc}"
 
         self.open_url(dest_url, site_name=site, new_tab=new_tab)

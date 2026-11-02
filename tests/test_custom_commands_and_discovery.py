@@ -192,8 +192,10 @@ class TestCustomCommandsAndDiscovery(unittest.TestCase):
 
         app1 = DiscoveredApplication(app_id="code_editor_pro", display_name="Code Editor Pro", executable_path=dummy_exe1, is_available=True)
         app2 = DiscoveredApplication(app_id="code_editor_lite", display_name="Code Editor Lite", executable_path=dummy_exe2, is_available=True)
-        self.discovery._cached_apps["code_editor_pro"] = app1
-        self.discovery._cached_apps["code_editor_lite"] = app2
+        self.discovery._cached_apps = {
+            "code_editor_pro": app1,
+            "code_editor_lite": app2
+        }
 
         best, cands = self.discovery.find_application("Code Editor")
         self.assertIsNone(best)

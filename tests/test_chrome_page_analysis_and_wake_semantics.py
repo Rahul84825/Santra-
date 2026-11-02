@@ -331,8 +331,9 @@ class TestDeterministicCommandLatency(unittest.TestCase):
             "Santra, open Chrome.",
             "Santra, go to sleep."
         ]
-        # Warmup
+        # Warmup router and application resolver cache
         intelligence_router.route("warmup")
+        intelligence_router.route("Open Chrome.")
 
         latencies = []
         for cmd in test_commands:

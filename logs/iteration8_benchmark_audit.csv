@@ -1,0 +1,130 @@
+id,filename,category,ground_truth,hypothesis,exact_match,intent_match,predicted_intent,predicted_action,target,wer,cer,latency_ms,is_command,is_noise,is_dangerous
+lock_computer_NeerjaNeural_m10pct,lock_computer_NeerjaNeural_m10pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,620.8,True,False,True
+lock_computer_NeerjaNeural_m15pct,lock_computer_NeerjaNeural_m15pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,344.6,True,False,True
+lock_computer_NeerjaNeural_m20pct,lock_computer_NeerjaNeural_m20pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,311.1,True,False,True
+lock_computer_NeerjaNeural_m5pct,lock_computer_NeerjaNeural_m5pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,315.5,True,False,True
+lock_computer_NeerjaNeural_p0pct,lock_computer_NeerjaNeural_p0pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,320.5,True,False,True
+lock_computer_NeerjaNeural_p10pct,lock_computer_NeerjaNeural_p10pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,346.2,True,False,True
+lock_computer_NeerjaNeural_p15pct,lock_computer_NeerjaNeural_p15pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,322.8,True,False,True
+lock_computer_NeerjaNeural_p20pct,lock_computer_NeerjaNeural_p20pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,726.2,True,False,True
+lock_computer_NeerjaNeural_p25pct,lock_computer_NeerjaNeural_p25pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,421.8,True,False,True
+lock_computer_NeerjaNeural_p5pct,lock_computer_NeerjaNeural_p5pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,302.4,True,False,True
+lock_computer_PrabhatNeural_m10pct,lock_computer_PrabhatNeural_m10pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,338.5,True,False,True
+lock_computer_PrabhatNeural_m15pct,lock_computer_PrabhatNeural_m15pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,316.4,True,False,True
+lock_computer_PrabhatNeural_m20pct,lock_computer_PrabhatNeural_m20pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,297.3,True,False,True
+lock_computer_PrabhatNeural_m5pct,lock_computer_PrabhatNeural_m5pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,316.6,True,False,True
+lock_computer_PrabhatNeural_p0pct,lock_computer_PrabhatNeural_p0pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,330.5,True,False,True
+lock_computer_PrabhatNeural_p10pct,lock_computer_PrabhatNeural_p10pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,308.8,True,False,True
+lock_computer_PrabhatNeural_p15pct,lock_computer_PrabhatNeural_p15pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,339.2,True,False,True
+lock_computer_PrabhatNeural_p20pct,lock_computer_PrabhatNeural_p20pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,298.4,True,False,True
+lock_computer_PrabhatNeural_p25pct,lock_computer_PrabhatNeural_p25pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,300.6,True,False,True
+lock_computer_PrabhatNeural_p5pct,lock_computer_PrabhatNeural_p5pct.wav,indian_accent_command,Lock computer,Lock computer.,True,True,system_control,lock_pc,,0.0,0.083,316.1,True,False,True
+open_chrome_NeerjaNeural_m10pct,open_chrome_NeerjaNeural_m10pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,302.6,True,False,False
+open_chrome_NeerjaNeural_m15pct,open_chrome_NeerjaNeural_m15pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,297.0,True,False,False
+open_chrome_NeerjaNeural_m20pct,open_chrome_NeerjaNeural_m20pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,431.0,True,False,False
+open_chrome_NeerjaNeural_m5pct,open_chrome_NeerjaNeural_m5pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,472.7,True,False,False
+open_chrome_NeerjaNeural_p0pct,open_chrome_NeerjaNeural_p0pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,478.6,True,False,False
+open_chrome_NeerjaNeural_p10pct,open_chrome_NeerjaNeural_p10pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,357.9,True,False,False
+open_chrome_NeerjaNeural_p15pct,open_chrome_NeerjaNeural_p15pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,347.6,True,False,False
+open_chrome_NeerjaNeural_p20pct,open_chrome_NeerjaNeural_p20pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,258.4,True,False,False
+open_chrome_NeerjaNeural_p25pct,open_chrome_NeerjaNeural_p25pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,294.8,True,False,False
+open_chrome_NeerjaNeural_p5pct,open_chrome_NeerjaNeural_p5pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,423.6,True,False,False
+open_chrome_PrabhatNeural_m10pct,open_chrome_PrabhatNeural_m10pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,433.6,True,False,False
+open_chrome_PrabhatNeural_m15pct,open_chrome_PrabhatNeural_m15pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,550.9,True,False,False
+open_chrome_PrabhatNeural_m20pct,open_chrome_PrabhatNeural_m20pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,271.0,True,False,False
+open_chrome_PrabhatNeural_m5pct,open_chrome_PrabhatNeural_m5pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,274.5,True,False,False
+open_chrome_PrabhatNeural_p0pct,open_chrome_PrabhatNeural_p0pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,256.5,True,False,False
+open_chrome_PrabhatNeural_p10pct,open_chrome_PrabhatNeural_p10pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,288.1,True,False,False
+open_chrome_PrabhatNeural_p15pct,open_chrome_PrabhatNeural_p15pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,439.8,True,False,False
+open_chrome_PrabhatNeural_p20pct,open_chrome_PrabhatNeural_p20pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,349.5,True,False,False
+open_chrome_PrabhatNeural_p25pct,open_chrome_PrabhatNeural_p25pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,273.4,True,False,False
+open_chrome_PrabhatNeural_p5pct,open_chrome_PrabhatNeural_p5pct.wav,indian_accent_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,329.7,True,False,False
+open_downloads_NeerjaNeural_m10pct,open_downloads_NeerjaNeural_m10pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,339.6,True,False,False
+open_downloads_NeerjaNeural_m15pct,open_downloads_NeerjaNeural_m15pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,302.5,True,False,False
+open_downloads_NeerjaNeural_m20pct,open_downloads_NeerjaNeural_m20pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,351.8,True,False,False
+open_downloads_NeerjaNeural_m5pct,open_downloads_NeerjaNeural_m5pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,301.1,True,False,False
+open_downloads_NeerjaNeural_p0pct,open_downloads_NeerjaNeural_p0pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,300.3,True,False,False
+open_downloads_NeerjaNeural_p10pct,open_downloads_NeerjaNeural_p10pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,543.8,True,False,False
+open_downloads_NeerjaNeural_p15pct,open_downloads_NeerjaNeural_p15pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,359.5,True,False,False
+open_downloads_NeerjaNeural_p20pct,open_downloads_NeerjaNeural_p20pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,506.2,True,False,False
+open_downloads_NeerjaNeural_p25pct,open_downloads_NeerjaNeural_p25pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,306.9,True,False,False
+open_downloads_NeerjaNeural_p5pct,open_downloads_NeerjaNeural_p5pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,302.6,True,False,False
+open_downloads_PrabhatNeural_m10pct,open_downloads_PrabhatNeural_m10pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,340.1,True,False,False
+open_downloads_PrabhatNeural_m15pct,open_downloads_PrabhatNeural_m15pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,351.0,True,False,False
+open_downloads_PrabhatNeural_m20pct,open_downloads_PrabhatNeural_m20pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,349.4,True,False,False
+open_downloads_PrabhatNeural_m5pct,open_downloads_PrabhatNeural_m5pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,325.5,True,False,False
+open_downloads_PrabhatNeural_p0pct,open_downloads_PrabhatNeural_p0pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,260.1,True,False,False
+open_downloads_PrabhatNeural_p10pct,open_downloads_PrabhatNeural_p10pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,280.8,True,False,False
+open_downloads_PrabhatNeural_p15pct,open_downloads_PrabhatNeural_p15pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,318.3,True,False,False
+open_downloads_PrabhatNeural_p20pct,open_downloads_PrabhatNeural_p20pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,304.7,True,False,False
+open_downloads_PrabhatNeural_p25pct,open_downloads_PrabhatNeural_p25pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,265.3,True,False,False
+open_downloads_PrabhatNeural_p5pct,open_downloads_PrabhatNeural_p5pct.wav,indian_accent_command,Open downloads,Open downloads.,True,True,file_access,open_folder,downloads,0.0,0.077,570.5,True,False,False
+open_vs_code_NeerjaNeural_m10pct,open_vs_code_NeerjaNeural_m10pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,288.9,True,False,False
+open_vs_code_NeerjaNeural_m15pct,open_vs_code_NeerjaNeural_m15pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,331.4,True,False,False
+open_vs_code_NeerjaNeural_m20pct,open_vs_code_NeerjaNeural_m20pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,305.3,True,False,False
+open_vs_code_NeerjaNeural_m5pct,open_vs_code_NeerjaNeural_m5pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,305.1,True,False,False
+open_vs_code_NeerjaNeural_p0pct,open_vs_code_NeerjaNeural_p0pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,271.2,True,False,False
+open_vs_code_NeerjaNeural_p10pct,open_vs_code_NeerjaNeural_p10pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,336.5,True,False,False
+open_vs_code_NeerjaNeural_p15pct,open_vs_code_NeerjaNeural_p15pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,411.0,True,False,False
+open_vs_code_NeerjaNeural_p20pct,open_vs_code_NeerjaNeural_p20pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,381.4,True,False,False
+open_vs_code_NeerjaNeural_p25pct,open_vs_code_NeerjaNeural_p25pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,385.0,True,False,False
+open_vs_code_NeerjaNeural_p5pct,open_vs_code_NeerjaNeural_p5pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,340.3,True,False,False
+open_vs_code_PrabhatNeural_m10pct,open_vs_code_PrabhatNeural_m10pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,443.4,True,False,False
+open_vs_code_PrabhatNeural_m15pct,open_vs_code_PrabhatNeural_m15pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,279.6,True,False,False
+open_vs_code_PrabhatNeural_m20pct,open_vs_code_PrabhatNeural_m20pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,324.4,True,False,False
+open_vs_code_PrabhatNeural_m5pct,open_vs_code_PrabhatNeural_m5pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,319.4,True,False,False
+open_vs_code_PrabhatNeural_p0pct,open_vs_code_PrabhatNeural_p0pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,341.0,True,False,False
+open_vs_code_PrabhatNeural_p10pct,open_vs_code_PrabhatNeural_p10pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,287.6,True,False,False
+open_vs_code_PrabhatNeural_p15pct,open_vs_code_PrabhatNeural_p15pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,533.8,True,False,False
+open_vs_code_PrabhatNeural_p20pct,open_vs_code_PrabhatNeural_p20pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,297.8,True,False,False
+open_vs_code_PrabhatNeural_p25pct,open_vs_code_PrabhatNeural_p25pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,316.3,True,False,False
+open_vs_code_PrabhatNeural_p5pct,open_vs_code_PrabhatNeural_p5pct.wav,indian_accent_command,Open VS Code,Open VS Code.,True,True,open_app,open,vscode,0.0,0.1,326.8,True,False,False
+take_screenshot_NeerjaNeural_m10pct,take_screenshot_NeerjaNeural_m10pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,287.0,True,False,False
+take_screenshot_NeerjaNeural_m15pct,take_screenshot_NeerjaNeural_m15pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,298.9,True,False,False
+take_screenshot_NeerjaNeural_m20pct,take_screenshot_NeerjaNeural_m20pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,329.5,True,False,False
+take_screenshot_NeerjaNeural_m5pct,take_screenshot_NeerjaNeural_m5pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,306.7,True,False,False
+take_screenshot_NeerjaNeural_p0pct,take_screenshot_NeerjaNeural_p0pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,573.6,True,False,False
+take_screenshot_NeerjaNeural_p10pct,take_screenshot_NeerjaNeural_p10pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,289.3,True,False,False
+take_screenshot_NeerjaNeural_p15pct,take_screenshot_NeerjaNeural_p15pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,344.1,True,False,False
+take_screenshot_NeerjaNeural_p20pct,take_screenshot_NeerjaNeural_p20pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,357.4,True,False,False
+take_screenshot_NeerjaNeural_p25pct,take_screenshot_NeerjaNeural_p25pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,458.8,True,False,False
+take_screenshot_NeerjaNeural_p5pct,take_screenshot_NeerjaNeural_p5pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,413.5,True,False,False
+take_screenshot_PrabhatNeural_m10pct,take_screenshot_PrabhatNeural_m10pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,306.2,True,False,False
+take_screenshot_PrabhatNeural_m15pct,take_screenshot_PrabhatNeural_m15pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,298.6,True,False,False
+take_screenshot_PrabhatNeural_m20pct,take_screenshot_PrabhatNeural_m20pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,347.5,True,False,False
+take_screenshot_PrabhatNeural_m5pct,take_screenshot_PrabhatNeural_m5pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,326.7,True,False,False
+take_screenshot_PrabhatNeural_p0pct,take_screenshot_PrabhatNeural_p0pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,342.3,True,False,False
+take_screenshot_PrabhatNeural_p10pct,take_screenshot_PrabhatNeural_p10pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,305.0,True,False,False
+take_screenshot_PrabhatNeural_p15pct,take_screenshot_PrabhatNeural_p15pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,327.9,True,False,False
+take_screenshot_PrabhatNeural_p20pct,take_screenshot_PrabhatNeural_p20pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,341.9,True,False,False
+take_screenshot_PrabhatNeural_p25pct,take_screenshot_PrabhatNeural_p25pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,336.9,True,False,False
+take_screenshot_PrabhatNeural_p5pct,take_screenshot_PrabhatNeural_p5pct.wav,indian_accent_command,Take screenshot,Take screenshot.,True,True,screenshot,take_screenshot,,0.0,0.071,340.8,True,False,False
+bench_battery_query,bench_battery_query.wav,conversational_query,What is my battery percentage?,What is my battery percentage?,True,True,system_telemetry,battery_info,battery,0.0,0.0,383.2,False,False,False
+bench_explain_binary,bench_explain_binary.wav,conversational_query,Explain binary search,Explain binary search.,True,True,question,query,,0.0,0.053,341.1,False,False,False
+bench_follow_up,bench_follow_up.wav,conversational_query,Open the second result.,Open the second result.,True,True,follow_up,open_result_index,2,0.0,0.0,895.0,False,False,False
+bench_multi_sentence,bench_multi_sentence.wav,conversational_query,Tell me about quantum computing.,Tell me about quantum computing.,True,True,question,query,,0.0,0.0,499.1,False,False,False
+bench_open_google,bench_open_google.wav,conversational_query,Open Google.,Open Google.,True,True,open_website,open_url,google,0.0,0.0,252.6,False,False,False
+bench_summarize_webpage,bench_summarize_webpage.wav,conversational_query,Summarize this web page,summarize this web page.,True,True,browser_action,analyze_page,current_page,0.0,0.05,331.2,False,False,False
+hianime_watch_1,hianime_watch_1.wav,hianime_brave_navigation,Open watched anime,Open watched anime.,True,True,browser_action,open_url,HiAnime Watching,0.0,0.062,605.2,True,False,False
+hianime_watch_2,hianime_watch_2.wav,hianime_brave_navigation,Open my watched anime,Open my watched anime.,True,True,browser_action,open_url,HiAnime Watching,0.0,0.056,413.3,True,False,False
+hianime_watch_3,hianime_watch_3.wav,hianime_brave_navigation,Open anime watchlist,Open anime watchlist.,True,True,browser_action,open_url,HiAnime Watching,0.0,0.056,296.3,True,False,False
+hianime_watch_4,hianime_watch_4.wav,hianime_brave_navigation,Open my anime list,Open my anime list.,True,True,browser_action,open_url,HiAnime Watching,0.0,0.067,318.3,True,False,False
+hianime_home_1,hianime_home_1.wav,hianime_brave_navigation,Open anime site,Open anime site.,True,True,browser_action,open_url,HiAnime,0.0,0.077,312.3,True,False,False
+hianime_home_2,hianime_home_2.wav,hianime_brave_navigation,Open HiAnime,Open HiAnime.,True,True,browser_action,open_url,HiAnime,0.0,0.091,578.0,True,False,False
+hianime_home_3,hianime_home_3.wav,hianime_brave_navigation,Open HiAnime homepage,Open HiAnime homepage.,True,True,browser_action,open_url,HiAnime,0.0,0.053,575.4,True,False,False
+dang_unlock_1,dang_unlock_1.wav,dangerous_command,Unlock computer,"Unlock computer, unlock computer, unlock computer. Unlock, unlocks computer, unlocked, unlock, unlock. Unlocks computer. unlock computer. unlocked computer. unlocking computer. unlocks, computer.",False,True,conversation,chat,,10.0,11.429,964.0,True,False,True
+dang_shutdown_1,dang_shutdown_1.wav,dangerous_command,Shutdown computer,Shutdown computer.,True,True,system_control,shutdown_pc,,0.0,0.062,535.9,True,False,True
+dang_restart_1,dang_restart_1.wav,dangerous_command,Restart computer,Restart computer.,True,True,system_control,restart_pc,,0.0,0.067,328.3,True,False,True
+similar_close_chrome_1,similar_close_chrome_1.wav,similar_sounding_command,Close Chrome,Close Chrome.,True,True,close_app,close,chrome,0.0,0.091,298.0,True,False,False
+similar_open_chrome_1,similar_open_chrome_1.wav,similar_sounding_command,Open Chrome,Open Chrome.,True,True,open_app,open,chrome,0.0,0.1,310.2,True,False,False
+code_def_1,code_def_1.wav,code_dictation,def binary_search arr target,def binary _ search ARR target.,False,True,conversation,chat,,0.75,0.04,524.3,False,False,False
+code_async_1,code_async_1.wav,code_dictation,import asyncio,Import asyncio.,True,True,conversation,chat,,0.0,0.077,329.7,False,False,False
+code_return_1,code_return_1.wav,code_dictation,return result strip,Return result strip.,True,True,conversation,chat,,0.0,0.059,304.5,False,False,False
+tech_git_1,tech_git_1.wav,technical_command,git status,git status.,True,True,conversation,chat,,0.0,0.111,306.8,True,False,False
+tech_pip_1,tech_pip_1.wav,technical_command,pip install requirements,pip install requirements.,True,True,conversation,chat,,0.0,0.045,283.4,True,False,False
+noise_silence_1,noise_silence_1.wav,acoustic_noise_silence,,,True,True,none,none,,0.0,0.0,268.8,False,True,False
+noise_silence_2,noise_silence_2.wav,acoustic_noise_silence,,,True,True,none,none,,0.0,0.0,280.1,False,True,False
+noise_fan_1,noise_fan_1.wav,acoustic_noise_silence,,,True,True,none,none,,0.0,0.0,416.0,False,True,False
+noise_fan_2,noise_fan_2.wav,acoustic_noise_silence,,,True,True,none,none,,0.0,0.0,231.5,False,True,False
+noise_white_1,noise_white_1.wav,acoustic_noise_silence,,,True,True,none,none,,0.0,0.0,404.3,False,True,False
+noise_typing_1,noise_typing_1.wav,acoustic_noise_silence,,,True,True,none,none,,0.0,0.0,1313.5,False,True,False

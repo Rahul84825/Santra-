@@ -75,6 +75,9 @@ class JarvisRuntime:
         # Transaction & Deduplication Cache
         self._dedup_cache: Dict[str, float] = {}
         self._dedup_lock = threading.Lock()
+        self._executed_utterance_ids = set()
+        self._executed_utterances_order = []
+        self._utterance_exec_lock = threading.Lock()
 
         # Observers / Callbacks
         self.on_status_change_cb: Optional[Callable[[str], None]] = None
@@ -94,6 +97,17 @@ class JarvisRuntime:
         self.executor = CommandExecutor(history_tracker=self.history_tracker)
         self.brain = Brain(executor=self.executor)
         self.transcriber = SpeechTranscriber(cpu_threads=getattr(config, "whisper_threads", 4))
+        try:
+            from core.os.domain_manager import domain_manager
+            domain_vocab = domain_manager.get_vocabulary_prompt()
+            self.transcriber.initial_prompt = (
+                f"Santra, Hey Santra, Samtra, Suntra, San-tra, Jarvis, open VS Code, YouTube, Chrome, "
+                f"{domain_vocab}, Spotify, Notepad, Calculator, lock computer, take a screenshot, calculate, "
+                f"system status, shutdown, restart, volume up, volume down, mute, unmute, minimize, maximize, "
+                f"what time is it, what is the date, play music."
+            ) 
+        except Exception as pe:
+            logger.debug(f"Could not initialize domain prompt on transcriber: {pe}")
         self.normalizer = CommandNormalizer()
         self.intent_engine = IntentEngine()
         self.memory = SessionMemory(max_turns=20)
@@ -151,6 +165,9 @@ class JarvisRuntime:
 
         # Wire Executor Panel Visibility callback
         self.executor.panel_visibility_cb = self._on_panel_visibility
+
+        # Wire Audio Device Dynamic Hot-Swap Observer
+        self.listener.on_device_switched_cb = self._on_audio_device_switched
 
         # Share single coordinated microphone stream with wake word detector
         if hasattr(self.wakeword_detector, "feed_pcm_frame"):
@@ -216,7 +233,8 @@ class JarvisRuntime:
             "microphone": {
                 "active": mic_listening,
                 "device": mic_name,
-                "index": getattr(self.listener, "active_input_device_index", None)
+                "index": getattr(self.listener, "active_input_device_index", None),
+                "stream_health": self.listener.get_stream_health() if hasattr(self.listener, "get_stream_health") else {}
             },
             "wakeword": {
                 "active": ww_listening,
@@ -431,6 +449,15 @@ class JarvisRuntime:
         self.tts_manager.play_wake_chime()
         self.listener.trigger_manual_recording(manual=True)
 
+    def _on_audio_device_switched(self, old_device: str, new_device: str, latency_ms: float):
+        """Observer invoked when microphone input endpoint dynamically hot-swaps."""
+        logger.info(f"[AUDIO_DYNAMIC_HOTSWAP] Input stream transitioned: '{old_device}' -> '{new_device}' in {latency_ms:.1f}ms.")
+        if hasattr(self.wakeword_detector, "reset_audio_state"):
+            self.wakeword_detector.reset_audio_state()
+        if hasattr(self.wakeword_detector, "release_standalone_stream"):
+            self.wakeword_detector.release_standalone_stream()
+        self._update_speech_text(f"Mic switched to: {new_device}")
+
     def _on_barge_in(self):
         t0 = time.time()
         logger.info("[VOICE_BARGE_IN] Immediate user speech barge-in activated. Terminating TTS output immediately.")
@@ -482,6 +509,7 @@ class JarvisRuntime:
         self._update_status("TRANSCRIBING", utterance_id)
 
         text = ""
+        meta = {}
         whisper_duration_s = 0.0
         audio_dur_s = 0.0
         t_stt_start = time.time()
@@ -489,7 +517,7 @@ class JarvisRuntime:
             t0_whisper = time.time()
             text = self.transcriber.transcribe(wav_path)
             whisper_duration_s = time.time() - t0_whisper
-            meta = getattr(self.transcriber, "last_metadata", {})
+            meta = getattr(self.transcriber, "last_metadata", {}) or {}
             audio_dur_s = meta.get("duration", 0.0)
             logger.info(f"[UTTERANCE {utterance_id}][WHISPER_RESULT] '{text}' (Confidence={meta.get('confidence', 0.0):.2f})")
             if self.on_speech_debug_cb:
@@ -574,10 +602,24 @@ class JarvisRuntime:
     # ==========================================
     def process_command(self, text: str, utterance_id: Optional[str] = None, t0_start: Optional[float] = None, whisper_ms: float = 0.0, audio_dur_s: float = 0.0):
         """Dispatches command execution asynchronously."""
+        if not text or not text.strip():
+            logger.info(f"[UTTERANCE {utterance_id or 'NONE'}][EMPTY_COMMAND] Discarding empty command string.")
+            return
+
         actual_uid = utterance_id or uuid.uuid4().hex[:6].upper()
-        if not self._active_utterance_id:
-            self._active_utterance_id = actual_uid
+        with self._utterance_exec_lock:
+            if actual_uid in self._executed_utterance_ids:
+                logger.warning(f"[RATE_LIMIT_WARNING][DUPLICATE_UTTERANCE] Utterance {actual_uid} already executed or executing. Rejecting duplicate dispatch.")
+                return
+            self._executed_utterance_ids.add(actual_uid)
+            self._executed_utterances_order.append(actual_uid)
+            if len(self._executed_utterances_order) > 200:
+                old = self._executed_utterances_order.pop(0)
+                self._executed_utterance_ids.discard(old)
+
+        self._active_utterance_id = actual_uid
         t0 = t0_start or time.time()
+        logger.info(f"[UTTERANCE {actual_uid}][DISPATCH] text='{text}'")
         threading.Thread(
             target=self._process_command_worker,
             args=(text, actual_uid, t0, whisper_ms, audio_dur_s),
@@ -585,16 +627,30 @@ class JarvisRuntime:
             daemon=True
         ).start()
 
-    def _is_duplicate_request(self, normalized_text: str) -> bool:
-        """Suppresses accidental rapid duplicate callbacks within 1.2s."""
+    def _is_duplicate_request(self, normalized_text: str, utterance_id: Optional[str] = None) -> bool:
+        """Prevent rapid duplicate callback executions for the same utterance or rapid identical bursts
+        without a distinct utterance ID (< 1.2s window), while allowing genuinely distinct spoken utterances
+        to repeat earlier commands normally.
+        """
         now = time.time()
-        with self._dedup_lock:
-            last_time = self._dedup_cache.get(normalized_text, 0.0)
-            if (now - last_time) < 1.2:
-                return True
-            self._dedup_cache[normalized_text] = now
-            self._dedup_cache = {k: v for k, v in self._dedup_cache.items() if now - v < 5.0}
+        last_text = getattr(self, "_last_req_text", None)
+        last_time = getattr(self, "_last_req_time", 0.0)
+        last_uid = getattr(self, "_last_req_uid", None)
+
+        # If it's a distinctly registered new utterance ID, it's a new spoken request
+        if utterance_id is not None and last_uid is not None and utterance_id != last_uid:
+            self._last_req_text = normalized_text
+            self._last_req_time = now
+            self._last_req_uid = utterance_id
             return False
+
+        if last_text == normalized_text and (now - last_time) < 1.2:
+            return True
+
+        self._last_req_text = normalized_text
+        self._last_req_time = now
+        self._last_req_uid = utterance_id
+        return False
 
     def _process_command_worker(self, text: str, utterance_id: Optional[str] = None, t0_start: Optional[float] = None, whisper_ms: float = 0.0, audio_dur_s: float = 0.0):
         if utterance_id is None:
@@ -639,8 +695,59 @@ class JarvisRuntime:
                     self._active_utterance_id = None
                 return
 
-        self._update_status("UNDERSTANDING", utterance_id)
         clean_text = text.lower().strip()
+
+        # -------------------------------------------------------------
+        # 0A. Universal Voice Typing Interception
+        # -------------------------------------------------------------
+        try:
+            from core.typing.typing_coordinator import typing_coordinator
+            if typing_coordinator.is_typing_active():
+                t_res = typing_coordinator.feed_speech(text)
+                msg = t_res.get("message", "")
+                if t_res.get("success"):
+                    if t_res.get("state") in ["inactive", "paused", "error"]:
+                        if msg:
+                            self.response_manager.success(msg, spoken_text=msg, speak=True)
+                    else:
+                        typed_txt = t_res.get("text") or t_res.get("draft") or msg
+                        self._update_speech_text(f"Typed: {typed_txt}")
+                    self._update_status("STANDBY", utterance_id)
+                    if self._active_utterance_id == utterance_id:
+                        self._active_utterance_id = None
+                    return
+                elif t_res.get("reason") in ["target_lost", "password_field_blocked", "password_field"]:
+                    if msg:
+                        self.response_manager.warning(msg, spoken_text=msg, speak=True)
+                    self._update_status("STANDBY", utterance_id)
+                    if self._active_utterance_id == utterance_id:
+                        self._active_utterance_id = None
+                    return
+        except Exception as te:
+            logger.debug(f"[VOICE_TYPING] Typing interception pass-through: {te}")
+
+        # -------------------------------------------------------------
+        # 0B. Message Send Gated Approval Interception
+        # -------------------------------------------------------------
+        try:
+            from core.interaction.message_workflow import message_workflow_manager, MessageWorkflowState
+            if message_workflow_manager.state == MessageWorkflowState.AWAITING_SEND_APPROVAL:
+                m_res = message_workflow_manager.process_approval_response(text)
+                m_msg = m_res.get("message", "")
+                if m_res.get("sent"):
+                    self.response_manager.success(m_msg, spoken_text=m_msg, speak=True)
+                elif m_res.get("requires_explicit_approval"):
+                    self.response_manager.conversation(m_msg, speak=True)
+                else:
+                    self.response_manager.conversation(m_msg, speak=True)
+
+                self._update_status("STANDBY", utterance_id)
+                self._update_speech_text(m_msg)
+                if self._active_utterance_id == utterance_id:
+                    self._active_utterance_id = None
+                return
+        except Exception as me:
+            logger.debug(f"[MESSAGE_WORKFLOW] Approval interception pass-through: {me}")
 
         # 0. Active Conversational PendingActionContext (Follow-up & Clarification Resolution)
         pending_act = self.conversation_manager.get_pending_action()
@@ -883,7 +990,7 @@ class JarvisRuntime:
         # 2. Duplicate request check
         norm_res = self.normalizer.normalize(text)
         normalized = norm_res["normalized"]
-        if self._is_duplicate_request(normalized):
+        if self._is_duplicate_request(normalized, utterance_id=utterance_id):
             logger.info(f"[UTTERANCE {utterance_id}][DEDUP] Suppressing duplicate rapid request execution: '{normalized}'")
             self._update_status("STANDBY", utterance_id)
             return
@@ -940,7 +1047,7 @@ class JarvisRuntime:
                 logger.info(f"[PERFORMANCE][{utterance_id}] capture={audio_dur_s:.2f}s whisper={whisper_ms:.0f}ms multi_exec={t_total_ms:.0f}ms total={t_total_ms:.0f}ms")
                 return
 
-        self._process_single_command(text, raw_full_text=text, speak=True, utterance_id=utterance_id, t0_start=t0_start, whisper_ms=whisper_ms, audio_dur_s=audio_dur_s)
+        self._process_single_command(text, raw_full_text=text, speak=True, utterance_id=utterance_id, t0_start=t0_start, whisper_ms=whisper_ms, audio_dur_s=audio_dur_s, normalized=normalized)
         if self._active_utterance_id == utterance_id:
             self._active_utterance_id = None
 
@@ -952,7 +1059,8 @@ class JarvisRuntime:
         utterance_id: Optional[str] = None,
         t0_start: Optional[float] = None,
         whisper_ms: float = 0.0,
-        audio_dur_s: float = 0.0
+        audio_dur_s: float = 0.0,
+        normalized: Optional[str] = None
     ) -> dict:
         uid = utterance_id or uuid.uuid4().hex[:6].upper()
         t0_proc = time.time()
@@ -961,7 +1069,7 @@ class JarvisRuntime:
 
         # Route via 3-Layer Intelligence Router
         t0_route = time.time()
-        req = intelligence_router.route(text, session_context=self.conversation_manager.get_context())
+        req = intelligence_router.route(text, session_context=self.conversation_manager.get_context(), normalized=normalized)
         routing_ms = (time.time() - t0_route) * 1000
         normalized_text = req.normalized_text
         logger.info(f"[UTTERANCE {uid}][ROUTER] Mode='{req.mode}' | Layer={req.layer} | Intent='{req.intent}' | Target='{req.target}' ({routing_ms:.1f}ms)")
@@ -1160,7 +1268,9 @@ class JarvisRuntime:
             t0_agent = time.time()
             agent_res = self.conversation_manager.agent.reason_and_execute(text, conversation_history=self.conversation_manager.history)
             agent_ms = (time.time() - t0_agent) * 1000
-            response_text = agent_res.get("text", "Task completed, sir.")
+            response_text = agent_res.get("text")
+            if not response_text or not response_text.strip():
+                response_text = "I was unable to retrieve a response because the AI provider returned an empty answer, sir."
 
             self.memory.add_interaction(text, response_text)
             self.response_manager.conversation(response_text, speak=speak)
@@ -1313,8 +1423,40 @@ class JarvisRuntime:
         else:
             # Case 5: Informational Questions & Conversation
             logger.info(f"[UTTERANCE {uid}] Query routed to ConversationManager.")
+            self._update_status("PROCESSING", uid)
             t0_conv = time.time()
-            conv_res = self.conversation_manager.process_query(text)
+
+            spoken_sentences = []
+            stream_id = uid
+            def _on_sentence_chunk(sentence: str):
+                if not speak or not sentence.strip():
+                    return
+                clean_chunk = sanitize_speech_text(sentence)
+                if not clean_chunk:
+                    return
+                spoken_sentences.append(clean_chunk)
+                self._update_status("SPEAKING", uid)
+                self._update_speech_text(clean_chunk)
+                is_first = (len(spoken_sentences) == 1)
+                idx = len(spoken_sentences) - 1
+                self.tts_manager.enqueue_stream_sentence(
+                    clean_chunk,
+                    stream_job_id=stream_id,
+                    sentence_index=idx,
+                    interrupt=is_first
+                )
+
+            if speak:
+                conv_res = self.conversation_manager.process_query(
+                    text,
+                    on_sentence=_on_sentence_chunk,
+                    is_cancelled=lambda: (
+                        (self._active_utterance_id is not None and self._active_utterance_id != uid) or
+                        self.tts_manager._interrupt_event.is_set()
+                    )
+                )
+            else:
+                conv_res = self.conversation_manager.process_query(text)
             conv_ms = (time.time() - t0_conv) * 1000
             response_text = conv_res["text"]
             self.memory.add_interaction(text, response_text)
@@ -1328,11 +1470,14 @@ class JarvisRuntime:
                     text=response_text
                 )
 
-            # Deliver speech: use sentence tracker for new multi-sentence explanations; regular speech for answers
-            if not has_parent and speak and self.conversation_manager.explanation_state and len(self.conversation_manager.explanation_state.sentences) > 1:
-                self.tts_manager.speak_sentences(self.conversation_manager.explanation_state.sentences, interrupt=True)
-            else:
-                self.response_manager.conversation(response_text, speak=speak)
+            # Deliver speech if not already streamed as sentence chunks
+            if not spoken_sentences:
+                # Deliver speech: use sentence tracker for new multi-sentence explanations; regular speech for answers
+                if not has_parent and speak and self.conversation_manager.explanation_state and len(self.conversation_manager.explanation_state.sentences) > 1:
+                    self.tts_manager.speak_sentences(self.conversation_manager.explanation_state.sentences, interrupt=True)
+                else:
+                    self.response_manager.conversation(response_text, speak=speak)
+
             stage_source = conv_res.get("source", "Conversation")
             self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", f"N/A ({stage_source})", response_text, "Speaking")
 
@@ -1488,8 +1633,10 @@ class JarvisRuntime:
             trace.record_timestamp("tool_start", t_tool_start)
 
         self._update_status("EXECUTING", uid)
+        logger.info(f"[COMMAND_EXEC_START] uid={uid}, intent='{intent}', action='{action}'")
         result = self.executor.execute(intent_node, confirm=confirm)
         t_tool_end = time.time()
+        logger.info(f"[COMMAND_EXEC_COMPLETE] uid={uid}, action='{action}', success={result.get('success', False)}, msg='{result.get('message', '')}'")
 
         if trace:
             trace.record_timestamp("tool_end", t_tool_end)
@@ -1626,6 +1773,7 @@ class JarvisRuntime:
         self._tts_speaking_lock = True
         self.listener.set_speaking_active(True)
         self._update_status("SPEAKING")
+        logger.info("[TTS_LIFECYCLE] Speaking started. Listener VAD suppressed.")
 
     def _on_speaker_stopped(self):
         if not self.tts_manager.is_speaking():
@@ -1634,7 +1782,7 @@ class JarvisRuntime:
             if self.current_status not in ["SLEEPING", "STOPPED"]:
                 self._update_status("STANDBY")
                 self._update_speech_text("Standby. Say 'Santra' or speak into microphone.")
-                logger.info("[RETURNED_TO_STANDBY] Speech complete. Voice Core on Standby.")
+                logger.info("[TTS_LIFECYCLE] Speaking finished. Listener VAD unsuppressed (cooldown=0.35s). Voice Core on Standby.")
 
     def toggle_mute(self):
         """Toggles the microphone mute state."""

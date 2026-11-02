@@ -1,0 +1,14 @@
+{
+  "status": "PASSED",
+  "default_input": "Microphone (Realtek(R) Audio)",
+  "default_output": "Headphones (Noise Buds N1 Pro)",
+  "resolved_input_name": "Headset (Noise Buds N1 Pro)",
+  "resolved_input_index": 2,
+  "hardware_sample_rate": 16000,
+  "resampling_required": false,
+  "stream_startup_latency_ms": 973.51,
+  "hotswap_recovery_latency_ms": 255.73,
+  "post_switch_chunks_received": 5,
+  "post_switch_ambient_rms": 0.00425,
+  "stream_healthy_after_switch": true
+}

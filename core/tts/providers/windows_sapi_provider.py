@@ -63,14 +63,27 @@ class WindowsSAPIProvider(BaseTTS):
             speaker = win32com.client.Dispatch("SAPI.SpVoice")
             stream = win32com.client.Dispatch("SAPI.SpFileStream")
 
-            # Desired voice selection
-            preferred_voice = getattr(config, "sapi_voice", "Zira").lower()
+            # Desired voice selection: enforce British/Male Butler persona consistency
+            preferred_voice = getattr(config, "sapi_voice", "David").lower()
             voices = speaker.GetVoices()
+            matched_voice = None
+            # 1. Match preferred voice (e.g. David / George)
             for i in range(voices.Count):
                 desc = voices.Item(i).GetDescription().lower()
                 if preferred_voice in desc:
-                    speaker.Voice = voices.Item(i)
+                    matched_voice = voices.Item(i)
                     break
+            # 2. Male voice fallback: prefer David, George, or any male voice
+            if not matched_voice:
+                for i in range(voices.Count):
+                    desc = voices.Item(i).GetDescription().lower()
+                    if ("david" in desc or "george" in desc or "male" in desc) and "female" not in desc and "zira" not in desc:
+                        matched_voice = voices.Item(i)
+                        break
+            if matched_voice:
+                speaker.Voice = matched_voice
+            elif voices.Count > 0:
+                speaker.Voice = voices.Item(0)
 
             # SAPI volume setting (0 to 100, default 70 for comfortable, polite listening)
             try:

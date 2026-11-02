@@ -103,34 +103,21 @@ def run_ui_mode(start_minimized=False, guard=None):
         on_gesture=lambda event: safe_emit(window.sig_gesture_detected, event)
     )
 
+    from ui.panel_controller import PanelVisibilityController
+    panel_controller = PanelVisibilityController(window=window)
+    window.panel_controller = panel_controller
+
     def show_window():
-        if window.isMinimized():
-            window.showNormal()
-        window.show()
-        window.raise_()
-        window.activateWindow()
+        panel_controller.show_panel()
 
     def hide_window():
-        window.hide()
+        panel_controller.hide_panel()
 
     def toggle_window():
-        if window.isVisible() and not window.isMinimized():
-            hide_window()
-        else:
-            show_window()
+        panel_controller.toggle_panel()
 
-    def handle_panel_visibility(action: str):
-        if action in ("show", "show_panel", "restore"):
-            show_window()
-        elif action in ("hide", "hide_panel", "minimize"):
-            hide_window()
-        elif action in ("toggle", "toggle_panel"):
-            toggle_window()
-        elif action in ("exit_assistant", "shutdown", "exit"):
-            handle_exit()
-
-    window.sig_panel_visibility_requested.connect(handle_panel_visibility)
-    runtime.panel_visibility_cb = lambda act: window.sig_panel_visibility_requested.emit(act)
+    window.sig_panel_visibility_requested.connect(panel_controller.request_action)
+    runtime.panel_visibility_cb = lambda act: panel_controller.request_action(act)
     runtime.open_virtual_lab_cb = lambda: window._open_virtual_lab()
 
     # Register Global Hotkey (Default: Ctrl+Shift+Space) via Win32 RegisterHotKey
@@ -138,13 +125,13 @@ def run_ui_mode(start_minimized=False, guard=None):
     hotkey_mgr = GlobalHotkeyManager()
     window.global_hotkey_manager = hotkey_mgr
     try:
-        hotkey_mgr.register(hwnd=None, on_trigger=lambda: window.sig_panel_visibility_requested.emit("toggle"))
+        hotkey_mgr.register(hwnd=None, on_trigger=lambda: panel_controller.request_action("toggle"))
     except Exception as hk_err:
         logger.warning(f"Could not initialize global hotkey: {hk_err}")
 
-    # Start single-instance IPC server to listen for wakeups from secondary launches
+    # Start single-instance IPC server to listen for wakeups from secondary launches (thread-safe queued action)
     if guard:
-        guard.start_ipc_server(on_activate=show_window)
+        guard.start_ipc_server(on_activate=lambda: panel_controller.request_action("show"))
 
     # System Tray Configuration
     tray_icon = QSystemTrayIcon()
@@ -158,10 +145,10 @@ def run_ui_mode(start_minimized=False, guard=None):
     status_action.setEnabled(False)
 
     show_action = QAction("🖥️ Show HUD Panel", menu)
-    show_action.triggered.connect(show_window)
+    show_action.triggered.connect(panel_controller.show_panel)
 
     hide_action = QAction("👁️‍🗨️ Hide HUD Panel", menu)
-    hide_action.triggered.connect(hide_window)
+    hide_action.triggered.connect(panel_controller.hide_panel)
 
     talk_action = QAction("🎙️ Talk / Activate Now", menu)
     talk_action.triggered.connect(lambda: runtime.trigger_manual_talk())
@@ -221,6 +208,7 @@ def run_ui_mode(start_minimized=False, guard=None):
         tray_icon.hide()
         app.quit()
 
+    panel_controller.on_exit_cb = handle_exit
     exit_action.triggered.connect(handle_exit)
 
     menu.addAction(status_action)

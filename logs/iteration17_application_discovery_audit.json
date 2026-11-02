@@ -1,0 +1,98 @@
+{
+  "database_path": "logs/applications.db",
+  "total_records_in_db": 109,
+  "live_applications_loaded": 109,
+  "source_breakdown": {
+    "registry_app_paths": 31,
+    "config": 3,
+    "start_menu": 63,
+    "registry_uninstall": 11,
+    "riot_client_installs": 1
+  },
+  "launch_mechanism_breakdown": {
+    "null": 108,
+    "executable": 1
+  },
+  "valid_path_count": 87,
+  "broken_path_count": 22,
+  "broken_paths_sample": [
+    {
+      "id": "notion",
+      "name": "Notion",
+      "path": "C:\\Users\\activ\\AppData\\Local\\Programs\\Notion\\Notion.exe"
+    },
+    {
+      "id": "adobe_offers",
+      "name": "Adobe offers",
+      "path": "C:\\Program Files (x86)\\Online Services\\Adobe\\WizLink.exe"
+    },
+    {
+      "id": "agoda",
+      "name": "Agoda",
+      "path": "C:\\Program Files (x86)\\HP\\Shared\\WizLink.exe"
+    },
+    {
+      "id": "xps_viewer",
+      "name": "XPS Viewer",
+      "path": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Accessories\\XPS Viewer.lnk"
+    },
+    {
+      "id": "mcafee",
+      "name": "McAfee",
+      "path": "C:\\Program Files\\McAfee\\wps\\mc-launch.exe"
+    },
+    {
+      "id": "gethelp",
+      "name": "GetHelp",
+      "path": "C:\\Program Files\\WindowsApps\\Microsoft.GetHelp_10.2409.42492.0_x64__8wekyb3d8bbwe\\GetHelp.exe"
+    },
+    {
+      "id": "ms_teams",
+      "name": "ms-teams",
+      "path": "C:\\Program Files\\WindowsApps\\msteams_25275.2601.4002.2815_x64__8wekyb3d8bbwe\\ms-teams.exe"
+    },
+    {
+      "id": "ms_teamsupdate",
+      "name": "ms-teamsupdate",
+      "path": "C:\\Program Files\\WindowsApps\\msteams_25275.2601.4002.2815_x64__8wekyb3d8bbwe\\ms-teamsupdate.exe"
+    },
+    {
+      "id": "olk",
+      "name": "olk",
+      "path": "C:\\Program Files\\WindowsApps\\Microsoft.OutlookForWindows_1.2026.915.300_x64__8wekyb3d8bbwe\\olk.exe"
+    },
+    {
+      "id": "pad_browsernativemessagehost",
+      "name": "PAD.BrowserNativeMessageHost",
+      "path": "C:\\Program Files\\WindowsApps\\Microsoft.PowerAutomateDesktop_11.2609.183.0_x64__8wekyb3d8bbwe\\dotnet\\PAD.BrowserNativeMessageHost.exe"
+    }
+  ],
+  "store_app_count": 0,
+  "standard_desktop_app_count": 87,
+  "sample_resolver_check": {
+    "notepad": {
+      "found": true,
+      "display_name": "notepad",
+      "executable_path": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2607.14.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe",
+      "exists_on_disk": true,
+      "is_available": true
+    },
+    "calc": {
+      "found": false
+    },
+    "chrome": {
+      "found": true,
+      "display_name": "chrome",
+      "executable_path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "exists_on_disk": true,
+      "is_available": true
+    },
+    "explorer": {
+      "found": true,
+      "display_name": "Explorer",
+      "executable_path": "C:\\Windows\\explorer.EXE",
+      "exists_on_disk": true,
+      "is_available": true
+    }
+  }
+}

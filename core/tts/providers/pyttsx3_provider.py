@@ -32,6 +32,27 @@ class Pyttsx3Provider(BaseTTS):
             import pyttsx3
             engine = pyttsx3.init()
             
+            # Voice persona pinning (Male / David)
+            try:
+                voices = engine.getProperty("voices")
+                if voices:
+                    target_voice = None
+                    for v in voices:
+                        v_name = (v.name or "").lower()
+                        if "david" in v_name or "george" in v_name:
+                            target_voice = v.id
+                            break
+                    if not target_voice:
+                        for v in voices:
+                            v_name = (v.name or "").lower()
+                            if ("male" in v_name or "man" in v_name) and "female" not in v_name:
+                                target_voice = v.id
+                                break
+                    if target_voice:
+                        engine.setProperty("voice", target_voice)
+            except Exception as ve:
+                logger.debug(f"[pyttsx3] Voice setting error: {ve}")
+
             # Volume setting (0.0 to 1.0)
             try:
                 vol = float(getattr(config, "playback_volume", 0.70))

@@ -1,0 +1,165 @@
+{
+  "routing_accuracy": [
+    {
+      "command": "open chrome",
+      "expected": "open_application",
+      "detected_intent": "open_app",
+      "action": "open",
+      "matched": false
+    },
+    {
+      "command": "launch notepad",
+      "expected": "open_application",
+      "detected_intent": "open_app",
+      "action": "open",
+      "matched": false
+    },
+    {
+      "command": "mute volume",
+      "expected": "system_volume",
+      "detected_intent": "system_control",
+      "action": "mute",
+      "matched": false
+    },
+    {
+      "command": "take a screenshot",
+      "expected": "screenshot",
+      "detected_intent": "screenshot",
+      "action": "take_screenshot",
+      "matched": true
+    },
+    {
+      "command": "what time is it",
+      "expected": "time_query",
+      "detected_intent": "time_query",
+      "action": "get_time",
+      "matched": true
+    },
+    {
+      "command": "search google for python tutorials",
+      "expected": "web_search",
+      "detected_intent": "web_search",
+      "action": "search",
+      "matched": true
+    },
+    {
+      "command": "tell me a joke about computers",
+      "expected": "conversational",
+      "detected_intent": "social_humor",
+      "action": "tell_joke",
+      "matched": false
+    }
+  ],
+  "hianime_brave_enforcement": {
+    "hianime_detected_strict_browser": "brave",
+    "brave_installed_on_system": true,
+    "resolved_browser": "brave",
+    "strict_fallback_message_missing_browser": "Opera isn't installed. I couldn't open the browser.",
+    "strictly_requires_brave": true
+  },
+  "missing_app_handling": {
+    "missing_app": "NonExistentApp12345",
+    "discovery_result": [
+      null,
+      []
+    ],
+    "is_installed": {
+      "installed": false,
+      "available": false,
+      "message": "No, NonExistentApp12345 is not installed on this system."
+    },
+    "safe_failure": false
+  },
+  "tool_safety_gate": {
+    "default_mode_allow_writes": false,
+    "effectful_actions_blocked_by_default": {
+      "shutdown_pc": {
+        "allowed": false,
+        "blocked": true,
+        "reason": "Blocked: 'shutdown_pc' modifies external state and requires write authorization"
+      },
+      "restart_pc": {
+        "allowed": false,
+        "blocked": true,
+        "reason": "Blocked: 'restart_pc' modifies external state and requires write authorization"
+      },
+      "delete_file": {
+        "allowed": false,
+        "blocked": true,
+        "reason": "Blocked: 'delete_file' modifies external state and requires write authorization"
+      },
+      "kill_process": {
+        "allowed": false,
+        "blocked": true,
+        "reason": "Blocked: 'kill_process' modifies external state and requires write authorization"
+      },
+      "run_terminal_command": {
+        "allowed": false,
+        "blocked": true,
+        "reason": "Blocked: 'run_terminal_command' modifies external state and requires write authorization"
+      },
+      "send_email": {
+        "allowed": false,
+        "blocked": true,
+        "reason": "Blocked: 'send_email' modifies external state and requires write authorization"
+      }
+    },
+    "safe_actions_allowed_by_default": {
+      "get_time": {
+        "allowed": true,
+        "reason": "Allowed: Whitelisted read-only tool"
+      },
+      "get_date": {
+        "allowed": true,
+        "reason": "Allowed: Whitelisted read-only tool"
+      },
+      "get_system_status": {
+        "allowed": true,
+        "reason": "Allowed: Whitelisted read-only tool"
+      },
+      "read_file": {
+        "allowed": true,
+        "reason": "Allowed: Whitelisted read-only tool"
+      },
+      "list_directory": {
+        "allowed": true,
+        "reason": "Allowed: Whitelisted read-only tool"
+      }
+    }
+  },
+  "message_approval_security": {
+    "draft_id": "draft-50b717f9",
+    "content_hash": "ea6bba056a5d63331b7f11767015582ce31e92697864ea690d2aefabf9a6840d",
+    "ambiguous_responses_blocked": [
+      {
+        "response": "ok",
+        "sent": false,
+        "blocked": true,
+        "state": "awaiting_send_approval"
+      },
+      {
+        "response": "fine",
+        "sent": false,
+        "blocked": true,
+        "state": "awaiting_send_approval"
+      },
+      {
+        "response": "looks good",
+        "sent": false,
+        "blocked": true,
+        "state": "awaiting_send_approval"
+      },
+      {
+        "response": "nice",
+        "sent": false,
+        "blocked": true,
+        "state": "awaiting_send_approval"
+      }
+    ],
+    "low_confidence_blocked": true
+  },
+  "duplicate_execution_protection": {
+    "command_manager_initialized": true,
+    "multi_command_parsing": false
+  }
+}

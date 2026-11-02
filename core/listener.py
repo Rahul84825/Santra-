@@ -44,14 +44,33 @@ class SpeechListener:
         self.on_speech_start_cb = None
         self.on_speech_end_cb = None
         self.on_barge_in_cb = None  # Signature: callback(wav_path: str)
+        self.on_device_switched_cb = None  # Signature: callback(old_device: str, new_device: str, latency_ms: float)
+
+        # Dynamic Audio Hot-Swap, Watchdog & Resampling State
+        self._watcher = None
+        self._recovery_lock = threading.Lock()
+        self._is_recovering = False
+        self._last_callback_time = 0.0
+        self._zero_frame_count = 0
+        self._transient_cooldown_until = 0.0
+        self._resample_needed = False
+        self._hardware_sample_rate = self.sample_rate
+        self._resampler = None
+
         try:
             from core.audio_device_resolver import resolve_audio_input_device
             from config import config
             pref = getattr(config, "audio_input_device", None) or getattr(config, "microphone_device", None)
-            self.active_input_device_index, self.active_input_device_name = resolve_audio_input_device(pref)
+            resolved = resolve_audio_input_device(pref)
+            self.active_input_device_index = resolved[0]
+            self.active_input_device_name = resolved[1]
+            self._hardware_sample_rate = getattr(resolved, "sample_rate", self.sample_rate)
+            self._resample_needed = getattr(resolved, "requires_resampling", False)
         except Exception:
             self.active_input_device_index = None
             self.active_input_device_name = "Default Mic"
+            self._hardware_sample_rate = self.sample_rate
+            self._resample_needed = False
 
         # Audio chunk consumers (e.g. OpenWakeWordDetector stream sharing)
         self._audio_consumers = []
@@ -92,6 +111,7 @@ class SpeechListener:
             self.speaking_active = is_speaking
             if is_speaking:
                 self._barge_in_active = False
+                self._pre_roll_buffer.clear()
                 # Suppress unconfirmed background VAD recording while Jarvis speaks, but keep manual wake recordings
                 if self._recording and not self._manual_recording:
                     logger.debug("Suppressing background VAD recording: Jarvis is speaking.")
@@ -101,6 +121,7 @@ class SpeechListener:
                     self._recording_start_time = None
                     self._consecutive_speech_frames = 0
             else:
+                self._pre_roll_buffer.clear()
                 if not self._barge_in_active and not self._recording:
                     # 350ms acoustic cooldown after TTS finishes to let room reverb decay
                     self._speaking_cooldown_until = time.time() + 0.35
@@ -203,20 +224,35 @@ class SpeechListener:
             for attempt in range(max_retries + 1):
                 try:
                     pref = getattr(config, "audio_input_device", None) or getattr(config, "microphone_device", None)
-                    input_dev, dev_name = resolve_audio_input_device(pref)
+                    resolved = resolve_audio_input_device(pref)
+                    input_dev, dev_name = resolved[0], resolved[1]
+                    hw_rate = getattr(resolved, "sample_rate", self.sample_rate)
+                    resample = getattr(resolved, "requires_resampling", False)
                     self.active_input_device_index = input_dev
                     self.active_input_device_name = dev_name
+                    self._hardware_sample_rate = hw_rate
+                    self._resample_needed = resample
+                    if self._resample_needed:
+                        from core.audio_resampler import AudioResampler
+                        self._resampler = AudioResampler(hw_rate, self.sample_rate)
+                    else:
+                        self._resampler = None
+                    blocksize = int(2048 * (hw_rate / self.sample_rate)) if resample else 2048
+
                     self._stream = sd.InputStream(
                         device=input_dev,
-                        samplerate=self.sample_rate,
+                        samplerate=hw_rate,
                         channels=1,
                         callback=self._audio_callback,
-                        blocksize=2048,  # increased from 1024 for stability
-                        latency='high',   # prioritized buffer stability
+                        blocksize=blocksize,
+                        latency='high',
                         dtype='float32'
                     )
                     self._stream.start()
-                    logger.info(f"Speech Listener stream started successfully (device=[{input_dev}] '{dev_name}').")
+                    self._last_callback_time = time.time()
+                    self._zero_frame_count = 0
+                    self._is_recovering = False
+                    logger.info(f"Speech Listener stream started successfully (device=[{input_dev}] '{dev_name}', Rate={hw_rate}Hz, Resample={resample}).")
                     last_err = None
                     break
                 except Exception as e:
@@ -230,28 +266,54 @@ class SpeechListener:
                         logger.error(f"Failed to start Speech Listener stream after {max_retries + 1} attempts: {e}", exc_info=True)
                         raise e
 
-    def stop(self):
-        """Stops the stream and releases microphone hardware."""
-        with self._lock:
-            if not self._running:
-                return
-            
-            logger.info("Stopping Speech Listener.")
-            self._running = False
-            self._recording = False
-            self._manual_recording = False
-            self._recording_start_time = None
-            self._consecutive_speech_frames = 0
-            
-            if self._stream:
+            # Start AudioDeviceWatcher for zero-latency endpoint hot-swap & watchdog monitoring
+            if self._watcher is None:
                 try:
-                    self._stream.stop()
-                    self._stream.close()
-                except Exception as e:
-                    logger.error(f"Error closing Speech Listener stream: {e}")
-                self._stream = None
-            
-            logger.info("Speech Listener stopped.")
+                    from core.audio_device_watcher import AudioDeviceWatcher
+                    self._watcher = AudioDeviceWatcher(
+                        on_endpoint_change=lambda evt, details: self.recover_stream(reason=f"watcher_{evt}"),
+                        debounce_seconds=0.25,
+                        watchdog_interval=1.0,
+                        stream_health_checker=self.is_stream_healthy
+                    )
+                    self._watcher.start()
+                except Exception as wex:
+                    logger.warning(f"Could not start AudioDeviceWatcher: {wex}")
+
+    def stop(self):
+        """Stops the stream, watcher, and releases microphone hardware safely."""
+        if self._watcher:
+            try:
+                self._watcher.stop()
+            except Exception as wex:
+                logger.debug(f"Error stopping audio device watcher: {wex}")
+            self._watcher = None
+
+        with self._recovery_lock:
+            with self._lock:
+                if not self._running:
+                    return
+                
+                logger.info("Stopping Speech Listener.")
+                self._running = False
+                self._recording = False
+                self._manual_recording = False
+                self._recording_start_time = None
+                self._consecutive_speech_frames = 0
+                self._audio_buffer.clear()
+                self._pre_roll_buffer.clear()
+                if hasattr(self, "_resampler") and self._resampler:
+                    self._resampler.reset()
+                
+                if self._stream:
+                    try:
+                        self._stream.stop()
+                        self._stream.close()
+                    except Exception as e:
+                        logger.error(f"Error closing Speech Listener stream: {e}")
+                    self._stream = None
+                
+                logger.info("Speech Listener stopped.")
 
     def is_listening(self) -> bool:
         """Returns True if monitoring microphone."""
@@ -278,6 +340,7 @@ class SpeechListener:
 
             logger.info(f"Speech recording triggered (manual={manual}). Initializing buffer from pre-roll.")
             self._audio_buffer = list(self._pre_roll_buffer)
+            self._pre_roll_buffer.clear()
             self._recording = True
             self._recording_start_time = time.time()
             self._manual_recording = manual
@@ -303,31 +366,54 @@ class SpeechListener:
             if self._audio_buffer:
                 captured_data = np.concatenate(self._audio_buffer, axis=0)
                 self._audio_buffer = []
+                self._pre_roll_buffer.clear()
                 threading.Thread(target=self._save_and_dispatch, args=(captured_data,), name="ListenerSaveThread", daemon=True).start()
 
     def _audio_callback(self, indata, frames, time_info, status):
-        """High-priority audio callback that captures buffer chunks."""
+        """High-priority audio callback that captures buffer chunks with dynamic downsampling and hot-swap safety."""
         if status:
             logger.debug(f"Speech Listener stream warning: {status}")
             
-        if not self._running:
+        if not self._running or self._is_recovering:
+            return
+
+        now = time.time()
+        self._last_callback_time = now
+
+        # Check for sustained absolute zeros (hardware disconnect zombie frames)
+        if np.all(indata == 0.0):
+            self._zero_frame_count += 1
+        else:
+            self._zero_frame_count = 0
+
+        # High-fidelity polyphase band-limited downsampling if hardware runs at a different rate
+        if self._resample_needed:
+            if self._resampler is None or getattr(self._resampler, "source_rate", None) != self._hardware_sample_rate:
+                from core.audio_resampler import AudioResampler
+                self._resampler = AudioResampler(self._hardware_sample_rate, self.sample_rate)
+            eff_data = self._resampler.resample(indata)
+        else:
+            eff_data = indata
+
+        # Transient suppression guard immediately after stream recovery (suppress hardware pops)
+        if now < self._transient_cooldown_until:
             return
  
         with self._lock:
-            # Maintain pre-roll buffer when running
-            if self._running:
-                self._pre_roll_buffer.append(indata.copy())
+            # Maintain pre-roll buffer ONLY when running and NOT recording
+            if self._running and not self._recording:
+                self._pre_roll_buffer.append(eff_data.copy())
                 # Ensure it doesn't exceed pre-roll duration
                 total_samples = sum(len(x) for x in self._pre_roll_buffer)
                 max_samples = int(self.sample_rate * self.pre_roll_duration)
-                while total_samples - len(self._pre_roll_buffer[0]) >= max_samples:
+                while self._pre_roll_buffer and total_samples - len(self._pre_roll_buffer[0]) >= max_samples:
                     total_samples -= len(self._pre_roll_buffer[0])
                     self._pre_roll_buffer.pop(0)
 
         # Dispatch 16-bit PCM chunk to registered stream consumers (e.g. OpenWakeWord)
         if self._audio_consumers:
             try:
-                clipped = np.clip(indata[:, 0], -1.0, 1.0)
+                clipped = np.clip(eff_data[:, 0], -1.0, 1.0)
                 pcm_chunk = (clipped * 32767.0).astype(np.int16)
                 with self._consumers_lock:
                     consumers = list(self._audio_consumers)
@@ -345,7 +431,7 @@ class SpeechListener:
             if self._sleep_mode:
                 return
 
-        samples = indata[:, 0]
+        samples = eff_data[:, 0]
         rms = float(np.sqrt(np.mean(samples**2)))
         now = time.time()
         
@@ -397,8 +483,10 @@ class SpeechListener:
                             self._recording_start_time = now
                             self._manual_recording = False
                             self._audio_buffer = list(self._pre_roll_buffer)
+                            self._pre_roll_buffer.clear()
                             self._silence_start = None
-                            self._speech_detected = True
+                            self._speech_detected = False
+                            self._active_speech_frame_count = 0
                             self._consecutive_speech_frames = 0
                             
                             if self.on_speech_start_cb:
@@ -414,6 +502,7 @@ class SpeechListener:
                     # Echo suppression: cancel VAD recording triggered by speaker output
                     self._recording = False
                     self._audio_buffer = []
+                    self._pre_roll_buffer.clear()
                     self._silence_start = None
                     self._recording_start_time = None
                     self._consecutive_speech_frames = 0
@@ -423,24 +512,40 @@ class SpeechListener:
                 if now < self._chime_cooldown_until:
                     return
 
-                self._audio_buffer.append(indata.copy())
+                self._audio_buffer.append(eff_data.copy())
                 
                 # Check for max recording duration safety cap (e.g., 10 seconds)
                 if self._recording_start_time and (now - self._recording_start_time > self.max_duration):
                     logger.info(f"VAD: Max recording duration limit reached ({self.max_duration}s). Finalizing audio.")
                     self._recording = False
+                    self._manual_recording = False
                     captured_data = np.concatenate(self._audio_buffer, axis=0) if self._audio_buffer else np.zeros((1, 1), dtype=np.float32)
                     self._audio_buffer = []
+                    self._pre_roll_buffer.clear()
                     self._silence_start = None
                     self._recording_start_time = None
+                    speech_was_detected = self._speech_detected
+                    self._speech_detected = False
+                    self._active_speech_frame_count = 0
                     self._consecutive_speech_frames = 0
+
+                    calc_rms = float(np.sqrt(np.mean(captured_data**2))) if len(captured_data) > 0 else 0.0
+                    silence_floor = max(0.0075, self._ambient_rms * 1.35)
+                    if not speech_was_detected or calc_rms < silence_floor:
+                        logger.info(f"VAD: Max duration reached but segment contains no speech (SpeechDetected={speech_was_detected}, RMS={calc_rms:.4f} <= Floor={silence_floor:.4f}, Ambient={self._ambient_rms:.4f}). Discarding without STT.")
+                        if self.on_speech_end_cb:
+                            threading.Thread(target=self.on_speech_end_cb, args=("",), name="ListenerSilentCB", daemon=True).start()
+                        return
+
                     threading.Thread(target=self._save_and_dispatch, args=(captured_data,), name="ListenerSaveThread", daemon=True).start()
                     return
 
                 # Check for VAD silence timeout using hold_threshold
                 elapsed = now - self._recording_start_time if self._recording_start_time else 0.0
                 if rms > hold_threshold:
-                    self._speech_detected = True
+                    self._active_speech_frame_count = getattr(self, "_active_speech_frame_count", 0) + 1
+                    if self._active_speech_frame_count >= 3:
+                        self._speech_detected = True
                     self._silence_start = None
                 else:
                     # Silence detected
@@ -454,16 +559,19 @@ class SpeechListener:
                         self._manual_recording = False
                         captured_data = np.concatenate(self._audio_buffer, axis=0) if self._audio_buffer else np.zeros((1, 1), dtype=np.float32)
                         self._audio_buffer = []
+                        self._pre_roll_buffer.clear()
                         self._silence_start = None
                         self._recording_start_time = None
                         speech_was_detected = self._speech_detected
                         self._speech_detected = False
+                        self._active_speech_frame_count = 0
                         self._consecutive_speech_frames = 0
 
                         calc_rms = float(np.sqrt(np.mean(captured_data**2))) if len(captured_data) > 0 else 0.0
-                        # If no speech was detected during the segment and audio energy is at ambient floor, discard without running STT
-                        if not speech_was_detected and calc_rms < max(0.005, self._ambient_rms * 1.25):
-                            logger.info(f"VAD: Segment contains no speech (SpeechDetected=False, RMS={calc_rms:.4f} <= Ambient={self._ambient_rms:.4f}). Discarding without STT.")
+                        silence_floor = max(0.0075, self._ambient_rms * 1.35)
+                        # If no sustained speech was detected or total audio energy is at ambient floor, discard without running STT
+                        if not speech_was_detected or calc_rms < silence_floor:
+                            logger.info(f"VAD: Segment contains no speech (SpeechDetected={speech_was_detected}, RMS={calc_rms:.4f} <= Floor={silence_floor:.4f}, Ambient={self._ambient_rms:.4f}). Discarding without STT.")
                             if self.on_speech_end_cb:
                                 threading.Thread(target=self.on_speech_end_cb, args=("",), name="ListenerSilentCB", daemon=True).start()
                             return
@@ -474,21 +582,25 @@ class SpeechListener:
         """Encodes float32 samples to 16-bit WAV and triggers end-of-speech callback."""
         from pathlib import Path
         try:
-            if audio_data is None or len(audio_data) < int(self.sample_rate * 0.25):
+            if audio_data is None:
+                return
+            audio_arr = np.asarray(audio_data, dtype=np.float32)
+            if len(audio_arr) < int(self.sample_rate * 0.25):
                 logger.info("Audio segment duration too short (<250ms). Discarding without STT.")
                 if self.on_speech_end_cb:
                     self.on_speech_end_cb("")
                 return
 
-            calc_rms = float(np.sqrt(np.mean(audio_data**2)))
-            if calc_rms < 0.0025:
-                logger.info(f"Audio segment has negligible energy (RMS={calc_rms:.5f}). Discarding silence without STT.")
+            calc_rms = float(np.sqrt(np.mean(audio_arr**2)))
+            silence_floor = max(0.0075, self._ambient_rms * 1.35)
+            if calc_rms < silence_floor:
+                logger.info(f"Audio segment has negligible energy (RMS={calc_rms:.5f} < {silence_floor:.5f}). Discarding silence without STT.")
                 if self.on_speech_end_cb:
                     self.on_speech_end_cb("")
                 return
 
             # Clip values to ensure safe range, then convert to 16-bit PCM integers
-            clipped = np.clip(audio_data, -1.0, 1.0)
+            clipped = np.clip(audio_arr, -1.0, 1.0)
             pcm_data = (clipped * 32767.0).astype(np.int16)
             
             # Set up temporary file
@@ -612,3 +724,174 @@ class SpeechListener:
                 "clipping_detected": False,
                 "spoken_summary": "I couldn't complete the microphone test because the audio device was unavailable."
             }
+
+    def is_stream_healthy(self) -> Tuple[bool, str]:
+        """Evaluates operational health of active audio input stream."""
+        if not self._running:
+            return True, "Stopped"
+        if self._is_recovering:
+            return True, "Recovering"
+        if self._stream is None:
+            return False, "Stream is None"
+        if not getattr(self._stream, "active", False):
+            return False, "Stream inactive"
+        if self._last_callback_time > 0 and (time.time() - self._last_callback_time > 2.0):
+            return False, f"Callback timeout ({time.time() - self._last_callback_time:.2f}s)"
+        if self._zero_frame_count > 60:
+            return False, f"Sustained silent/zero frames ({self._zero_frame_count})"
+        return True, "Healthy"
+
+    def get_stream_health(self) -> dict:
+        """Returns comprehensive diagnostic dictionary of microphone stream status."""
+        healthy, reason = self.is_stream_healthy()
+        return {
+            "healthy": healthy,
+            "reason": reason,
+            "running": self._running,
+            "stream_active": getattr(self._stream, "active", False) if self._stream else False,
+            "device_index": self.active_input_device_index,
+            "device_name": self.active_input_device_name,
+            "hardware_sample_rate": self._hardware_sample_rate,
+            "target_sample_rate": self.sample_rate,
+            "resampling_active": self._resample_needed,
+            "ambient_rms": round(self._ambient_rms, 5),
+            "last_callback_ago": round(time.time() - self._last_callback_time, 2) if self._last_callback_time > 0 else None,
+            "zero_frames": self._zero_frame_count,
+            "is_recovering": self._is_recovering,
+            "watcher_active": getattr(self._watcher, "_running", False) if self._watcher else False
+        }
+
+    def recover_stream(self, reason: str = "endpoint_change", force: bool = False) -> bool:
+        """Seamlessly recovers and restarts the microphone stream when an audio endpoint changes or fails."""
+        with self._recovery_lock:
+            with self._lock:
+                if not self._running:
+                    return False
+
+            t0 = time.time()
+            old_idx = self.active_input_device_index
+            old_name = self.active_input_device_name
+
+            # Only skip if redundant AND reason does not request explicit recovery
+            is_critical = force or any(term in reason.lower() for term in ["unplug", "benchmark_cycle", "die", "fail", "timeout", "recalib", "zero", "force", "unhealthy", "live_diag"])
+            if not is_critical:
+                try:
+                    from core.audio_device_resolver import resolve_audio_input_device
+                    from config import config
+                    pref = getattr(config, "audio_input_device", None) or getattr(config, "microphone_device", None)
+                    quick_res = resolve_audio_input_device(preferred=pref)
+                    if (quick_res[0] == old_idx and 
+                        self._stream is not None and 
+                        getattr(self._stream, "active", False) and 
+                        self.is_stream_healthy()[0]):
+                        logger.debug(f"[AUDIO_HOTSWAP] Stream already active and healthy on [{old_idx}] '{old_name}'. Skipping redundant recovery.")
+                        return True
+                except Exception:
+                    pass
+
+            logger.info(f"[AUDIO_HOTSWAP] Initiating audio stream recovery. Reason: '{reason}'. Current: [{old_idx}] '{old_name}'")
+            self._is_recovering = True
+
+            # 1. Stop and release existing stream safely
+            if self._stream is not None:
+                try:
+                    self._stream.stop()
+                except Exception as e:
+                    logger.debug(f"Error stopping stream during recovery: {e}")
+                try:
+                    self._stream.close()
+                except Exception as e:
+                    logger.debug(f"Error closing stream during recovery: {e}")
+                self._stream = None
+
+            # 2. Refresh PortAudio device cache
+            from core.audio_device_resolver import refresh_device_cache, resolve_audio_input_device
+            from config import config
+            refresh_device_cache()
+
+            # 3. Resolve optimal new input device
+            pref = getattr(config, "audio_input_device", None) or getattr(config, "microphone_device", None)
+            resolved = resolve_audio_input_device(preferred=pref)
+            new_idx, new_name = resolved[0], resolved[1]
+            hw_rate = getattr(resolved, "sample_rate", self.sample_rate)
+            resample_needed = getattr(resolved, "requires_resampling", False)
+
+            # 4. Open new InputStream
+            max_retries = 2
+            stream_opened = False
+            for attempt in range(max_retries + 1):
+                try:
+                    blocksize = int(2048 * (hw_rate / self.sample_rate)) if resample_needed else 2048
+                    self._stream = sd.InputStream(
+                        device=new_idx,
+                        samplerate=hw_rate,
+                        channels=1,
+                        callback=self._audio_callback,
+                        blocksize=blocksize,
+                        latency='high',
+                        dtype='float32'
+                    )
+                    self._stream.start()
+                    stream_opened = True
+                    break
+                except Exception as ex:
+                    logger.warning(f"[AUDIO_HOTSWAP] Attempt {attempt + 1} failed to open stream on [{new_idx}] '{new_name}': {ex}")
+                    time.sleep(0.2)
+
+            if not stream_opened:
+                self._is_recovering = False
+                logger.error(f"[AUDIO_HOTSWAP] Failed to recover audio input stream after {max_retries + 1} attempts.")
+                return False
+
+            # 5. Update state, resampler, and flush buffers
+            with self._lock:
+                if not self._running:
+                    # Shutdown occurred while initializing stream
+                    try:
+                        self._stream.stop()
+                        self._stream.close()
+                    except Exception:
+                        pass
+                    self._stream = None
+                    self._is_recovering = False
+                    return False
+
+                self.active_input_device_index = new_idx
+                self.active_input_device_name = new_name
+                self._hardware_sample_rate = hw_rate
+                self._resample_needed = resample_needed
+                if self._resample_needed:
+                    from core.audio_resampler import AudioResampler
+                    self._resampler = AudioResampler(hw_rate, self.sample_rate)
+                else:
+                    self._resampler = None
+                self._audio_buffer.clear()
+                self._pre_roll_buffer.clear()
+                self._ambient_rms = 0.005
+                self._consecutive_speech_frames = 0
+                self._recording = False
+                self._manual_recording = False
+                self._zero_frame_count = 0
+                self._last_callback_time = time.time()
+                self._transient_cooldown_until = time.time() + 0.35
+                self._is_recovering = False
+
+            latency_ms = (time.time() - t0) * 1000
+            logger.info(
+                f"[AUDIO_HOTSWAP] Audio stream recovered successfully in {latency_ms:.2f}ms. "
+                f"Switched from [{old_idx}] '{old_name}' -> [{new_idx}] '{new_name}' (Rate={hw_rate}Hz, Resample={resample_needed})."
+            )
+
+            # 6. Notify observers
+            if self.on_device_switched_cb:
+                try:
+                    threading.Thread(
+                        target=self.on_device_switched_cb,
+                        args=(old_name, new_name, latency_ms),
+                        name="AudioDeviceSwitchedCB",
+                        daemon=True
+                    ).start()
+                except Exception as cb_err:
+                    logger.debug(f"Device switched callback error: {cb_err}")
+
+            return True

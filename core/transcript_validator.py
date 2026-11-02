@@ -37,12 +37,34 @@ class TranscriptValidator:
         "santra", "jarvis", "goliya", "buddy"
     }
 
+    KNOWN_HALLUCINATION_PHRASES = {
+        "thank you for watching", "thanks for watching", "subtitles by",
+        "transcribed by", "amara.org", "please subscribe", "like and subscribe",
+        "see you next time", "watching", "subscribe",
+    }
+
     ACTION_VERBS = {
         "open", "launch", "start", "close", "exit", "terminate",
         "lock", "sleep", "restart", "shutdown", "reboot", "turn",
         "increase", "decrease", "mute", "unmute", "take",
         "show", "list", "search", "find", "minimize", "maximize", "restore",
-        "run", "calculate", "solve", "play", "pause", "resume"
+        "run", "calculate", "solve", "play", "pause", "resume",
+        "type", "insert", "send", "approve", "cancel", "deny"
+    }
+
+    QUERY_PREFIXES = {
+        "what", "what's", "whats", "how", "how's", "hows", "tell", "check", "get", "show"
+    }
+
+    COMMAND_KEYWORDS = {
+        "volume", "screenshot", "lock", "sleep", "restart", "shutdown",
+        "tab", "tabs", "window", "windows"
+    }
+
+    SYSTEM_KEYWORDS = {
+        "battery", "percentage", "volume", "screenshot", "lock", "sleep",
+        "restart", "shutdown", "tab", "window", "wifi", "network",
+        "time", "date", "weather", "cpu", "ram", "memory", "status"
     }
 
     def __init__(self):
@@ -86,20 +108,101 @@ class TranscriptValidator:
         # 1. Repetitive Loop & Hallucination Analysis
         cleaned_text, rep_detected, rep_count, rep_ratio = self._analyze_and_compress_repetitions(text)
 
-        # 2. Check for Hallucination Signatures (e.g. 5+ repetitions of short words)
-        status = "VALID"
-        if rep_detected and rep_count >= 4 and len(cleaned_text.split()) <= 2:
-            status = "REPETITIVE_HALLUCINATION"
-        elif rep_detected:
-            status = "VALID"
+        # Check known silence hallucination phrases
+        norm_clean = re.sub(r'[^\w\s]', '', cleaned_text).strip().lower()
+        if norm_clean in self.KNOWN_HALLUCINATION_PHRASES or any(p in norm_clean for p in ["subtitles by", "amara.org", "transcribed by"]):
+            logger.info(f"[VALIDATOR] Discarding known hallucination phrase: '{cleaned_text}'")
+            return ValidationResult(
+                raw_text=raw_text,
+                cleaned_text="",
+                status=ValidationStatus.LIKELY_HALLUCINATION,
+                is_valid=False,
+                is_command_candidate=False,
+                repetition_detected=rep_detected,
+                repetition_ratio=rep_ratio,
+                original_repetition_count=rep_count,
+                confidence=confidence,
+                is_hallucination_compressed=False
+            )
+
+        # Discard critically low-confidence transcripts (< 0.20) as noise or hallucination
+        if confidence is not None and isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
+            if confidence < 0.20:
+                logger.info(f"[VALIDATOR] Discarding low-confidence transcript (confidence={confidence:.3f} < 0.20): '{cleaned_text}'")
+                return ValidationResult(
+                    raw_text=raw_text,
+                    cleaned_text="",
+                    status=ValidationStatus.LIKELY_HALLUCINATION,
+                    is_valid=False,
+                    is_command_candidate=False,
+                    repetition_detected=rep_detected,
+                    repetition_ratio=rep_ratio,
+                    original_repetition_count=rep_count,
+                    confidence=confidence,
+                    is_hallucination_compressed=False
+                )
+
+        # 2. Check for Hallucination Signatures
+        status = ValidationStatus.VALID
+        is_valid = True
+        is_known_conversational = (
+            norm_clean in self.KNOWN_CONVERSATIONAL_WORDS
+            or any(w in self.KNOWN_CONVERSATIONAL_WORDS for w in norm_clean.split())
+        )
+
+        if rep_detected:
+            words = cleaned_text.lower().split()
+            first_word = words[0] if words else ""
+            clean_tokens = set(re.findall(r'\b\w+\b', cleaned_text.lower()))
+            is_action_command = (
+                first_word in self.ACTION_VERBS or
+                any(w in self.ACTION_VERBS for w in words[:3]) or
+                bool(clean_tokens & self.COMMAND_KEYWORDS) or
+                any(cleaned_text.lower().startswith(p) for p in ["open", "launch", "type", "search", "close", "mute", "unmute", "lock", "shutdown", "restart", "volume"])
+            )
+
+            if is_action_command:
+                # Compressed repetitive command (decoder loop recovery e.g. "Open Chrome" looped 30x)
+                status = ValidationStatus.VALID
+                is_valid = True
+                logger.info(f"[VALIDATOR] Retained compressed repetitive command ({rep_count}x '{cleaned_text}'): raw='{raw_text[:60]}...'")
+            elif (len(cleaned_text.split()) == 1 and rep_count >= 4) or rep_count >= 5:
+                status = ValidationStatus.REPETITIVE_HALLUCINATION
+                is_valid = False
+                logger.info(f"[VALIDATOR] Discarding repetitive hallucination ({rep_count}x '{cleaned_text}'): raw='{raw_text[:60]}...'")
+            elif rep_count >= 3 and not is_known_conversational:
+                status = ValidationStatus.REPETITIVE_HALLUCINATION
+                is_valid = False
+                logger.info(f"[VALIDATOR] Discarding non-conversational repetitive hallucination ({rep_count}x '{cleaned_text}'): raw='{raw_text[:60]}...'")
+            else:
+                # Natural conversational repetition (e.g., "okay okay okay", "bye bye bye", "hello hello", "thank you thank you")
+                status = ValidationStatus.VALID
+                is_valid = True
+
+        if not is_valid:
+            return ValidationResult(
+                raw_text=raw_text,
+                cleaned_text="",
+                status=status,
+                is_valid=False,
+                is_command_candidate=False,
+                repetition_detected=rep_detected,
+                repetition_ratio=rep_ratio,
+                original_repetition_count=rep_count,
+                confidence=confidence,
+                is_hallucination_compressed=rep_detected
+            )
 
         # 3. Determine if candidate looks like an actionable command
         words = cleaned_text.lower().split()
         first_word = words[0] if words else ""
+        clean_tokens = set(re.findall(r'\b\w+\b', cleaned_text.lower()))
+
         has_action = (
             first_word in self.ACTION_VERBS or
             any(w in self.ACTION_VERBS for w in words[:3]) or
-            any(kw in cleaned_text.lower() for kw in ["volume", "screenshot", "lock", "sleep", "restart", "shutdown", "tab", "window"])
+            bool(clean_tokens & self.COMMAND_KEYWORDS) or
+            (bool(words and words[0] in self.QUERY_PREFIXES) and bool(clean_tokens & self.SYSTEM_KEYWORDS))
         )
 
         logger.debug(f"[VALIDATOR] Raw: '{raw_text}' -> Cleaned: '{cleaned_text}' | Status: {status} | RepCount: {rep_count} | CommandCandidate: {has_action}")

@@ -20,7 +20,10 @@ class Brain:
             return "I heard silence. Please speak again if you need assistance."
 
         res = self.agent.reason_and_execute(text, conversation_history=history)
-        return res.get("text", "Task completed, sir.")
+        ans = res.get("text")
+        if not ans or not ans.strip():
+            return "I was unable to complete the request because the AI provider did not return a response, sir."
+        return ans
 
     def shutdown(self):
         logger.info("Jarvis Brain shutting down.")

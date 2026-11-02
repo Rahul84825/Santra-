@@ -51,6 +51,8 @@ class MainWindow(QMainWindow):
     sig_audio_amplitude_updated = pyqtSignal(float)
     sig_camera_state_updated = pyqtSignal(object)
     sig_gesture_detected = pyqtSignal(object)
+    sig_typing_state_changed = pyqtSignal(str, dict)
+    sig_show_message_approval = pyqtSignal(str, str, str, object)
 
     def __init__(self):
         super().__init__()
@@ -150,33 +152,77 @@ class MainWindow(QMainWindow):
         tool_layout.addWidget(self.lbl_tool_name)
         self.tool_badge_frame.hide()
 
-        # --- Floating Conversation Area (Bottom Center) ---
-        self.log_widget = QWidget(self.canvas)
+        # --- Top-Right Universal Voice Typing Indicator ---
+        self.typing_badge = QLabel(self.canvas)
+        self.typing_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.typing_badge.setStyleSheet("""
+            color: #00e5ff;
+            background: rgba(0, 229, 255, 0.12);
+            border: 1px solid rgba(0, 229, 255, 0.45);
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            padding: 4px 10px;
+        """)
+        self.typing_badge.setText("⌨️ TYPING: INACTIVE")
+        self.typing_badge.hide()
+
+        # --- Scrollable Conversation History Area (Bottom Center) ---
+        from PyQt6.QtWidgets import QScrollArea
+        self.log_scroll = QScrollArea(self.canvas)
+        self.log_scroll.setWidgetResizable(True)
+        self.log_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.log_scroll.setStyleSheet("""
+            QScrollArea {
+                background: rgba(2, 10, 16, 0.78);
+                border: 1px solid rgba(0, 229, 255, 0.32);
+                border-radius: 6px;
+            }
+            QScrollBar:vertical {
+                background: rgba(0, 20, 30, 0.6);
+                width: 6px;
+                margin: 0;
+                border-radius: 3px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(0, 229, 255, 0.45);
+                border-radius: 3px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #00e5ff;
+            }
+        """)
+
+        self.log_widget = QWidget()
+        self.log_widget.setStyleSheet("background: transparent;")
         self.log_layout = QVBoxLayout(self.log_widget)
-        self.log_layout.setContentsMargins(0, 0, 0, 0)
-        self.log_layout.setSpacing(8)
-        self.log_layout.setAlignment(Qt.AlignmentFlag.AlignBottom)
+        self.log_layout.setContentsMargins(12, 10, 12, 10)
+        self.log_layout.setSpacing(10)
+        self.log_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.log_scroll.setWidget(self.log_widget)
 
         # --- Live Caption Label ---
         self.lbl_caption = QLabel(self.canvas)
         self.lbl_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_caption.setStyleSheet("""
             color: #ffffff;
-            font-size: 15px;
+            font-size: 14px;
             letter-spacing: 0.03em;
             background: transparent;
         """)
         self.lbl_caption.hide()
 
-        # --- Bottom Input Bar ---
+        # --- Bottom Input Bar (Uncluttered, High-DPI Ergonomic Controls) ---
         self.input_container = QWidget(self.canvas)
         input_layout = QHBoxLayout(self.input_container)
         input_layout.setContentsMargins(0, 0, 0, 0)
-        input_layout.setSpacing(8)
+        input_layout.setSpacing(10)
 
         self.cmd_input = QLineEdit()
         self.cmd_input.setProperty("class", "cyberInput")
-        self.cmd_input.setPlaceholderText("Command Santra (voice or text e.g. 'Open Chrome and search wellmeds.in')...")
+        self.cmd_input.setPlaceholderText("Command Santra (voice or text e.g. 'Open Chrome', 'Explain binary search')...")
         self.cmd_input.returnPressed.connect(self._on_submit_command)
         input_layout.addWidget(self.cmd_input, stretch=1)
 
@@ -185,35 +231,11 @@ class MainWindow(QMainWindow):
         self.btn_execute.clicked.connect(self._on_submit_command)
         input_layout.addWidget(self.btn_execute)
 
-        self.btn_screen = QPushButton("🔍 SCREEN")
-        self.btn_screen.setProperty("class", "cyberButton")
-        self.btn_screen.setToolTip("Analyze and explain visible desktop screen content (Ctrl+Shift+S)")
-        self.btn_screen.clicked.connect(self._open_screen_intelligence)
-        input_layout.addWidget(self.btn_screen)
-
-        self.btn_ai_settings = QPushButton("⚙️ AI")
-        self.btn_ai_settings.setProperty("class", "cyberButton")
-        self.btn_ai_settings.setToolTip("Manage AI providers, API keys, models, and priority (Ctrl+Shift+A)")
-        self.btn_ai_settings.clicked.connect(self._open_ai_settings)
-        input_layout.addWidget(self.btn_ai_settings)
-
-        self.btn_pronunciation = QPushButton("🗣️ ACCENT")
-        self.btn_pronunciation.setProperty("class", "cyberButton")
-        self.btn_pronunciation.setToolTip("Configure Indian Accent Pronunciation & Wake-Word Intelligence (Ctrl+Shift+P)")
-        self.btn_pronunciation.clicked.connect(self._open_pronunciation_settings)
-        input_layout.addWidget(self.btn_pronunciation)
-
-        self.btn_lab = QPushButton("🧪 LAB")
-        self.btn_lab.setProperty("class", "cyberButton")
-        self.btn_lab.setToolTip("Open Santra Virtual Testing Room & Capability Lab (Ctrl+Shift+L)")
-        self.btn_lab.clicked.connect(self._open_virtual_lab)
-        input_layout.addWidget(self.btn_lab)
-
-        self.btn_spotify = QPushButton("🎵 SPOTIFY")
-        self.btn_spotify.setProperty("class", "cyberButton")
-        self.btn_spotify.setToolTip("Open Spotify Integration, Playback & Playlist Manager (Ctrl+Shift+M)")
-        self.btn_spotify.clicked.connect(self._open_spotify_panel)
-        input_layout.addWidget(self.btn_spotify)
+        self.btn_palette = QPushButton("COMMANDS ▤")
+        self.btn_palette.setProperty("class", "cyberButton")
+        self.btn_palette.setToolTip("Open Categorized Command Palette & Capability Hub (Ctrl+K)")
+        self.btn_palette.clicked.connect(self._open_command_palette)
+        input_layout.addWidget(self.btn_palette)
 
         self.btn_sleep = QPushButton("🌙 SLEEP")
         self.btn_sleep.setProperty("class", "cyberButton")
@@ -250,6 +272,10 @@ class MainWindow(QMainWindow):
         self.shortcut_lab = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
         self.shortcut_lab.activated.connect(self._open_virtual_lab)
 
+        # Command Palette shortcut (Ctrl+K)
+        self.shortcut_palette = QShortcut(QKeySequence("Ctrl+K"), self)
+        self.shortcut_palette.activated.connect(self._open_command_palette)
+
         # Pronunciation & Accent Intelligence shortcut
         self.shortcut_pronunciation = QShortcut(QKeySequence("Ctrl+Shift+P"), self)
         self.shortcut_pronunciation.activated.connect(self._open_pronunciation_settings)
@@ -258,6 +284,25 @@ class MainWindow(QMainWindow):
         self.shortcut_spotify = QShortcut(QKeySequence("Ctrl+Shift+M"), self)
         self.shortcut_spotify.activated.connect(self._open_spotify_panel)
 
+        # Project Intelligence shortcut
+        self.shortcut_code = QShortcut(QKeySequence("Ctrl+Shift+C"), self)
+        self.shortcut_code.activated.connect(self._open_project_intelligence)
+
+    def _open_project_intelligence(self):
+        try:
+            from ui.panels.project_intelligence_panel import ProjectIntelligencePanel
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout
+            dialog = QDialog(self)
+            dialog.setWindowTitle("SANTRA — Project Intelligence & Code Architecture")
+            dialog.resize(880, 620)
+            layout = QVBoxLayout(dialog)
+            layout.setContentsMargins(10, 10, 10, 10)
+            panel = ProjectIntelligencePanel(dialog)
+            layout.addWidget(panel)
+            dialog.exec()
+        except Exception as e:
+            logger.error(f"Failed to open Project Intelligence Panel: {e}", exc_info=True)
+
     def _open_spotify_panel(self):
         try:
             from ui.panels.spotify_panel import SpotifyDialog
@@ -265,6 +310,29 @@ class MainWindow(QMainWindow):
             dialog.exec()
         except Exception as e:
             logger.error(f"Failed to open Spotify Dialog: {e}", exc_info=True)
+
+    def _open_command_palette(self):
+        try:
+            from ui.panels.command_palette_dialog import CommandPaletteDialog
+            callbacks = {
+                "code": self._open_project_intelligence,
+                "lab": self._open_virtual_lab,
+                "ai": self._open_ai_settings,
+                "screen": self._open_screen_intelligence,
+                "accent": self._open_pronunciation_settings,
+                "spotify": self._open_spotify_panel,
+                "test_speakers": self._test_audio_speakers,
+                "hianime": lambda: self.sig_command_submitted.emit("open hianime"),
+                "chatgpt": lambda: self.sig_command_submitted.emit("open chatgpt"),
+                "wake": self._on_wake_clicked,
+            }
+            dialog = CommandPaletteDialog(self, callbacks=callbacks)
+            dialog.exec()
+        except Exception as e:
+            logger.error(f"Failed to open Command Palette: {e}", exc_info=True)
+
+    def _test_audio_speakers(self):
+        self.sig_command_submitted.emit("test audio speakers")
 
     def _open_screen_intelligence(self):
         try:
@@ -319,25 +387,32 @@ class MainWindow(QMainWindow):
         if hasattr(self, "boot_overlay") and self.boot_overlay.isVisible():
             self.boot_overlay.resize(self.size())
 
-        # Center Arc Reactor
-        reactor_size = min(int(min(w, h) * 0.58), 420)
+        # Responsive widths
+        lw = min(880, max(620, int(w * 0.82)))
+        log_h = min(170, max(110, int(h * 0.25)))
+
+        # Center Arc Reactor positioned in middle top
+        reactor_size = min(int(min(w, h) * 0.46), 330)
         rx = int((w - reactor_size) / 2)
-        ry = int((h - reactor_size) / 2) - 30
+        ry = max(50, int((h - log_h - 130 - reactor_size) / 2) + 20)
         self.arc_reactor.setGeometry(rx, ry, reactor_size, reactor_size)
 
         # Top Tool Badge
         bw = min(540, int(w * 0.6))
-        self.tool_badge_frame.setGeometry(int((w - bw) / 2), 70, bw, 36)
+        self.tool_badge_frame.setGeometry(int((w - bw) / 2), 65, bw, 36)
 
-        # Conversation log area (Bottom Center)
-        lw = min(720, int(w * 0.72))
-        self.log_widget.setGeometry(int((w - lw) / 2), h - 235, lw, 120)
+        # Top-Right Universal Typing Badge
+        if hasattr(self, "typing_badge"):
+            self.typing_badge.setGeometry(w - 290, 24, 260, 30)
+
+        # Conversation scroll area
+        self.log_scroll.setGeometry(int((w - lw) / 2), h - log_h - 105, lw, log_h)
 
         # Caption (Above input)
-        self.lbl_caption.setGeometry(int((w - lw) / 2), h - 110, lw, 24)
+        self.lbl_caption.setGeometry(int((w - lw) / 2), h - 88, lw, 22)
 
         # Input container
-        self.input_container.setGeometry(int((w - lw) / 2), h - 80, lw, 38)
+        self.input_container.setGeometry(int((w - lw) / 2), h - 62, lw, 38)
 
     def _on_hud_tick(self):
         # Animate pulsing beacon and signal level interpolation
@@ -399,19 +474,19 @@ class MainWindow(QMainWindow):
         top_y = 48
         pad_x = 72
 
-        # Brand Mark: J.A.R.V.I.S.
+        # Brand Mark: S.A.N.T.R.A.
         font_brand = QFont("Chakra Petch", 16, QFont.Weight.Bold)
         font_brand.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 6.0)
         painter.setFont(font_brand)
         painter.setPen(QColor(0, 229, 255, 240))
-        painter.drawText(pad_x, top_y, "J.A.R.V.I.S.")
+        painter.drawText(pad_x, top_y, "S.A.N.T.R.A.")
 
         # Subtitle
         font_sub = QFont("Chakra Petch", 8, QFont.Weight.Normal)
-        font_sub.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 2.5)
+        font_sub.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 2.2)
         painter.setFont(font_sub)
-        painter.setPen(QColor(0, 229, 255, 110))
-        painter.drawText(pad_x, top_y + 16, "JUST A RATHER VERY INTELLIGENT SYSTEM")
+        painter.setPen(QColor(0, 229, 255, 120))
+        painter.drawText(pad_x, top_y + 16, "SYSTEM AUTOMATION & NEURAL TASK ROUTING ASSISTANT")
 
         # Top-Right Status Line with Pulsing Dot
         state_color = HUDColors.STANDBY_CYAN
@@ -421,7 +496,7 @@ class MainWindow(QMainWindow):
             state_color = HUDColors.CYAN_PRIMARY
         elif self._current_state in [JarvisUIState.LISTENING, JarvisUIState.TRANSCRIBING]:
             state_color = HUDColors.LISTENING_CYAN
-        elif self._current_state in [JarvisUIState.UNDERSTANDING, JarvisUIState.THINKING, JarvisUIState.EXECUTING]:
+        elif self._current_state in [JarvisUIState.UNDERSTANDING, JarvisUIState.PROCESSING, JarvisUIState.THINKING, JarvisUIState.EXECUTING]:
             state_color = HUDColors.THINKING_GOLD
         elif self._current_state == JarvisUIState.SPEAKING:
             state_color = HUDColors.SPEAKING_TEAL
@@ -504,7 +579,7 @@ class MainWindow(QMainWindow):
         font_hint.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.8)
         painter.setFont(font_hint)
         painter.setPen(QColor(0, 229, 255, 95))
-        hint_text = 'SAY "HEY SANTRA" • SPACE TO TALK • ENTER TO COMMAND • V VOICE ENGINE'
+        hint_text = 'SAY "SANTRA" • CTRL+K COMMAND PALETTE • SPACE TO TALK • ENTER TO COMMAND'
         painter.drawText(0, h - 28, w, 20, Qt.AlignmentFlag.AlignCenter, hint_text)
 
     def _on_boot_finished(self):
@@ -524,6 +599,63 @@ class MainWindow(QMainWindow):
         self.sig_audio_amplitude_updated.connect(self.arc_reactor.set_audio_amplitude)
         self.sig_camera_state_updated.connect(self._on_camera_state_updated)
         self.sig_gesture_detected.connect(self._on_gesture_detected)
+        self.sig_typing_state_changed.connect(self._update_typing_badge)
+        self.sig_show_message_approval.connect(self._show_message_approval_dialog)
+
+        # Wire typing coordinator callback
+        try:
+            from core.typing.typing_coordinator import typing_coordinator
+            typing_coordinator.register_state_callback(
+                lambda state, details: self.sig_typing_state_changed.emit(state.value, details)
+            )
+        except Exception as e:
+            logger.debug(f"Typing coordinator callback registration: {e}")
+
+    def _update_typing_badge(self, state: str, details: dict):
+        if state in ["listening", "active", "transcribing", "text_ready", "inserting"]:
+            app = details.get("app", "Active Window")
+            mode = details.get("mode", "continuous")
+            self.typing_badge.setText(f"⌨️ TYPING: {app.upper()} [{mode.upper()}]")
+            self.typing_badge.setStyleSheet("""
+                color: #00ffaa;
+                background: rgba(0, 255, 170, 0.15);
+                border: 1px solid rgba(0, 255, 170, 0.6);
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                padding: 4px 10px;
+            """)
+            self.typing_badge.show()
+        elif state == "paused":
+            self.typing_badge.setText("⌨️ TYPING: PAUSED")
+            self.typing_badge.setStyleSheet("""
+                color: #ffaa00;
+                background: rgba(255, 170, 0, 0.15);
+                border: 1px solid rgba(255, 170, 0, 0.6);
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                padding: 4px 10px;
+            """)
+            self.typing_badge.show()
+        else:
+            self.typing_badge.hide()
+
+    def _show_message_approval_dialog(self, target_app: str, target_control: str, draft_text: str, on_confirm_cb):
+        try:
+            from ui.panels.message_approval_dialog import MessageApprovalDialog
+            dialog = MessageApprovalDialog(
+                target_app=target_app,
+                target_control=target_control,
+                draft_text=draft_text,
+                parent=self,
+                on_confirm_cb=on_confirm_cb
+            )
+            dialog.exec()
+        except Exception as e:
+            logger.error(f"Failed to open Message Approval Dialog: {e}", exc_info=True)
 
     def _on_camera_state_updated(self, event):
         """Updates UI with real camera telemetry and state."""
@@ -574,40 +706,78 @@ class MainWindow(QMainWindow):
             self.sig_command_submitted.emit(cmd)
 
     def _add_turn(self, role: str, text: str):
-        self._turns.append({"role": role, "text": text})
-        if len(self._turns) > 6:
-            self._turns = self._turns[-6:]
+        now_str = time.strftime("%H:%M:%S")
+        self._turns.append({"role": role, "text": text, "timestamp": now_str})
+        if len(self._turns) > 50:
+            self._turns = self._turns[-50:]
         self._rebuild_log_view()
 
     def _rebuild_log_view(self):
-        # Clear existing layout items
         while self.log_layout.count():
             item = self.log_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
-        for turn in self._turns[-3:]:
-            lbl = QLabel()
-            lbl.setWordWrap(True)
-            if turn["role"] == "user":
-                lbl.setStyleSheet("""
-                    color: rgba(255, 255, 255, 0.55);
+        for turn in self._turns:
+            card = QWidget()
+            card_layout = QVBoxLayout(card)
+            card_layout.setContentsMargins(6, 4, 6, 4)
+            card_layout.setSpacing(3)
+
+            ts = turn.get("timestamp", time.strftime("%H:%M:%S"))
+            role = turn["role"]
+            header_text = f"[{ts}] YOU  ➜" if role == "user" else f"[{ts}] SANTRA (Autonomous)  ➜"
+            header_color = "rgba(0, 229, 255, 0.65)" if role == "user" else "#00e5ff"
+
+            lbl_hdr = QLabel(header_text)
+            lbl_hdr.setStyleSheet(f"""
+                color: {header_color};
+                font-family: 'Chakra Petch', sans-serif;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                background: transparent;
+            """)
+            card_layout.addWidget(lbl_hdr)
+
+            lbl_body = QLabel()
+            lbl_body.setWordWrap(True)
+            lbl_body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            txt = turn["text"]
+
+            if "```" in txt:
+                lbl_body.setStyleSheet("""
+                    color: #d8f5ff;
+                    font-family: 'Consolas', 'JetBrains Mono', monospace;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    background: rgba(0, 15, 25, 0.7);
+                    border: 1px solid rgba(0, 229, 255, 0.2);
+                    border-radius: 4px;
+                    padding: 8px;
+                """)
+                clean_code = txt.replace("```python", "").replace("```cpp", "").replace("```", "").strip()
+                lbl_body.setText(clean_code)
+            else:
+                body_color = "rgba(255, 255, 255, 0.88)" if role == "user" else "#eaf9ff"
+                lbl_body.setStyleSheet(f"""
+                    color: {body_color};
                     font-size: 13px;
-                    font-weight: 500;
+                    font-weight: {500 if role == 'user' else 600};
                     letter-spacing: 0.02em;
                     background: transparent;
+                    padding: 2px 0px;
                 """)
-                lbl.setText(f"YOU  ➜  {turn['text']}")
-            else:
-                lbl.setStyleSheet("""
-                    color: #eaf9ff;
-                    font-size: 14px;
-                    font-weight: 600;
-                    letter-spacing: 0.03em;
-                    background: transparent;
-                """)
-                lbl.setText(f"SANTRA  ➜  {turn['text']}")
-            self.log_layout.addWidget(lbl)
+                lbl_body.setText(txt)
+
+            card_layout.addWidget(lbl_body)
+            self.log_layout.addWidget(card)
+
+        # Smooth autoscroll to bottom
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(25, lambda: self.log_scroll.verticalScrollBar().setValue(
+            self.log_scroll.verticalScrollBar().maximum()
+        ))
 
     def _on_status_changed(self, status: str):
         self._status_text = status.upper()
@@ -632,7 +802,7 @@ class MainWindow(QMainWindow):
             self.lbl_caption.show()
         elif self._current_state == JarvisUIState.SPEAKING:
             self._target_signal_level = 0.90
-        elif self._current_state in [JarvisUIState.THINKING, JarvisUIState.UNDERSTANDING]:
+        elif self._current_state in [JarvisUIState.THINKING, JarvisUIState.PROCESSING, JarvisUIState.UNDERSTANDING]:
             self._target_signal_level = 0.75
         elif self._current_state == JarvisUIState.SLEEPING:
             self._target_signal_level = 0.10

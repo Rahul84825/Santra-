@@ -1,0 +1,227 @@
+{
+  "positive_tests": 6,
+  "positive_recognized": 6,
+  "positive_accuracy_percent": 100.0,
+  "missed_wakeups": 0,
+  "negative_tests": 14,
+  "negative_rejected": 14,
+  "negative_accuracy_percent": 100.0,
+  "false_activations": 0,
+  "threshold_sensitivity": 0.45,
+  "test_results": [
+    {
+      "id": 1,
+      "phrase": "santra",
+      "type": "positive",
+      "expected_wake": true,
+      "detected_wake": true,
+      "is_negative_confuser": false,
+      "matched_variant": "santra",
+      "confidence_score": 0.9,
+      "status": "PASSED"
+    },
+    {
+      "id": 2,
+      "phrase": "hey santra",
+      "type": "positive",
+      "expected_wake": true,
+      "detected_wake": true,
+      "is_negative_confuser": false,
+      "matched_variant": "santra",
+      "confidence_score": 0.9,
+      "status": "PASSED"
+    },
+    {
+      "id": 3,
+      "phrase": "santra open chrome",
+      "type": "positive",
+      "expected_wake": true,
+      "detected_wake": true,
+      "is_negative_confuser": false,
+      "matched_variant": "santra",
+      "confidence_score": 0.9,
+      "status": "PASSED"
+    },
+    {
+      "id": 4,
+      "phrase": "santra take a screenshot",
+      "type": "positive",
+      "expected_wake": true,
+      "detected_wake": true,
+      "is_negative_confuser": false,
+      "matched_variant": "santra",
+      "confidence_score": 0.9,
+      "status": "PASSED"
+    },
+    {
+      "id": 5,
+      "phrase": "suntra",
+      "type": "positive_indian_accent",
+      "expected_wake": true,
+      "detected_wake": true,
+      "is_negative_confuser": false,
+      "matched_variant": "suntra",
+      "confidence_score": 0.9,
+      "status": "PASSED"
+    },
+    {
+      "id": 6,
+      "phrase": "samtra",
+      "type": "positive_indian_accent",
+      "expected_wake": true,
+      "detected_wake": true,
+      "is_negative_confuser": false,
+      "matched_variant": "samtra",
+      "confidence_score": 0.9,
+      "status": "PASSED"
+    },
+    {
+      "id": 7,
+      "phrase": "santa",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 8,
+      "phrase": "santa claus",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 9,
+      "phrase": "secret santa",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 10,
+      "phrase": "central processing unit",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 11,
+      "phrase": "centre of gravity",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 12,
+      "phrase": "sutra reading",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 13,
+      "phrase": "kama sutra",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 14,
+      "phrase": "mantra chanting",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 15,
+      "phrase": "tantra practice",
+      "type": "negative_confuser",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": true,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 16,
+      "phrase": "what time is it",
+      "type": "conversation",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": false,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 17,
+      "phrase": "how is the weather outside",
+      "type": "conversation",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": false,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    },
+    {
+      "id": 18,
+      "phrase": "open chrome browser",
+      "type": "command_without_wake",
+      "expected_wake": false,
+      "detected_wake": false,
+      "is_negative_confuser": false,
+      "matched_variant": "",
+      "confidence_score": 0.0,
+      "status": "PASSED"
+    }
+  ],
+  "noise_evaluations": [
+    {
+      "file": "noise_fan.wav",
+      "type": "fan_noise",
+      "transcript": "",
+      "false_wake": false,
+      "status": "PASSED"
+    },
+    {
+      "file": "noise_silence.wav",
+      "type": "silence",
+      "transcript": "",
+      "false_wake": false,
+      "status": "PASSED"
+    }
+  ]
+}

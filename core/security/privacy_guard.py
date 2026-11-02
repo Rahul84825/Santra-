@@ -62,10 +62,13 @@ REDACTION_PATTERNS = [
 
 # Injection Patterns for External Output Sanitization
 PROMPT_INJECTION_PATTERNS = [
-    r"(?i)ignore\s+(?:all\s+)?previous\s+instructions",
+    r"(?i)ignore\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions|rules|guidelines|prompts)",
+    r"(?i)ignore\s+(?:all\s+)?(?:safety|system)\s+(?:guidelines|rules|instructions)",
     r"(?i)system:\s*you\s+are\s+now",
+    r"(?i)system\s+instruction\s*:\s*ignore",
     r"(?i)disregard\s+(?:all\s+)?prior\s+safety",
-    r"(?i)you\s+must\s+now\s+act\s+as\s+an\s+unrestricted"
+    r"(?i)you\s+must\s+now\s+act\s+as\s+an\s+unrestricted",
+    r"(?i)print\s+(?:all\s+)?(?:passwords|api\s+keys|tokens|credentials|secrets)"
 ]
 
 

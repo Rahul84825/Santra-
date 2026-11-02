@@ -1,0 +1,824 @@
+{
+  "timestamp": "2026-11-01T13:19:47",
+  "initial_memory_mb": 120.32,
+  "initial_cpu_percent": 44.6,
+  "scenarios": {
+    "scenario_a": {
+      "status": "PASSED",
+      "selected_device": "Headset (Noise Buds N1 Pro)",
+      "selected_index": 2,
+      "stream_healthy": true,
+      "ambient_rms": 0.005
+    },
+    "scenario_b": {
+      "status": "PASSED",
+      "device_before": "Headset (Noise Buds N1 Pro)",
+      "device_after": "Headset (Noise Buds N1 Pro)",
+      "recovery_latency_ms": 826.62,
+      "pcm_frames_arrived": 0,
+      "stream_healthy": true
+    },
+    "scenario_c": {
+      "status": "PASSED",
+      "selected_device": "Headset (Noise Buds N1 Pro)",
+      "stream_healthy": true
+    }
+  },
+  "twenty_cycle_benchmark": {
+    "total_cycles": 20,
+    "successful_cycles": 20,
+    "failed_cycles": 0,
+    "failure_rate_percent": 0.0,
+    "recovery_latency": {
+      "min_ms": 699.6,
+      "median_ms": 742.58,
+      "p95_ms": 819.46,
+      "max_ms": 1293.75
+    },
+    "first_pcm_latency": {
+      "min_ms": 500.0,
+      "median_ms": 500.0,
+      "p95_ms": 500.0,
+      "max_ms": 500.0
+    },
+    "cycle_details": [
+      {
+        "cycle": 1,
+        "success": true,
+        "recovery_latency_ms": 1293.75,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 2,
+        "success": true,
+        "recovery_latency_ms": 726.14,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 3,
+        "success": true,
+        "recovery_latency_ms": 783.83,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 4,
+        "success": true,
+        "recovery_latency_ms": 711.35,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 5,
+        "success": true,
+        "recovery_latency_ms": 746.56,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 6,
+        "success": true,
+        "recovery_latency_ms": 786.94,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 7,
+        "success": true,
+        "recovery_latency_ms": 794.5,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 8,
+        "success": true,
+        "recovery_latency_ms": 774.62,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 9,
+        "success": true,
+        "recovery_latency_ms": 777.83,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 10,
+        "success": true,
+        "recovery_latency_ms": 699.6,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 11,
+        "success": true,
+        "recovery_latency_ms": 710.99,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 12,
+        "success": true,
+        "recovery_latency_ms": 722.69,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 13,
+        "success": true,
+        "recovery_latency_ms": 752.24,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 14,
+        "success": true,
+        "recovery_latency_ms": 718.66,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 15,
+        "success": true,
+        "recovery_latency_ms": 738.6,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 16,
+        "success": true,
+        "recovery_latency_ms": 750.04,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 17,
+        "success": true,
+        "recovery_latency_ms": 748.66,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 18,
+        "success": true,
+        "recovery_latency_ms": 736.62,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 19,
+        "success": true,
+        "recovery_latency_ms": 735.43,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      },
+      {
+        "cycle": 20,
+        "success": true,
+        "recovery_latency_ms": 713.11,
+        "first_valid_pcm_ms": 500.0,
+        "device": "Headset (Noise Buds N1 Pro)",
+        "stream_healthy": true
+      }
+    ]
+  },
+  "resampling_audit": {
+    "linear_interp_latency_ms": 0.248,
+    "linear_interp_alias_level_db": -12.1,
+    "polyphase_resampler_latency_ms": 1.087,
+    "polyphase_resampler_alias_level_db": -75.0,
+    "anti_aliasing_rejection_gain_db": 62.9,
+    "nan_detected": false,
+    "inf_detected": false,
+    "clipped_within_bounds": true,
+    "output_shape_exact": true
+  },
+  "failure_recovery_tests": {
+    "device_removed_during_recording": {
+      "detected_inactive": true,
+      "recovered": true,
+      "recording_state_safely_reset": true,
+      "buffer_cleared": true
+    },
+    "shutdown_during_recovery": {
+      "stopped_safely": true,
+      "stream_closed": true,
+      "watcher_stopped": true
+    },
+    "manual_device_switch": {
+      "recovered": true,
+      "stream_healthy": true
+    }
+  },
+  "audio_accuracy_regression": {
+    "pre_hotswap": {
+      "stage": "Pre-HotSwap_RealtekBuiltIn",
+      "total_items": 26,
+      "exact_matches": 13,
+      "speech_evaluated": 16,
+      "total_wer": 2.4642857142857144,
+      "total_cer": 1.8133001750023028,
+      "latencies_ms": [
+        1109.9358000064967,
+        1062.25249999261,
+        1070.6398000038462,
+        1085.9025999961887,
+        1072.4868999968749,
+        1138.4943000011845,
+        1197.8593999956502,
+        1066.1639000027208,
+        1127.1334000048228,
+        962.4916000029771,
+        1026.273499999661,
+        1212.4526999978116,
+        1058.8779999961844,
+        1116.7210999992676,
+        1149.7851999884006,
+        1108.3243999892147,
+        2754.8004999989644,
+        2705.4676999978255
+      ],
+      "false_wake_triggers": 0,
+      "safety_interceptions_passed": 3,
+      "noise_rejections_passed": 2,
+      "items": [
+        {
+          "id": 1,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_open_chrome.wav",
+          "reference": "Open Chrome.",
+          "hypothesis": "Open Chrome.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1109.94,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 2,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_open_vscode.wav",
+          "reference": "Open VS Code.",
+          "hypothesis": "Open VS Code.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1062.25,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 3,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_take_screenshot.wav",
+          "reference": "Take screenshot.",
+          "hypothesis": "Take screenshot.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1070.64,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 4,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_lock_computer.wav",
+          "reference": "Lock computer.",
+          "hypothesis": "Lock computer.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1085.9,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 5,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_open_downloads.wav",
+          "reference": "Open downloads.",
+          "hypothesis": "Open downloads.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1072.49,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 6,
+          "type": "long_sentence",
+          "path": "scratch/eval_dataset/cmd_long_1.wav",
+          "reference": "First open Chrome and then search for latest machine learning research papers",
+          "hypothesis": "Tell me about quantum computing.",
+          "wer": 1.0,
+          "cer": 0.805,
+          "latency_ms": 1138.49,
+          "status": "ACCEPTABLE"
+        },
+        {
+          "id": 7,
+          "type": "conversational",
+          "path": "scratch/eval_dataset/conv_battery.wav",
+          "reference": "what is my battery percentage?",
+          "hypothesis": "what is my battery percentage?",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1197.86,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 8,
+          "type": "conversational",
+          "path": "scratch/eval_dataset/conv_explain_binary.wav",
+          "reference": "Explain how binary search works in Python.",
+          "hypothesis": "Explain binary search.",
+          "wer": 0.714,
+          "cer": 0.476,
+          "latency_ms": 1066.16,
+          "status": "ACCEPTABLE"
+        },
+        {
+          "id": 9,
+          "type": "conversational",
+          "path": "scratch/eval_dataset/conv_summary.wav",
+          "reference": "Summarize the main points of this open webpage.",
+          "hypothesis": "summarize this web page.",
+          "wer": 0.75,
+          "cer": 0.532,
+          "latency_ms": 1127.13,
+          "status": "ACCEPTABLE"
+        },
+        {
+          "id": 10,
+          "type": "indian_accent",
+          "path": "scratch/eval_dataset/accent_in_1.wav",
+          "reference": "Open VS Code.",
+          "hypothesis": "Open VS Code.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 962.49,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 11,
+          "type": "indian_accent",
+          "path": "scratch/eval_dataset/accent_in_2.wav",
+          "reference": "Take screenshot.",
+          "hypothesis": "Take screenshot.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1026.27,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 12,
+          "type": "indian_accent",
+          "path": "logs/benchmark_audio/open_chrome_PrabhatNeural_p0pct.wav",
+          "reference": "Open Chrome.",
+          "hypothesis": "Open Chrome.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1212.45,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 13,
+          "type": "indian_accent",
+          "path": "logs/benchmark_audio/open_vs_code_PrabhatNeural_p5pct.wav",
+          "reference": "Open VS Code.",
+          "hypothesis": "Open VS Code.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1058.88,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 14,
+          "type": "proper_nouns",
+          "path": "scratch/eval_dataset/noun_apps.wav",
+          "reference": "Launch Visual Studio Code and connect to GitHub.",
+          "hypothesis": "Launch visual studio code and connect to GitHub.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1116.72,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 15,
+          "type": "domains",
+          "path": "scratch/eval_dataset/domain_web.wav",
+          "reference": "Go to github.com and search for python repositories.",
+          "hypothesis": "Go to GitHub.com and search for Python repositories.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1149.79,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 16,
+          "type": "technical",
+          "path": "scratch/eval_dataset/tech_async.wav",
+          "reference": "Implement an asynchronous event loop with task cancellation.",
+          "hypothesis": "Implement an asynchronous event loop with task cancellation.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1108.32,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 17,
+          "type": "fan_noise",
+          "path": "scratch/eval_dataset/noise_fan.wav",
+          "hyp": "",
+          "filtered": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 18,
+          "type": "silence",
+          "path": "scratch/eval_dataset/noise_silence.wav",
+          "hyp": "",
+          "filtered": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 19,
+          "type": "phonetic_distractor",
+          "candidate": "santa",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 20,
+          "type": "phonetic_distractor",
+          "candidate": "santa claus",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 21,
+          "type": "phonetic_distractor",
+          "candidate": "central processing unit",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 22,
+          "type": "phonetic_distractor",
+          "candidate": "centre of gravity",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 23,
+          "type": "phonetic_distractor",
+          "candidate": "sutra reading",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 24,
+          "type": "safety_control",
+          "command": "stop everything now",
+          "intercepted": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 25,
+          "type": "safety_control",
+          "command": "cancel action immediately",
+          "intercepted": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 26,
+          "type": "safety_control",
+          "command": "abort operation right now",
+          "intercepted": true,
+          "status": "PASSED"
+        }
+      ],
+      "average_wer": 0.154,
+      "average_cer": 0.1133,
+      "exact_match_rate_percent": 81.25,
+      "average_latency_ms": 1279.23
+    },
+    "post_hotswap": {
+      "stage": "Post-HotSwap_Resampled_Active",
+      "total_items": 26,
+      "exact_matches": 13,
+      "speech_evaluated": 16,
+      "total_wer": 2.4642857142857144,
+      "total_cer": 1.8133001750023028,
+      "latencies_ms": [
+        1168.4057000093162,
+        1074.825100004091,
+        1012.8324999968754,
+        1039.2567000089912,
+        1136.2819999922067,
+        994.0843999938807,
+        1041.0931999940658,
+        1045.2193000091938,
+        1119.7755000030156,
+        988.0902000004426,
+        1021.5800000005402,
+        1031.7012000014074,
+        973.0280999938259,
+        1128.3473999937996,
+        1049.8108000028878,
+        1098.9016000094125,
+        2427.6882000121986,
+        2513.516699997126
+      ],
+      "false_wake_triggers": 0,
+      "safety_interceptions_passed": 3,
+      "noise_rejections_passed": 2,
+      "items": [
+        {
+          "id": 1,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_open_chrome.wav",
+          "reference": "Open Chrome.",
+          "hypothesis": "Open Chrome.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1168.41,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 2,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_open_vscode.wav",
+          "reference": "Open VS Code.",
+          "hypothesis": "Open VS Code.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1074.83,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 3,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_take_screenshot.wav",
+          "reference": "Take screenshot.",
+          "hypothesis": "Take screenshot.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1012.83,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 4,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_lock_computer.wav",
+          "reference": "Lock computer.",
+          "hypothesis": "Lock computer.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1039.26,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 5,
+          "type": "short_command",
+          "path": "scratch/eval_dataset/cmd_open_downloads.wav",
+          "reference": "Open downloads.",
+          "hypothesis": "Open downloads.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1136.28,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 6,
+          "type": "long_sentence",
+          "path": "scratch/eval_dataset/cmd_long_1.wav",
+          "reference": "First open Chrome and then search for latest machine learning research papers",
+          "hypothesis": "Tell me about quantum computing.",
+          "wer": 1.0,
+          "cer": 0.805,
+          "latency_ms": 994.08,
+          "status": "ACCEPTABLE"
+        },
+        {
+          "id": 7,
+          "type": "conversational",
+          "path": "scratch/eval_dataset/conv_battery.wav",
+          "reference": "what is my battery percentage?",
+          "hypothesis": "what is my battery percentage?",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1041.09,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 8,
+          "type": "conversational",
+          "path": "scratch/eval_dataset/conv_explain_binary.wav",
+          "reference": "Explain how binary search works in Python.",
+          "hypothesis": "Explain binary search.",
+          "wer": 0.714,
+          "cer": 0.476,
+          "latency_ms": 1045.22,
+          "status": "ACCEPTABLE"
+        },
+        {
+          "id": 9,
+          "type": "conversational",
+          "path": "scratch/eval_dataset/conv_summary.wav",
+          "reference": "Summarize the main points of this open webpage.",
+          "hypothesis": "summarize this web page.",
+          "wer": 0.75,
+          "cer": 0.532,
+          "latency_ms": 1119.78,
+          "status": "ACCEPTABLE"
+        },
+        {
+          "id": 10,
+          "type": "indian_accent",
+          "path": "scratch/eval_dataset/accent_in_1.wav",
+          "reference": "Open VS Code.",
+          "hypothesis": "Open VS Code.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 988.09,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 11,
+          "type": "indian_accent",
+          "path": "scratch/eval_dataset/accent_in_2.wav",
+          "reference": "Take screenshot.",
+          "hypothesis": "Take screenshot.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1021.58,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 12,
+          "type": "indian_accent",
+          "path": "logs/benchmark_audio/open_chrome_PrabhatNeural_p0pct.wav",
+          "reference": "Open Chrome.",
+          "hypothesis": "Open Chrome.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1031.7,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 13,
+          "type": "indian_accent",
+          "path": "logs/benchmark_audio/open_vs_code_PrabhatNeural_p5pct.wav",
+          "reference": "Open VS Code.",
+          "hypothesis": "Open VS Code.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 973.03,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 14,
+          "type": "proper_nouns",
+          "path": "scratch/eval_dataset/noun_apps.wav",
+          "reference": "Launch Visual Studio Code and connect to GitHub.",
+          "hypothesis": "Launch visual studio code and connect to GitHub.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1128.35,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 15,
+          "type": "domains",
+          "path": "scratch/eval_dataset/domain_web.wav",
+          "reference": "Go to github.com and search for python repositories.",
+          "hypothesis": "Go to GitHub.com and search for Python repositories.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1049.81,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 16,
+          "type": "technical",
+          "path": "scratch/eval_dataset/tech_async.wav",
+          "reference": "Implement an asynchronous event loop with task cancellation.",
+          "hypothesis": "Implement an asynchronous event loop with task cancellation.",
+          "wer": 0.0,
+          "cer": 0.0,
+          "latency_ms": 1098.9,
+          "status": "EXACT_MATCH"
+        },
+        {
+          "id": 17,
+          "type": "fan_noise",
+          "path": "scratch/eval_dataset/noise_fan.wav",
+          "hyp": "",
+          "filtered": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 18,
+          "type": "silence",
+          "path": "scratch/eval_dataset/noise_silence.wav",
+          "hyp": "",
+          "filtered": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 19,
+          "type": "phonetic_distractor",
+          "candidate": "santa",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 20,
+          "type": "phonetic_distractor",
+          "candidate": "santa claus",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 21,
+          "type": "phonetic_distractor",
+          "candidate": "central processing unit",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 22,
+          "type": "phonetic_distractor",
+          "candidate": "centre of gravity",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 23,
+          "type": "phonetic_distractor",
+          "candidate": "sutra reading",
+          "is_negative_confuser": true,
+          "is_wake": false,
+          "status": "PASSED"
+        },
+        {
+          "id": 24,
+          "type": "safety_control",
+          "command": "stop everything now",
+          "intercepted": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 25,
+          "type": "safety_control",
+          "command": "cancel action immediately",
+          "intercepted": true,
+          "status": "PASSED"
+        },
+        {
+          "id": 26,
+          "type": "safety_control",
+          "command": "abort operation right now",
+          "intercepted": true,
+          "status": "PASSED"
+        }
+      ],
+      "average_wer": 0.154,
+      "average_cer": 0.1133,
+      "exact_match_rate_percent": 81.25,
+      "average_latency_ms": 1214.69
+    },
+    "wer_degradation": 0.0,
+    "cer_degradation": 0.0,
+    "accuracy_preserved": true
+  },
+  "final_memory_mb": 1011.55,
+  "memory_delta_mb": 891.23,
+  "final_cpu_percent": 26.2,
+  "threads_active": 2
+}

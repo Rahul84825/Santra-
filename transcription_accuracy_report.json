@@ -1,0 +1,58 @@
+{
+  "base_cuda_float16": {
+    "model": "base",
+    "device": "cuda",
+    "compute": "float16",
+    "init_ms": 760.28,
+    "speech_samples": 26,
+    "noise_samples": 2,
+    "wer_percent": 35.66,
+    "exact_match_acc_percent": 50.0,
+    "false_command_rate_percent": 0.0,
+    "missed_command_rate_percent": 30.77,
+    "median_latency_ms": 256.67,
+    "p95_latency_ms": 358.14
+  },
+  "small_cuda_float16": {
+    "model": "small",
+    "device": "cuda",
+    "compute": "float16",
+    "init_ms": 1795.45,
+    "speech_samples": 26,
+    "noise_samples": 2,
+    "wer_percent": 33.2,
+    "exact_match_acc_percent": 53.85,
+    "false_command_rate_percent": 0.0,
+    "missed_command_rate_percent": 26.92,
+    "median_latency_ms": 401.78,
+    "p95_latency_ms": 541.39
+  },
+  "base_cpu_int8": {
+    "model": "base",
+    "device": "cpu",
+    "compute": "int8",
+    "init_ms": 1045.26,
+    "speech_samples": 26,
+    "noise_samples": 2,
+    "wer_percent": 35.66,
+    "exact_match_acc_percent": 50.0,
+    "false_command_rate_percent": 0.0,
+    "missed_command_rate_percent": 30.77,
+    "median_latency_ms": 1549.49,
+    "p95_latency_ms": 1650.76
+  },
+  "small_cpu_int8": {
+    "model": "small",
+    "device": "cpu",
+    "compute": "int8",
+    "init_ms": 3210.07,
+    "speech_samples": 26,
+    "noise_samples": 2,
+    "wer_percent": 35.98,
+    "exact_match_acc_percent": 53.85,
+    "false_command_rate_percent": 0.0,
+    "missed_command_rate_percent": 30.77,
+    "median_latency_ms": 2827.11,
+    "p95_latency_ms": 4752.46
+  }
+}

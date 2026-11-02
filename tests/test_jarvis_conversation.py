@@ -42,7 +42,7 @@ class TestJarvisConversation(unittest.TestCase):
                 self.assertEqual(intent_node["intent"], "identity")
                 exec_res = self.executor.execute(intent_node)
                 self.assertTrue(exec_res["success"])
-                self.assertIn("Jarvis", exec_res["message"])
+                self.assertTrue("Jarvis" in exec_res["message"] or "Santra" in exec_res["message"])
                 self.assertIn("Active Gamer", exec_res["message"])
 
     def test_help_intent(self):

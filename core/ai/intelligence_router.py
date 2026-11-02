@@ -57,13 +57,29 @@ class IntelligenceRouter:
         """Alias for route() method for classification."""
         return self.route(raw_text, session_context)
 
-    def route(self, raw_text: str, session_context: Optional[Dict[str, Any]] = None) -> StructuredRequest:
-        """Analyzes and classifies raw user speech into a StructuredRequest."""
+    def route(self, raw_text: str, session_context: Optional[Dict[str, Any]] = None, normalized: Optional[str] = None) -> StructuredRequest:
+        """Analyzes and classifies raw user speech into a StructuredRequest with fast confidence-aware first-stage routing."""
         t0 = time.perf_counter()
-        norm_res = self.normalizer.normalize(raw_text)
-        normalized = norm_res["normalized"]
+        if not raw_text or not raw_text.strip():
+            return StructuredRequest(
+                raw_text="",
+                normalized_text="",
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="EMPTY",
+                action="standby",
+                target="runtime",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        if normalized is None:
+            norm_res = self.normalizer.normalize(raw_text)
+            normalized = norm_res["normalized"]
         clean = normalized.lower().strip()
         raw_clean = raw_text.lower().strip()
+        clean_no_punct = re.sub(r"[^\w\s]", "", clean).strip()
 
         # Step 0: Explicit Model Prefix Routing (e.g. 'nvidia:', 'nemotron:')
         if any(raw_clean.startswith(pref) for pref in ["nvidia:", "nemotron:"]):
@@ -146,6 +162,66 @@ class IntelligenceRouter:
                 entities={"prompt": prompt, "provider": "nvidia"}
             )
 
+        # Step 0D: Fast Conversational Small Talk, Greetings & Social Reflexes (Latency < 0.1ms)
+        # Greetings: "Hi Santra", "Hello", "Good morning"
+        greeting_phrases = ["hi", "hello", "hey", "hi santra", "hello santra", "hey santra", "good morning", "good evening", "good afternoon"]
+        if clean in greeting_phrases or clean_no_punct in greeting_phrases or re.match(r"^(?:hi|hello|hey)\s+(?:santra|samtra|suntra|jarvis)$", clean):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as GREETING (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="GREETING",
+                action="greet",
+                target=clean,
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        # Conversational Inquiries: "How are you?", "How are you doing?", "How's it going?"
+        how_are_you_phrases = [
+            "how are you", "how are you doing", "how's it going", "how is it going",
+            "how have you been", "how r u", "how are things", "how's everything",
+            "what's up", "whats up", "what is up", "how do you do", "are you okay", "are you alright"
+        ]
+        if any(clean_no_punct == p or clean_no_punct.startswith(p + " ") or clean_no_punct.endswith(" " + p) for p in how_are_you_phrases):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as HOW_ARE_YOU (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="HOW_ARE_YOU",
+                action="respond_how_are_you",
+                target="how are you",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        # Fast Social Humor: "Tell me a joke", "Make me laugh"
+        joke_phrases = ["tell me a joke", "tell a joke", "make me laugh", "say something funny", "tell another joke", "another joke", "give me a joke"]
+        if any(clean_no_punct == j or clean_no_punct.startswith(j + " ") for j in joke_phrases):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as SOCIAL_HUMOR (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="SOCIAL_HUMOR",
+                action="tell_joke",
+                target="joke",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False,
+                entities={"action": "tell_joke"}
+            )
+
         # Step 1: Detect Complex Multi-Step / Reasoning Requests (Layer 3)
         if self._is_complex_reasoning(clean, raw_text):
             elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -163,36 +239,19 @@ class IntelligenceRouter:
                 planning_required=True
             )
 
-        # Step 2: Detect Informational Questions (Strict Filter)
-        if self._is_informational_question(raw_text, clean):
-            elapsed_ms = (time.perf_counter() - t0) * 1000
-            logger.info(f"[ROUTER] Classified as QUESTION (Layer 2/3 conversation, Latency={elapsed_ms:.2f}ms)")
-            return StructuredRequest(
-                raw_text=raw_text,
-                normalized_text=normalized,
-                mode=MODE_QUESTION,
-                layer=LAYER_2,
-                intent="informational_question",
-                action="explain",
-                target=clean,
-                confidence=0.95,
-                context_required=True,
-                planning_required=False
-            )
-
-        # Step 3: Check Contextual References & Pronominals (Layer 2)
+        # Step 1B: Check Contextual References & Pronominals (Layer 2)
         contextual_req = self._check_contextual_request(raw_text, normalized, clean, session_context)
         if contextual_req:
             elapsed_ms = (time.perf_counter() - t0) * 1000
             logger.info(f"[ROUTER] Classified as LAYER 2 CONTEXT (Latency={elapsed_ms:.2f}ms)")
             return contextual_req
 
-        # Step 4: Deterministic Local Parsing (Layer 1 Fast Reflex)
-        intent_node = self.intent_engine.parse(normalized)
+        # Step 2: Deterministic Local Parsing (Layer 1 Fast Direct Commands - < 1.5ms)
+        # Parse directly with IntentEngine to execute without unnecessary reasoning loops
+        intent_node = self.intent_engine.parse(normalized, raw_text=raw_text)
         intent = intent_node.get("intent", "unknown")
         confidence = intent_node.get("confidence", 0.0)
 
-        # Known Layer 1 Fast Local intents
         deterministic_intents = {
             "open_app", "close_app", "minimize_app", "maximize_app", "window_control", "system_control",
             "open_new_chrome_tab", "open_new_chrome_window", "open_folder", "open_file",
@@ -219,25 +278,52 @@ class IntelligenceRouter:
             "affirmation", "negation", "how_are_you", "status_check",
             "turn_on_camera", "turn_off_camera", "start_hand_tracking", "stop_hand_tracking", "camera_snapshot",
             "social_humor", "social_personality", "social_chat", "social_greeting", "about",
-            "spotify_control", "panel_visibility"
+            "spotify_control", "panel_visibility", "battery_info", "power_control", "power.scheme"
         }
 
-
-        if intent in deterministic_intents and confidence >= 0.75:
+        if (intent in deterministic_intents or
+            intent.startswith("application.") or
+            intent.startswith("desktop.") or
+            intent.startswith("desktop_interaction.") or
+            intent.startswith("screen.") or
+            intent.startswith("screen_understanding.") or
+            intent.startswith("files.") or
+            intent.startswith("file_management.") or
+            intent.startswith("ai.") or
+            intent.startswith("ai_management.") or
+            intent.startswith("virtual_lab.") or
+            intent.startswith("power.")) and confidence >= 0.75:
             elapsed_ms = (time.perf_counter() - t0) * 1000
-            logger.info(f"[ROUTER] Classified as LAYER 1 FAST LOCAL ({intent}, Latency={elapsed_ms:.2f}ms)")
+            logger.info(f"[ROUTER] Fast-path classified as LAYER 1 FAST LOCAL ({intent}, Latency={elapsed_ms:.2f}ms)")
             return StructuredRequest(
                 raw_text=raw_text,
                 normalized_text=normalized,
                 mode=MODE_FAST_LOCAL,
                 layer=LAYER_1,
                 intent=intent.upper(),
-                action=intent_node.get("action", ""),
-                target=intent_node.get("target", ""),
+                action=intent_node.get("action", intent),
+                target=intent_node.get("target") or intent_node.get("query") or clean,
                 confidence=confidence,
                 context_required=False,
                 planning_required=False,
                 entities=intent_node
+            )
+
+        # Step 3: Detect Informational Questions (Strict Filter)
+        if self._is_informational_question(raw_text, clean):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Classified as QUESTION (Layer 2/3 conversation, Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_QUESTION,
+                layer=LAYER_2,
+                intent="informational_question",
+                action="explain",
+                target=clean,
+                confidence=0.95,
+                context_required=True,
+                planning_required=False
             )
 
         # Step 5: Fallback / Conversational Understanding (Layer 2)
@@ -293,6 +379,14 @@ class IntelligenceRouter:
         ]):
             return False
 
+        # Battery & System Telemetry bypass (Route deterministically via Layer 1 tools, zero LLM latency)
+        if any(b in clean for b in [
+            "battery", "charging", "plugged in", "how long can i use the laptop",
+            "how long can i use my laptop", "how long will the battery last", "how much time left on battery",
+            "cpu info", "ram info", "disk space", "system uptime"
+        ]):
+            return False
+
         # Spotify inquiry bypass
         if any(h in clean for h in [
             "which song is playing", "what song is playing", "what's playing",
@@ -326,7 +420,10 @@ class IntelligenceRouter:
             "stop being sarcastic", "talk casually", "keep it short", "explain things in detail",
             "be more dramatic", "use your normal personality", "don't tell jokes for now",
             "enable humor", "disable humor", "i'm bored", "im bored", "guess what",
-            "tell me something interesting", "surprise me", "let's talk", "lets talk"
+            "tell me something interesting", "surprise me", "let's talk", "lets talk",
+            "how are you", "how are you doing", "how's it going", "how is it going",
+            "how have you been", "how r u", "how are things", "how's everything",
+            "what's up", "whats up", "what is up", "how do you do", "are you okay", "are you alright"
         ]
         if any(h in clean for h in social_identity_bypass):
             return False

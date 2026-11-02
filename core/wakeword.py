@@ -46,6 +46,14 @@ class WakeWordDetector(ABC):
         """Returns a human-readable diagnostic status string describing engine readiness."""
         pass
 
+    def reset_audio_state(self):
+        """Optional hook to flush internal audio buffers during audio endpoint hot-swap."""
+        pass
+
+    def release_standalone_stream(self):
+        """Optional hook to release standalone fallback stream when coordinated feed resumes."""
+        pass
+
 
 class MockWakeWordDetector(WakeWordDetector):
     """Reliable mock wake word detector running on a background thread.
@@ -66,6 +74,10 @@ class MockWakeWordDetector(WakeWordDetector):
         if hasattr(self, "received_frames"):
             if len(self.received_frames) < 100:
                 self.received_frames.append(pcm_frame)
+
+    def reset_audio_state(self):
+        if hasattr(self, "received_frames"):
+            self.received_frames.clear()
 
     def start(self, callback):
         with self._lock:
@@ -161,6 +173,23 @@ class OpenWakeWordDetector(WakeWordDetector):
             self._audio_queue.put_nowait(pcm_frame)
         except queue.Full:
             pass
+
+    def reset_audio_state(self):
+        """Flushes buffered audio frames and debounces inference on hardware switch."""
+        with self._lock:
+            while not self._audio_queue.empty():
+                try:
+                    self._audio_queue.get_nowait()
+                except Exception:
+                    break
+            self._audio_buffer = np.array([], dtype=np.int16)
+            self._debounce_until = time.time() + 0.35
+            logger.info("[OpenWakeWord] Buffer flushed for audio device hot-swap.")
+
+    def release_standalone_stream(self):
+        """Marks external feed active to trigger immediate release of standalone stream."""
+        self._external_feed_active = True
+        self._last_external_feed_time = time.time()
 
     def _verify_engine_readiness(self):
         """Verifies whether openwakeword library and models can be loaded."""
@@ -509,6 +538,25 @@ class SantraWakeWordDetector(WakeWordDetector):
             self._audio_queue.put_nowait(pcm_frame)
         except queue.Full:
             pass
+
+    def reset_audio_state(self):
+        """Flushes buffered audio frames and debounces inference on hardware switch."""
+        with self._lock:
+            while not self._audio_queue.empty():
+                try:
+                    self._audio_queue.get_nowait()
+                except Exception:
+                    break
+            self._speech_buffer = bytearray()
+            self._speech_frames = 0
+            self._silence_frames = 0
+            self._debounce_until = time.time() + 0.35
+            logger.info("[SantraWake] Buffer flushed for audio device hot-swap.")
+
+    def release_standalone_stream(self):
+        """Marks external feed active to trigger immediate release of standalone stream."""
+        self._external_feed_active = True
+        self._last_external_feed_time = time.time()
 
     def is_available(self) -> bool:
         return True

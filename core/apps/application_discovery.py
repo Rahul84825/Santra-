@@ -132,6 +132,9 @@ class DiscoveredApplication:
 
 
 class ApplicationDiscovery:
+    def get_all_applications(self):
+        return self.list_applications()
+
     """Discovers, normalizes, caches, and resolves installed desktop applications."""
 
     SEMANTIC_ALIASES = {
@@ -586,18 +589,30 @@ class ApplicationDiscovery:
                         if client_p and Path(client_p).exists():
                             rc_exe = client_p
                             break
-                if rc_exe and Path(rc_exe).exists():
-                    discovered["valorant"] = DiscoveredApplication(
-                        app_id="valorant",
-                        display_name="Valorant",
-                        executable_path=str(rc_exe),
-                        arguments=["--launch-product=valorant", "--launch-patchline=live"],
-                        source="riot_client_installs",
-                        platform="windows",
-                        category="game",
-                        launch_mechanism="executable",
-                        install_directory=str(Path(rc_exe).parent)
-                    )
+            if not rc_exe or not Path(rc_exe).exists():
+                for cand_p in [
+                    Path(os.environ.get("USERPROFILE", "C:/Users/activ")) / "Riot Games" / "Riot Client" / "RiotClientServices.exe",
+                    Path("C:/Riot Games/Riot Client/RiotClientServices.exe"),
+                    Path("D:/Riot Games/Riot Client/RiotClientServices.exe"),
+                    Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Riot Games" / "Riot Client" / "RiotClientServices.exe",
+                    Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Riot Games" / "Riot Client" / "RiotClientServices.exe",
+                ]:
+                    if cand_p.exists():
+                        rc_exe = str(cand_p)
+                        break
+
+            if rc_exe and Path(rc_exe).exists():
+                discovered["valorant"] = DiscoveredApplication(
+                    app_id="valorant",
+                    display_name="Valorant",
+                    executable_path=str(rc_exe),
+                    arguments=["--launch-product=valorant", "--launch-patchline=live"],
+                    source="riot_client_installs",
+                    platform="windows",
+                    category="game",
+                    launch_mechanism="executable",
+                    install_directory=str(Path(rc_exe).parent)
+                )
         except Exception as e:
             logger.debug(f"Special launcher discovery (Riot) failed: {e}")
 
@@ -1033,6 +1048,14 @@ class ApplicationDiscovery:
                 continue
             if app.app_id == clean or app.display_name.lower() == clean:
                 return app, []
+
+        # Check special launchers on demand if query is for a specialized game/launcher not yet in cache
+        if self.platform_name == "windows" and clean in ["valorant", "riot", "riot client", "riotclient"]:
+            if "valorant" not in self._cached_apps:
+                self._scan_windows_special_launchers(self._cached_apps)
+                if "valorant" in self._cached_apps:
+                    self._save_to_db([self._cached_apps["valorant"]])
+                    return self._cached_apps["valorant"], []
 
         # 3. Exact searchable alias match
         for app in self._cached_apps.values():

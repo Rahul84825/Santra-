@@ -37,20 +37,21 @@ class TestSpeechDebugAudio(unittest.TestCase):
                 p.write_bytes(b"RIFF dummy")
                 created_files.append(p)
 
-            # Invoke save_and_dispatch to trigger rotation cap
-            audio_data = [0.0] * 100
-            with patch("tempfile.mkstemp", return_value=(123, "temp_test.wav")):
-                with patch("os.close", MagicMock()):
-                    with patch("os.remove", MagicMock()):
-                        self.listener._save_and_dispatch(audio_data)
+            # Invoke save_and_dispatch with audible audio to trigger rotation cap
+            audio_data = [0.05] * 8000
+            try:
+                with patch("wave.open", MagicMock()):
+                    with patch("tempfile.mkstemp", return_value=(123, "temp_test.wav")):
+                        with patch("os.close", MagicMock()):
+                            with patch("os.remove", MagicMock()):
+                                self.listener._save_and_dispatch(audio_data)
 
-            # Verify that rotation keeps <= 20 files
-            remaining_wavs = list(debug_dir.glob("*.wav"))
-            self.assertLessEqual(len(remaining_wavs), 21)
-
-            # Cleanup dummy test files
-            for f in remaining_wavs:
-                if "test_dummy_" in f.name:
+                # Verify that rotation keeps <= 20 files
+                remaining_wavs = list(debug_dir.glob("*.wav"))
+                self.assertLessEqual(len(remaining_wavs), 21)
+            finally:
+                # Cleanup dummy test files safely
+                for f in debug_dir.glob("test_dummy_*.wav"):
                     try:
                         f.unlink()
                     except Exception:
