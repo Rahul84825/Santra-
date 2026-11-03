@@ -411,7 +411,8 @@ class SpeechListener:
                     self._pre_roll_buffer.pop(0)
 
         # Dispatch 16-bit PCM chunk to registered stream consumers (e.g. OpenWakeWord)
-        if self._audio_consumers:
+        # Only dispatch when not actively capturing an utterance, preventing wake-word & recording overlap
+        if self._audio_consumers and (not self._recording or self._sleep_mode):
             try:
                 clipped = np.clip(eff_data[:, 0], -1.0, 1.0)
                 pcm_chunk = (clipped * 32767.0).astype(np.int16)
@@ -737,7 +738,7 @@ class SpeechListener:
             return False, "Stream inactive"
         if self._last_callback_time > 0 and (time.time() - self._last_callback_time > 2.0):
             return False, f"Callback timeout ({time.time() - self._last_callback_time:.2f}s)"
-        if self._zero_frame_count > 60:
+        if self._zero_frame_count > 300 and (self._last_callback_time > 0 and (time.time() - self._last_callback_time > 3.0)):
             return False, f"Sustained silent/zero frames ({self._zero_frame_count})"
         return True, "Healthy"
 

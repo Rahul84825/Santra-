@@ -53,11 +53,11 @@ class IntelligenceRouter:
         self.intent_engine = IntentEngine()
         self.project_registry = ProjectRegistry()
 
-    def classify(self, raw_text: str, session_context: Optional[Dict[str, Any]] = None) -> StructuredRequest:
+    def classify(self, raw_text: str, session_context: Optional[Dict[str, Any]] = None, ai_mode: bool = False) -> StructuredRequest:
         """Alias for route() method for classification."""
-        return self.route(raw_text, session_context)
+        return self.route(raw_text, session_context, ai_mode=ai_mode)
 
-    def route(self, raw_text: str, session_context: Optional[Dict[str, Any]] = None, normalized: Optional[str] = None) -> StructuredRequest:
+    def route(self, raw_text: str, session_context: Optional[Dict[str, Any]] = None, normalized: Optional[str] = None, ai_mode: bool = False) -> StructuredRequest:
         """Analyzes and classifies raw user speech into a StructuredRequest with fast confidence-aware first-stage routing."""
         t0 = time.perf_counter()
         if not raw_text or not raw_text.strip():
@@ -275,7 +275,7 @@ class IntelligenceRouter:
             "ai_management.cache_stats", "ai_management.clear_cache", "ai_management.forget_cache",
             "system_telemetry", "greeting", "thank_you", "goodbye", "help",
             "identity", "repeat_response", "status_request", "acknowledgement",
-            "affirmation", "negation", "how_are_you", "status_check",
+            "affirmation", "negation", "cancellation", "how_are_you", "status_check",
             "turn_on_camera", "turn_off_camera", "start_hand_tracking", "stop_hand_tracking", "camera_snapshot",
             "social_humor", "social_personality", "social_chat", "social_greeting", "about",
             "spotify_control", "panel_visibility", "battery_info", "power_control", "power.scheme"
@@ -309,21 +309,67 @@ class IntelligenceRouter:
                 entities=intent_node
             )
 
+        # Step 2.5: Detect Universal Research & Live Knowledge Queries
+        if not ai_mode or raw_clean.startswith("research "):
+            try:
+                from core.research.research_router import research_router, ResearchIntent
+                res_intent, res_constraints = research_router.classify_research_intent(raw_text)
+                if res_intent and res_intent != ResearchIntent.GENERAL_KNOWLEDGE:
+                    elapsed_ms = (time.perf_counter() - t0) * 1000
+                    logger.info(f"[ROUTER] Classified as UNIVERSAL_RESEARCH ({res_intent.value}, Latency={elapsed_ms:.2f}ms)")
+                    return StructuredRequest(
+                        raw_text=raw_text,
+                        normalized_text=normalized,
+                        mode=MODE_REASONING,
+                        layer=LAYER_3,
+                        intent="UNIVERSAL_RESEARCH",
+                        action=res_intent.value,
+                        target=clean,
+                        confidence=0.96,
+                        context_required=True,
+                        planning_required=False,
+                        entities={"research_intent": res_intent.value, "constraints": res_constraints.to_dict() if res_constraints else {}}
+                    )
+            except Exception as re_err:
+                logger.debug(f"[ROUTER] Research intent classification bypass: {re_err}")
+
         # Step 3: Detect Informational Questions (Strict Filter)
         if self._is_informational_question(raw_text, clean):
             elapsed_ms = (time.perf_counter() - t0) * 1000
-            logger.info(f"[ROUTER] Classified as QUESTION (Layer 2/3 conversation, Latency={elapsed_ms:.2f}ms)")
+            target_layer = LAYER_3 if ai_mode else LAYER_2
+            target_mode = MODE_REASONING if ai_mode else MODE_QUESTION
+            target_intent = "NEMOTRON_REASONING" if ai_mode else "informational_question"
+            target_action = "agent_plan_and_execute" if ai_mode else "explain"
+            logger.info(f"[ROUTER] Classified as QUESTION (Layer {target_layer}, Latency={elapsed_ms:.2f}ms)")
             return StructuredRequest(
                 raw_text=raw_text,
                 normalized_text=normalized,
-                mode=MODE_QUESTION,
-                layer=LAYER_2,
-                intent="informational_question",
-                action="explain",
+                mode=target_mode,
+                layer=target_layer,
+                intent=target_intent,
+                action=target_action,
                 target=clean,
                 confidence=0.95,
                 context_required=True,
-                planning_required=False
+                planning_required=ai_mode
+            )
+
+        # Step 4: If explicit AI_MODE is active, route exploratory or conversational queries to Layer 3 Nemotron
+        if ai_mode:
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] AI_MODE ACTIVE: Routing query to LAYER 3 NEMOTRON (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_REASONING,
+                layer=LAYER_3,
+                intent="NEMOTRON_REASONING",
+                action="agent_plan_and_execute",
+                target=clean,
+                confidence=0.98,
+                context_required=True,
+                planning_required=True,
+                entities={"ai_mode": True}
             )
 
         # Step 5: Fallback / Conversational Understanding (Layer 2)
@@ -451,8 +497,8 @@ class IntelligenceRouter:
         question_starters = (
             "how do i", "how can i", "how to", "why does", "why is", "why isn't",
             "what is", "what does", "what are", "tell me about", "can you explain",
-            "explain what", "explain why", "should i", "is it possible to", "who is",
-            "where is the documentation for", "describe"
+            "explain what", "explain why", "explain how", "explain in detail", "explain",
+            "should i", "is it possible to", "who is", "where is the documentation for", "describe"
         )
         if any(clean.startswith(q) for q in question_starters):
             # Check if it contains an imperative override
@@ -506,8 +552,8 @@ class IntelligenceRouter:
             r"(?:find|search)\s+(?:the\s+|a\s+)?.*(?:online|on the web|on the internet|news)?\s+and\s+(?:explain|summarize)(?:\s+it)?",
             r"^(?:ask\s+)?(?:nvidia|nemotron)\b",
             # Programming, DSA, Algorithmic and Cloud Reasoning
-            r"(?:explain|solve|write|implement|debug)\s+.*(?:in\s+c\+\+|in\s+cpp|in\s+python|algorithm|data\s+structure|leetcode|binary\s+search|merge\s+sort|quicksort|bfs|dfs|dynamic\s+programming)",
-            r"explain\s+(?:leetcode|binary\s+search|merge\s+sort|quicksort|depth\s+first|breadth\s+first)",
+            r"(?:solve|write|implement|debug)\s+.*(?:in\s+c\+\+|in\s+cpp|in\s+python|algorithm|data\s+structure|leetcode|binary\s+search|merge\s+sort|quicksort|bfs|dfs|dynamic\s+programming)",
+            r"(?:write|implement|solve|code)\s+(?:leetcode|binary\s+search|merge\s+sort|quicksort|depth\s+first|breadth\s+first)",
             r"time\s+(?:and\s+)?(?:space\s+)?complexity|space\s+complexity",
             r"why\s+does\s+my\s+.*(?:algorithm|code|function|solution)\s+fail",
             r"compare\s+.*sort\s+and\s+.*sort",

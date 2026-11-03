@@ -68,7 +68,7 @@ class TTSManager:
         self._queue = queue.Queue()
         self._running = False
         self._thread = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         # Interruption, Generation & Speaking states
         self._interrupt_event = threading.Event()
@@ -84,6 +84,9 @@ class TTSManager:
         self._total_sentences: int = 0
         self._current_sentence_text: str = ""
         self._last_playback_success = False
+        self._last_playback_status = "IDLE"
+        self._last_playback_error: Optional[str] = None
+        self._sleep_mode: bool = False
         self._prefetch_cache: Dict[Tuple[int, str], Tuple[str, bool, float]] = {}
         self._prefetch_lock = threading.Lock()
 
@@ -96,7 +99,7 @@ class TTSManager:
             "gtts": GTTSProvider(),
             "elevenlabs": ElevenLabsProvider()
         }
-        self._active_provider_key = "edge"
+        self._active_provider_key = getattr(config, "tts_provider", "edge").lower()
 
         # Callbacks
         self.on_start_speaking_cb = None
@@ -116,25 +119,20 @@ class TTSManager:
 
     def _log_audio_devices(self):
         try:
-            dev = sd.query_devices(kind='output')
-            logger.info(f"[AUDIO_DEVICE_INFO] Default Output: '{dev.get('name')}' | Rate: {dev.get('default_samplerate')}Hz | Channels: {dev.get('max_output_channels')}")
+            from core.audio_device_resolver import resolve_audio_output_device
+            res = resolve_audio_output_device(getattr(config, "audio_output_device", None))
+            logger.info(f"[AUDIO_DEVICE_INFO] Active Output: [{res.index}] '{res.name}' | Rate: {res.sample_rate}Hz")
         except Exception as e:
-            logger.debug(f"Could not query default audio output device: {e}")
+            logger.debug(f"Could not query audio output device: {e}")
 
     def _resolve_output_device(self) -> Optional[int]:
-        target = getattr(config, "audio_output_device", None)
-        if target is None:
-            return None
         try:
-            target_idx = int(target)
-            devices = sd.query_devices()
-            if 0 <= target_idx < len(devices):
-                dev = devices[target_idx]
-                if dev.get('max_output_channels', 0) > 0:
-                    return target_idx
-        except Exception:
-            pass
-        return None
+            from core.audio_device_resolver import resolve_audio_output_device
+            res = resolve_audio_output_device(getattr(config, "audio_output_device", None))
+            return res.index
+        except Exception as e:
+            logger.debug(f"Could not resolve audio output device: {e}")
+            return None
 
     @property
     def speech_queue(self):
@@ -216,6 +214,19 @@ class TTSManager:
         return self._last_interrupted_generation_id
 
     @property
+    def last_playback_status(self) -> str:
+        """Returns verified status of the most recent playback attempt: 'SUCCESS', 'FAILED', 'INTERRUPTED', 'IDLE'."""
+        return self._last_playback_status
+
+    @property
+    def last_playback_success(self) -> bool:
+        return self._last_playback_success
+
+    @property
+    def last_playback_error(self) -> Optional[str]:
+        return self._last_playback_error
+
+    @property
     def current_sentence_progress(self) -> SentenceProgress:
         return SentenceProgress(self._current_sentence_idx, self._total_sentences, self._current_sentence_text)
 
@@ -226,6 +237,16 @@ class TTSManager:
             logger.debug(f"TTS generation advanced to {self._current_generation_id}")
             return self._current_generation_id
 
+    def set_sleep_mode(self, sleeping: bool):
+        """Controls whether TTS is in Sleep Mode. In sleep mode, only explicit confirmation can play."""
+        with self._lock:
+            self._sleep_mode = sleeping
+            if sleeping:
+                self.interrupt(force=True)
+                logger.info("[TTS_LIFECYCLE] TTSManager sleep mode enabled. Active speech halted.")
+            else:
+                logger.info("[TTS_LIFECYCLE] TTSManager sleep mode disabled.")
+
     def speak(self, text: str, interrupt: bool = True, job_id: Optional[str] = None, generation_id: Optional[int] = None):
         """Enqueues text for TTS synthesis and audio playback with generation invalidation."""
         if not text or not text.strip():
@@ -233,6 +254,10 @@ class TTSManager:
 
         clean_text = sanitize_speech_text(text)
         if not clean_text:
+            return
+
+        if self._sleep_mode and job_id != "sleep_confirm":
+            logger.info(f"[TTS_SLEEP_REJECTED] Rejecting speak request in sleep mode (job_id={job_id}).")
             return
 
         if interrupt:
@@ -264,14 +289,29 @@ class TTSManager:
         if not clean_sentences:
             return
 
+        if self._sleep_mode and job_id != "sleep_confirm":
+            logger.info(f"[TTS_SLEEP_REJECTED] Rejecting speak_sentences request in sleep mode (job_id={job_id}).")
+            return
+
+        if self._sleep_mode:
+            logger.info(f"[TTS_STREAM_SLEEP_REJECTED] Rejecting stream chunk in sleep mode (stream_id={stream_job_id}).")
+            return
+
+        if self._interrupt_event.is_set() and not interrupt:
+            logger.info(f"[TTS_STREAM_INTERRUPT_REJECTED] Dropping stream chunk because generation was interrupted (stream_id={stream_job_id}).")
+            return
+
         if interrupt:
             self.interrupt()
+            self._interrupt_event.clear()
 
         gen_id = self._current_generation_id
-        self._interrupt_event.clear()
         total = len(clean_sentences)
         self._total_sentences = total
 
+        with self._lock:
+            if job_id:
+                self._current_job_id = job_id
         for idx, sentence in enumerate(clean_sentences):
             sub_id = f"{job_id}_{idx}" if job_id else f"sent_{idx}"
             self._queue.put(("text", sentence, sub_id, gen_id, idx, total))
@@ -295,11 +335,19 @@ class TTSManager:
         if not clean_text:
             return
 
+        if self._sleep_mode:
+            logger.info(f"[TTS_STREAM_SLEEP_REJECTED] Rejecting stream chunk in sleep mode (stream_id={stream_job_id}).")
+            return
+
+        if self._interrupt_event.is_set() and not interrupt:
+            logger.info(f"[TTS_STREAM_INTERRUPT_REJECTED] Dropping stream chunk because generation was interrupted (stream_id={stream_job_id}).")
+            return
+
         if interrupt:
             self.interrupt()
+            self._interrupt_event.clear()
 
         gen_id = self._current_generation_id
-        self._interrupt_event.clear()
 
         with self._lock:
             if stream_job_id:
@@ -563,10 +611,20 @@ class TTSManager:
                     self._queue.task_done()
                     continue
 
-                if item_job_id and self._current_job_id and item_job_id != self._current_job_id:
-                    logger.info(f"Skipping superseded TTS job '{item_job_id}' (Current: '{self._current_job_id}')")
-                    self._queue.task_done()
-                    continue
+                if item_job_id and self._current_job_id:
+                    item_root = item_job_id.rsplit('_', 1)[0] if '_' in item_job_id else item_job_id
+                    curr_root = self._current_job_id.rsplit('_', 1)[0] if '_' in self._current_job_id else self._current_job_id
+                    is_match = (
+                        item_job_id == self._current_job_id or
+                        item_root == self._current_job_id or
+                        item_root == curr_root or
+                        item_job_id.startswith(f"{self._current_job_id}_") or
+                        self._current_job_id.startswith(f"{item_job_id}_")
+                    )
+                    if not is_match:
+                        logger.info(f"Skipping superseded TTS job '{item_job_id}' (Current: '{self._current_job_id}')")
+                        self._queue.task_done()
+                        continue
 
                 self._interrupt_event.clear()
                 temp_file_to_clean = None
@@ -624,6 +682,9 @@ class TTSManager:
                                 if self._last_playback_success and self.on_sentence_progress_cb:
                                     self._trigger_callback(self.on_sentence_progress_cb, s_idx, s_total, payload)
                         else:
+                            self._last_playback_success = False
+                            self._last_playback_status = "FAILED"
+                            self._last_playback_error = f"All TTS providers failed to synthesize audio for job '{item_job_id}'"
                             logger.error(f"[TTS_SYNTHESIS_FAILED][{item_job_id}] All TTS providers failed to synthesize audio.")
 
                     elif item_type in ["file", "temp_file"]:
@@ -646,13 +707,30 @@ class TTSManager:
                     self._state = "IDLE"
                     self._is_speaking = False
                     if self._last_playback_success:
+                        self._last_playback_status = "SUCCESS"
+                        self._last_playback_error = None
                         logger.info(f"[TTS_COMPLETED][{item_job_id}] Speech playback completed successfully.")
                     else:
-                        logger.warning(f"[TTS_COMPLETED_WITH_WARNINGS][{item_job_id}] Speech cycle finished.")
+                        if self._interrupt_event.is_set():
+                            self._last_playback_status = "INTERRUPTED"
+                            logger.info(f"[TTS_INTERRUPTED][{item_job_id}] Speech playback interrupted.")
+                        else:
+                            self._last_playback_status = "FAILED"
+                            if not self._last_playback_error:
+                                self._last_playback_error = f"Speech playback failed to produce audible output for job '{item_job_id}'"
+                            logger.error(f"[TTS_PLAYBACK_FAILED][{item_job_id}] Speech playback failed to produce audible output.")
 
-                    self._trigger_callback(self.on_stop_speaking_cb)
-                    if self.on_audio_amplitude_cb:
-                        self._trigger_callback(self.on_audio_amplitude_cb, 0.0)
+                    has_more = False
+                    with self._queue.mutex:
+                        if len(self._queue.queue) > 0:
+                            has_more = any(
+                                (len(q_item) > 3 and q_item[3] == self._current_generation_id and not self._interrupt_event.is_set())
+                                for q_item in self._queue.queue
+                            )
+                    if not has_more:
+                        self._trigger_callback(self.on_stop_speaking_cb)
+                        if self.on_audio_amplitude_cb:
+                            self._trigger_callback(self.on_audio_amplitude_cb, 0.0)
                     self._queue.task_done()
 
             except queue.Empty:
@@ -665,9 +743,14 @@ class TTSManager:
         t0_play = time.time()
 
         try:
-            dev = sd.query_devices(kind='output')
-            dev_name = dev.get('name', 'Default Audio Device')
-            logger.info(f"[AUDIO_PLAYBACK_STARTED][{uid}] File: {file_path}")
+            target_device = self._resolve_output_device()
+            try:
+                dev = sd.query_devices(target_device) if target_device is not None else sd.query_devices(kind='output')
+                dev_name = dev.get('name', 'Default Audio Device')
+            except Exception:
+                target_device = None
+                dev_name = "Default Audio Device"
+            logger.info(f"[AUDIO_PLAYBACK_STARTED][{uid}] Device: [{target_device}] '{dev_name}' | File: {file_path}")
 
             container = av.open(file_path)
             if container.streams.audio:
@@ -706,7 +789,12 @@ class TTSManager:
                     self._is_speaking = True
                     self._trigger_callback(self.on_start_speaking_cb)
 
-                    sd.play(audio_data, samplerate=sample_rate)
+                    try:
+                        sd.play(audio_data, samplerate=sample_rate, device=target_device)
+                    except Exception as stream_err:
+                        logger.warning(f"[AUDIO_PLAYBACK_STREAM_ERR][{uid}] Device [{target_device}] failed ({stream_err}). Trying default output device...")
+                        target_device = None
+                        sd.play(audio_data, samplerate=sample_rate)
                     
                     # Compute chunk-by-chunk amplitude for UI pulsation
                     chunk_size = int(sample_rate * 0.03)  # ~30ms

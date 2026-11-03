@@ -443,6 +443,7 @@ class ConversationManager:
         self.current_topic: str = ""
 
         self.explanation_state: Optional[ExplanationState] = None
+        self.active_educational_topic: str = ""
 
         self.task_context = ConversationTaskContext()
 
@@ -453,10 +454,9 @@ class ConversationManager:
         """Updates active session context with recent action and target."""
 
         if target and target not in ["system", "all", "telemetry"]:
-
             self.last_target = target
-
-            self.task_context.current_topic = target
+            if action in ["conversation", "explain", "query", "social_chat", "informational_question"]:
+                self.task_context.current_topic = target
 
         if action:
 
@@ -562,6 +562,7 @@ class ConversationManager:
 
         raw_sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
 
+        self.active_educational_topic = topic or "explanation"
         self.explanation_state = ExplanationState(
 
             topic=topic or "explanation",
@@ -888,16 +889,17 @@ class ConversationManager:
 
             return text
 
-        topic = (
-
+        educational_topic = (
+            getattr(self, "active_educational_topic", "") or
             (self.explanation_state.topic if self.explanation_state and self.explanation_state.topic else "") or
-
-            self.task_context.current_topic or
-
-            self.last_target or
-
             ""
+        ).strip()
 
+        topic = (
+            educational_topic or
+            self.task_context.current_topic or
+            self.last_target or
+            ""
         ).strip()
 
         if not topic:
@@ -1040,10 +1042,16 @@ class ConversationManager:
             flags=re.IGNORECASE
         )
 
-        # 11. "give an example" / "give me an example" / "code example"
+        # 11. "give an example" / "give me an example" / "give another example" / "code example"
         resolved = re.sub(
-            r"^(?:please\s+)?(?:can\s+you\s+)?(?:give|show|provide)(?:\s+me)?\s+(?:an?\s+)?(?:code\s+)?example(?:\s+please)?(?:\?|\.|$)",
-            rf"Give a concrete code example and walkthrough for {topic}.",
+            r"^(?:please\s+)?(?:can\s+you\s+)?(?:give|show|provide)(?:\s+me)?\s+(?:an?|another)?\s*(?:code\s+)?example(?:\s+please)?(?:\?|\.|$)",
+            rf"Give another concrete code example and walkthrough for {topic}.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:give\s+)?another\s+example(?:\s+please)?(?:\?|\.|$)",
+            rf"Give another concrete code example and walkthrough for {topic}.",
             resolved,
             flags=re.IGNORECASE
         )
@@ -1056,10 +1064,18 @@ class ConversationManager:
             flags=re.IGNORECASE
         )
 
-        # 13. "simplify" / "explain simply" / "in simple terms" / "eli5"
+        # 12b. "explain" / "explain further" / "explain more"
         resolved = re.sub(
-            r"^(?:please\s+)?(?:can\s+you\s+)?(?:simplify(?:\s+this|\s+it)?|explain\s+simply|explain\s+in\s+simple\s+terms|in\s+simple\s+terms|explain\s+like\s+i'?m\s+5|eli5)(?:\s+please)?(?:\?|\.|$)",
-            rf"Explain {topic} in simple, accessible terms for a beginner.",
+            r"^(?:please\s+)?(?:can\s+you\s+)?explain(?:\s+further|\s+more)?(?:\s+please)?(?:\?|\.|$)",
+            rf"Explain {topic} in detail.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+
+        # 13. "simplify" / "make it simpler" / "explain simply" / "in simple terms" / "eli5"
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:can\s+you\s+)?(?:make\s+(?:it|this)\s+simpler|simplify(?:\s+this|\s+it)?|explain\s+simpler|explain\s+simply|explain\s+in\s+simple\s+terms|in\s+simple\s+terms|explain\s+like\s+i'?m\s+5|eli5)(?:\s+please)?(?:\?|\.|$)",
+            rf"Explain {topic} in simpler terms with a plain analogy.",
             resolved,
             flags=re.IGNORECASE
         )
@@ -1072,7 +1088,15 @@ class ConversationManager:
             flags=re.IGNORECASE
         )
 
-        # 15. "compare with <other>" / "compare to <other>"
+        # 15. "compare both" / "compare them"
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:can\s+you\s+)?compare\s+(?:both|them|these|the\s+two)(?:\s+please)?(?:\?|\.|$)",
+            rf"Compare both concepts discussed regarding {topic}, contrasting their mechanics, trade-offs, and use cases.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+
+        # 15b. "compare with <other>" / "compare to <other>"
         resolved = re.sub(
             r"^(?:please\s+)?(?:can\s+you\s+)?compare\s+(?:with|to)\s+([a-zA-Z0-9_\-\s]+?)(?:\?|\.|$)",
             rf"Compare {topic} with \1, highlighting key differences, advantages, and trade-offs.",
@@ -1080,7 +1104,51 @@ class ConversationManager:
             flags=re.IGNORECASE
         )
 
-        # 16. "continue" / "go on" / "resume"
+        # 16. Disadvantages & Advantages
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:can\s+you\s+tell\s+me\s+)?(?:what\s+are\s+(?:the|its)|what\s+about\s+(?:its|the))\s+(disadvantages?|advantages?|pros|cons|limitations?|trade-?offs?)(?:\s+of\s+it|\s+of\s+this)?(?:\?|\.|$)",
+            rf"What are the \1 of {topic}?",
+            resolved,
+            flags=re.IGNORECASE
+        )
+        resolved = re.sub(
+            r"^(?:disadvantages?|advantages?|limitations?|pros\s+and\s+cons)(?:\?|\.|$)",
+            rf"Explain the advantages and disadvantages of {topic}.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+
+        # 17. "explain the second point" / "explain point 2"
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:can\s+you\s+)?explain\s+(?:the\s+)?(first|second|third|fourth|1st|2nd|3rd|4th)\s+point(?:\s+in\s+detail)?(?:\?|\.|$)",
+            rf"Explain the \1 point of the previous explanation about {topic} in detail.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:can\s+you\s+)?explain\s+point\s+(\d+)(?:\s+in\s+detail)?(?:\?|\.|$)",
+            rf"Explain point \1 of the previous explanation about {topic} in detail.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+
+        # 18. "why?" / "why is that?"
+        resolved = re.sub(
+            r"^(?:why\??|why\s+is\s+that\??|why\s+so\??)$",
+            rf"Why is that the case for {topic}? Explain the underlying reasoning.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+
+        # 19. "show an example in C++" / "in C++"
+        resolved = re.sub(
+            r"^(?:please\s+)?(?:(?:show|give)(?:\s+me)?\s+an?\s+example\s+in|(?:write|implement)\s+(?:it|an\s+example)?\s+in|in)\s+([a-zA-Z0-9\+#]+)(?:\s+please)?(?:\?|\.|$)",
+            rf"Provide a concrete implementation and code example for {topic} in \1.",
+            resolved,
+            flags=re.IGNORECASE
+        )
+
+        # 20. "continue" / "go on" / "resume"
         resolved = re.sub(
             r"^(?:please\s+)?(?:continue|go\s+on|keep\s+going|resume)(?:\s+please)?(?:\?|\.|$)",
             rf"Continue the explanation of {topic} where you left off.",
@@ -1105,6 +1173,36 @@ class ConversationManager:
         """Processes a conversational user query through AgentBrain / ProviderManager with tool execution and memory."""
 
         self._check_session_timeout()
+
+        # 00. Fast local resumption for interrupted educational explanation
+        clean_raw = query.lower().strip()
+        is_cont = clean_raw in [
+            "continue", "continue.", "continue please", "please continue",
+            "continue from where you stopped", "continue from where you left off",
+            "continue from where we paused", "go on", "keep going", "resume",
+            "okay continue", "now continue", "proceed", "explain the remaining part"
+        ] or bool(re.match(r"^(?:please\s+)?(?:continue|go\s+on|keep\s+going|resume|explain the remaining part)(?:\s+from\s+where\s+(?:you|we)\s+(?:stopped|paused|left\s+off))?(?:\s+please)?[\.?!]?$", clean_raw))
+
+        if is_cont and self.has_interrupted_explanation():
+            msg, remaining = self.resume_explanation()
+            logger.info(f"[EXPLANATION_FAST_RESUME] Seamlessly resuming {len(remaining)} sentences for '{self.explanation_state.topic}'.")
+            self.history.append({"role": "user", "content": query})
+            self.history.append({"role": "assistant", "content": msg})
+            self.last_interaction_timestamp = time.time()
+            if on_sentence:
+                for rem_sent in remaining:
+                    if is_cancelled and is_cancelled():
+                        logger.info("[EXPLANATION_RESUME_CANCELLED] Resumption stream cancelled by user.")
+                        break
+                    on_sentence(rem_sent)
+            return {
+                "text": msg,
+                "source": "SANTRA Explanation Engine",
+                "tool_used": "resume_explanation",
+                "ai_available": True,
+                "latency_ms": 0.5,
+                "remaining_sentences": remaining
+            }
 
         # Conversational Safety Gate: Block destructive/unauthorized requests
 
@@ -1150,6 +1248,17 @@ class ConversationManager:
         user_msg = {"role": "user", "content": effective_query}
         clean_q = query.lower().strip()
 
+
+
+        # 0. Immediate Clarification for isolated "explain" without prior topic context
+        if clean_q in ["explain", "explain.", "explain please", "please explain"]:
+            if not self.task_context.current_topic:
+                resp = "What subject or concept would you like me to explain, Sir?"
+                self.history.append(user_msg)
+                self.history.append({"role": "assistant", "content": resp})
+                self.last_interaction_timestamp = time.time()
+                return {"text": resp, "source": "SANTRA Clarification Engine", "tool_used": "clarification", "ai_available": False, "latency_ms": 0.5}
+
         # 0A. Immediate Local Identity Contract
         if any(q in clean_q for q in ["who are you", "what are you", "what is your name", "who created you", "who made you", "tell me about yourself", "identify yourself"]):
             resp = "I am SANTRA, sir—your native AI desktop assistant engineered for local computer control, system automation, and intelligent interaction on Windows 11."
@@ -1180,7 +1289,7 @@ class ConversationManager:
             return {"text": resp, "source": "Application Discovery Registry", "tool_used": "get_installed_applications", "ai_available": False, "latency_ms": 1.0}
 
         # Inject canonical SANTRA system prompt contract
-        sys_prompt = self.agent._build_system_prompt(effective_query)
+        sys_prompt = self.agent._build_system_prompt(effective_query, include_tools=False)
         sys_msg = {"role": "system", "content": sys_prompt}
         messages = [sys_msg] + [m for m in self.history if m.get("role") != "system"] + [user_msg]
 
@@ -1645,11 +1754,21 @@ class ConversationManager:
 
             else:
 
-                agent_res = self.agent.reason_and_execute(effective_query, conversation_history=self.history)
+                if is_cancelled and callable(is_cancelled) and is_cancelled():
+
+                    logger.info("[CONVERSATION] Request cancelled before or during streaming. Suppressing fallback.")
+
+                    return {"text": "", "source": "Cancelled", "cancelled": True}
+
+                agent_res = self.agent.reason_and_execute(effective_query, conversation_history=self.history, is_cancelled=is_cancelled)
 
                 response_text = agent_res.get("text", "") if agent_res else ""
 
         t_duration_ms = (time.time() - t0) * 1000
+
+        if is_cancelled and callable(is_cancelled) and is_cancelled():
+            logger.info("[CONVERSATION] Request cancelled before completion. Suppressing response, history, and persistence.")
+            return {"text": "", "source": "Cancelled", "cancelled": True}
 
         if response_text:
 

@@ -50,12 +50,13 @@ class ProviderSettingsManager:
         AIProviderConfig(
             provider_id="nvidia",
             name="NVIDIA Nemotron",
-            model="nvidia/nemotron-3.5-super-vl-120b-a12b",
+            model="nvidia/nemotron-3.5-bolt-e4b",
             base_url="https://integrate.api.nvidia.com/v1",
             priority=1,
             capabilities=["text", "vision", "code", "tool_calling"],
             is_free_tier=True,
-            timeout_sec=30.0
+            timeout_sec=15.0,
+            max_retries=1
         ),
         AIProviderConfig(
             provider_id="gemini",
@@ -142,6 +143,33 @@ class ProviderSettingsManager:
             val = os.environ.get(env_var, "").strip()
             if val and pid in self.providers:
                 self.providers[pid].api_key = val
+
+        # 4. Authoritative sync with central config and environment overrides
+        try:
+            from config import config
+            if "nvidia" in self.providers:
+                if getattr(config, "nvidia_model", None):
+                    self.providers["nvidia"].model = str(config.nvidia_model).strip()
+                if getattr(config, "nvidia_timeout_sec", None):
+                    self.providers["nvidia"].timeout_sec = float(config.nvidia_timeout_sec)
+                if getattr(config, "nvidia_max_retries", None):
+                    self.providers["nvidia"].max_retries = int(config.nvidia_max_retries)
+        except Exception as ce:
+            logger.debug(f"Could not load central config for providers: {ce}")
+
+        if "nvidia" in self.providers:
+            if os.environ.get("NVIDIA_MODEL"):
+                self.providers["nvidia"].model = os.environ.get("NVIDIA_MODEL").strip()
+            if os.environ.get("NVIDIA_TIMEOUT_SEC"):
+                try:
+                    self.providers["nvidia"].timeout_sec = float(os.environ.get("NVIDIA_TIMEOUT_SEC"))
+                except ValueError:
+                    pass
+            if os.environ.get("NVIDIA_MAX_RETRIES"):
+                try:
+                    self.providers["nvidia"].max_retries = int(os.environ.get("NVIDIA_MAX_RETRIES"))
+                except ValueError:
+                    pass
 
     def save_configuration(self):
         """Persists provider configurations (with plain keys for local use)."""

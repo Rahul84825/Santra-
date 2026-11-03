@@ -45,6 +45,8 @@ class SpeechTranscriber:
         self.status = "STT_UNINITIALIZED"
 
         self._init_lock = threading.Lock()
+        self._active_transcriptions = 0
+        self._transcription_lock = threading.Lock()
 
         self._ready_event = threading.Event()
 
@@ -89,6 +91,10 @@ class SpeechTranscriber:
         """Safely unloads the Whisper model from memory and reclaims RAM/VRAM."""
 
         with self._init_lock:
+            with self._transcription_lock:
+                if self._active_transcriptions > 0:
+                    logger.info("[STT] Deferring Whisper model unload: active transcription in progress.")
+                    return False
 
             if self._model is None:
 
@@ -429,10 +435,14 @@ class SpeechTranscriber:
 
         
 
+        with self._transcription_lock:
+            self._active_transcriptions += 1
+
         path = Path(audio_file_path)
 
         if not path.exists():
-
+            with self._transcription_lock:
+                self._active_transcriptions = max(0, self._active_transcriptions - 1)
             raise FileNotFoundError(f"Audio file not found: {audio_file_path}")
 
         effective_beam = beam_size if beam_size is not None else self.beam_size
@@ -505,6 +515,7 @@ class SpeechTranscriber:
 
                     "vad_filter": effective_vad_filter,
 
+                    "compression_ratio_threshold": 2.4,
 
                 }
 
@@ -756,9 +767,21 @@ class SpeechTranscriber:
 
                 return ""
 
-            # Transcript Quality Control & Hallucination Filter
+            # Extract segment compression ratio to detect repetitive decoder loops
+            max_comp_ratio = 0.0
+            if segment_list:
+                comp_ratios = [_safe_float(getattr(seg, "compression_ratio", None)) for seg in segment_list]
+                valid_crs = [cr for cr in comp_ratios if cr is not None]
+                if valid_crs:
+                    max_comp_ratio = max(valid_crs)
 
-            val_res = transcript_validator.validate(transcription, confidence=confidence, audio_duration=info.duration)
+            # Transcript Quality Control & Hallucination Filter
+            val_res = transcript_validator.validate(
+                transcription,
+                confidence=confidence,
+                audio_duration=info.duration,
+                compression_ratio=max_comp_ratio
+            )
 
             if not val_res.is_valid or val_res.status in ["EMPTY", "TOO_SHORT", "REPETITIVE_HALLUCINATION", "LIKELY_HALLUCINATION", "HALLUCINATION_PHRASE"]:
 
@@ -821,6 +844,8 @@ class SpeechTranscriber:
             raise e
 
         finally:
+            with self._transcription_lock:
+                self._active_transcriptions = max(0, self._active_transcriptions - 1)
 
             try:
 

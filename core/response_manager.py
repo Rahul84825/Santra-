@@ -75,13 +75,19 @@ class ResponseManager:
             spoken_text = enforce_conversational_brevity(spoken_text, max_sentences=2)
             self.last_spoken_response = spoken_text
 
-        tts_success = True
-        if speak and self.speaker and spoken_text:
-            try:
-                self.speaker.speak(spoken_text)
-            except Exception as e:
+        tts_success = False
+        if speak:
+            if self.speaker and spoken_text:
+                try:
+                    self.speaker.speak(spoken_text)
+                    tts_success = True
+                except Exception as e:
+                    tts_success = False
+                    logger.error(f"Response Manager failed to output speech: {e}")
+            else:
                 tts_success = False
-                logger.error(f"Response Manager failed to output speech: {e}")
+        else:
+            tts_success = True
 
         logger.info(f"Response Manager [{resp_type}]: '{text}' (Spoken: '{spoken_text}', TTS_Success={tts_success})")
         metadata["tts_success"] = tts_success

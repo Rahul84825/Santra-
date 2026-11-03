@@ -993,6 +993,22 @@ class IntentEngine:
         if clean in ["no", "nope", "negative"]:
             return {"intent": "negation", "action": "respond_negation", "target": clean, "confidence": 0.98, "query": clean, "raw_text": raw_text}
 
+        # Cancellation and Negation Command Protection
+        cancellation_phrases = [
+            r"^(?:no\s*[,:]?\s*)?(?:cancel\s+(?:that|it|this|action|command)?|cancel|abort|never\s*mind|dismiss)$",
+            r"^(?:actually\s*[,:]?\s*)?(?:don\s*'?\s*t\s+do\s+(?:it|that|this)|do\s+not\s+do\s+(?:it|that|this))$",
+            r"^(?:no\s*[,:]?\s*)?(?:don\s*'?\s*t\s+(?:do\s+it|do\s+that|proceed|continue)|do\s+not\s+(?:do\s+it|do\s+that|proceed|continue))$"
+        ]
+        if any(re.match(pat, clean) for pat in cancellation_phrases):
+            return {"intent": "cancellation", "action": "cancel", "target": clean, "confidence": 0.99, "query": clean, "raw_text": raw_text}
+
+        # Explicit Negated Action (e.g., "don't open chrome", "no, don't put computer to sleep", "actually don't open chrome")
+        negated_action_pattern = r"^(?:no\s*[,:]?\s*|actually\s*[,:]?\s*)?(?:don\s*'?\s*t|do\s+not|never)\s+(.+)$"
+        m_neg = re.match(negated_action_pattern, clean)
+        if m_neg:
+            negated_target = m_neg.group(1).strip()
+            return {"intent": "negation", "action": "reject_action", "target": negated_target, "confidence": 0.99, "query": clean, "raw_text": raw_text}
+
         if any(h in clean for h in ["how are you", "how are you doing", "how's it going", "how is it going", "how r u"]):
             return {"intent": "how_are_you", "action": "respond_how_are_you", "target": clean, "confidence": 0.98, "query": clean, "raw_text": raw_text}
 
@@ -1058,6 +1074,26 @@ class IntentEngine:
         # -------------------------------------------------------------
         # 11. SYSTEM POWER & SECURITY ACTIONS
         # -------------------------------------------------------------
+        # 11.0 AI_MODE CONTROLS
+        ai_mode_enable_patterns = [
+            r"^(?:please\s+)?(?:switch\s+to|enable|turn\s+on|enter|activate|use)\s+ai(?:\s+mode)?$",
+            r"^(?:please\s+)?ai\s+mode\s+(?:on|enable|activate)$",
+            r"^(?:please\s+)?ask\s+nemotron$"
+        ]
+        for pat in ai_mode_enable_patterns:
+            if re.search(pat, clean):
+                return {"intent": "system_control", "action": "enable_ai_mode", "target": "ai_mode", "confidence": 0.99, "query": clean, "raw_text": raw_text}
+
+        ai_mode_disable_patterns = [
+            r"^(?:please\s+)?(?:exit|disable|turn\s+off|leave)\s+ai(?:\s+mode)?$",
+            r"^(?:please\s+)?ai\s+mode\s+(?:off|disable)$",
+            r"^(?:please\s+)?(?:return\s+to|switch\s+to)\s+normal(?:\s+mode)?$",
+            r"^(?:please\s+)?normal\s+mode$"
+        ]
+        for pat in ai_mode_disable_patterns:
+            if re.search(pat, clean):
+                return {"intent": "system_control", "action": "disable_ai_mode", "target": "normal_mode", "confidence": 0.99, "query": clean, "raw_text": raw_text}
+
         # 11.1 LOCK_COMPUTER
         lock_patterns = [
             r"^(?:please\s+)?lock(?:\s+(?:my|the|this)?\s*(?:pc|computer|laptop|screen|workstation|system|desktop))?$",
@@ -1085,11 +1121,12 @@ class IntentEngine:
 
         # 11.2 SLEEP_COMPUTER (OS Sleep / Suspend)
         sleep_patterns = [
-            r"^(?:put|send|make)\s+(?:my|the)?\s*(?:laptop|computer|pc|system|machine)\s*(?:to|into)?\s*sleep$",
-            r"^(?:can\s+you|could\s+you|please)?\s*put\s+(?:my|the)?\s*(?:laptop|computer|pc|system)\s+to\s+sleep$",
-            r"^(?:please\s+)?sleep\s+(?:the|my)?\s*(?:computer|laptop|pc|system|machine)$",
+            r"^(?:put|send|make)\s+(?:my|the)?\s*(?:laptop|computer|pc|system|machine)\s*(?:to|into)?\s*sleep(?:\s+mode)?$",
+            r"^(?:can\s+you|could\s+you|please)?\s*put\s+(?:my|the)?\s*(?:laptop|computer|pc|system)\s+(?:to|into)\s+sleep(?:\s+mode)?$",
+            r"^(?:please\s+)?sleep\s+(?:the|my)?\s*(?:computer|laptop|pc|system|machine)(?:\s+mode)?$",
             r"^(?:put|send)\s+(?:the|my)?\s*(?:computer|laptop|pc)\s+into\s+standby$",
-            r"^sleep\s+(?:computer|pc|laptop|machine)$"
+            r"^sleep\s+(?:computer|pc|laptop|machine|system)(?:\s+mode)?$",
+            r"^(?:please\s+)?(?:enter|go\s+to|start)\s+sleep\s+mode$"
         ]
         for pat in sleep_patterns:
             if re.search(pat, clean):
@@ -1716,21 +1753,22 @@ class IntentEngine:
         if m_type:
             g1 = m_type.group(1).strip()
             g2 = m_type.group(2).strip() if len(m_type.groups()) > 1 and m_type.group(2) else ""
-            if any(k in g1.lower() for k in ["search bar", "prompt box", "editor", "subject", "body", "field", "description"]):
-                dest_val = g1
-                text_val = g2 or g1
-            else:
-                text_val = g1
-                dest_val = g2
-            return {
-                "intent": "desktop_interaction.type_text",
-                "action": "enter_text",
-                "text": text_val,
-                "target": text_val,
-                "destination": dest_val,
-                "confidence": 0.98,
-                "raw_text": effective_raw
-            }
+            if not (any(p in g1.lower() for p in ["computer", "laptop", "pc", "system"]) and any(s in g2.lower() for s in ["sleep", "standby"])):
+                if any(k in g1.lower() for k in ["search bar", "prompt box", "editor", "subject", "body", "field", "description"]):
+                    dest_val = g1
+                    text_val = g2 or g1
+                else:
+                    text_val = g1
+                    dest_val = g2
+                return {
+                    "intent": "desktop_interaction.type_text",
+                    "action": "enter_text",
+                    "text": text_val,
+                    "target": text_val,
+                    "destination": dest_val,
+                    "confidence": 0.98,
+                    "raw_text": effective_raw
+                }
 
         # 5. Replace selected text
         m_replace = re.match(r"^replace\s+(?:the\s+)?(?:selected\s+text|selection)\s+with\s+(.+)$", clean, re.IGNORECASE)
@@ -1943,6 +1981,12 @@ class IntentEngine:
         # -------------------------------------------------------------
         # 23. FILESYSTEM FOLDER CREATION & SAVING INTENTS
         # -------------------------------------------------------------
+        m_folder_loc = re.match(r"^(?:create|make)\s+(?:a\s+)?folder(?:\s+called\s+['\"]?(.+?)['\"]?)?\s+(?:on|in|inside)\s+(?:my\s+)?(.+?)$", clean)
+        if m_folder_loc:
+            f_name = m_folder_loc.group(1).strip() if m_folder_loc.group(1) else "New Folder"
+            loc = m_folder_loc.group(2).strip()
+            return {"intent": "filesystem_control", "action": "create_folder", "target": f_name, "location": loc, "confidence": 0.95, "raw_text": raw_text}
+
         if clean in ["create folder", "create a folder", "make a folder", "make folder", "new folder"]:
             return {"intent": "filesystem_control", "action": "create_folder", "target": "", "missing_arg": "folder_name", "confidence": 0.95, "raw_text": raw_text}
 

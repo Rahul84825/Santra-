@@ -70,6 +70,8 @@ class ProjectIntelligencePanel(HUDFrame):
         self._init_ui()
 
     def _init_ui(self):
+        self.content_widget = QWidget(self)
+        self.layout.addWidget(self.content_widget)
         layout = QVBoxLayout(self.content_widget)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)

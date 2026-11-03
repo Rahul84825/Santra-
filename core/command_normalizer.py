@@ -50,7 +50,8 @@ class CommandNormalizer:
         self.phrase_mappings = [
             # System power & lock actions
             (r"\bput\s+(my|the)?\s*(pc|computer|laptop)\s+on\s+lock\b", "lock computer"),
-            (r"\b(make|send)\s+(my|the)?\s*(pc|computer|laptop)\s+(to\s+)?sleep\b", "sleep computer"),
+            (r"\b(?:make|send|put)\s+(?:my|the)?\s*(?:pc|computer|laptop|system|machine)\s+(?:to|into)?\s*sleep(?:\s+mode)?\b", "sleep computer"),
+            (r"\b(?:enter|start)\s+sleep(?:\s+mode)?\b", "sleep computer"),
             (r"\b(lock)\s+(my|the)?\s*(pc|computer|screen|system|workstation)\b", "lock computer"),
             (r"\b(sleep)\s+(my|the)?\s*(pc|computer|system)\b", "sleep computer"),
             (r"\bput\s+(my|the)?\s*(pc|computer|laptop)\s+to\s+sleep\b", "sleep computer"),
@@ -210,7 +211,7 @@ class CommandNormalizer:
             return [text]
 
         # Strip leading conversational conjunctions / fillers at start of utterance
-        text = re.sub(r"^(?:and|also|so|then)\s+", "", text, flags=re.IGNORECASE).strip()
+        text = re.sub(r"^(?:and|also|so|then|yes|yeah|yep|sure|okay|ok|alright)\s*[,:]?\s+", "", text, flags=re.IGNORECASE).strip()
 
         # Strip assistant address first (e.g. 'Hey Santra, open Chrome' -> 'open Chrome')
         is_addr, name, payload = self.extract_assistant_address(text)
@@ -318,6 +319,17 @@ class CommandNormalizer:
                     if test_sub:
                         removed.append(pattern.replace(r"\b", "").strip())
                         normalized = test_sub
+
+        # 4B. Strip leading conversational affirmative prefixes (e.g. "yes open chrome" -> "open chrome")
+        # Strictly preserve standalone affirmations ("yes", "sure", "ok") and all negations ("no", "don't")
+        words_check = normalized.split()
+        if len(words_check) > 1 and not is_capability_query:
+            aff_match = re.match(r"^(?:yes|yeah|yep|sure|okay|ok|alright)\s+(.+)$", normalized, re.IGNORECASE)
+            if aff_match:
+                remainder = aff_match.group(1).strip()
+                if remainder:
+                    removed.append(normalized.split()[0])
+                    normalized = remainder
 
         # 5. Apply phrase mappings and synonym replacements
         for pattern, replacement in self.phrase_mappings:

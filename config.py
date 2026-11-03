@@ -101,11 +101,11 @@ class Config:
         # NVIDIA Nemotron Settings
         self.nvidia_api_key = ""
         self.nvidia_base_url = "https://integrate.api.nvidia.com/v1"
-        self.nvidia_model = "nvidia/nemotron-3.5-super-vl-120b-a12b"
+        self.nvidia_model = "nvidia/nemotron-3.5-bolt-e4b"
         self.nvidia_temperature = 0.6
         self.nvidia_max_tokens = 2048
-        self.nvidia_timeout_sec = 25.0
-        self.nvidia_max_retries = 3
+        self.nvidia_timeout_sec = 15.0
+        self.nvidia_max_retries = 1
         
         # Whisper model size, beam size, device, and acceleration
         self.whisper_model_size = "base"

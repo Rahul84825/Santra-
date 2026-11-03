@@ -9,6 +9,8 @@ class ValidationStatus:
     VALID = "VALID"
     EMPTY = "EMPTY"
     TOO_SHORT = "TOO_SHORT"
+    FRAGMENT = "FRAGMENT"
+    WAKEWORD_ONLY = "WAKEWORD_ONLY"
     REPETITIVE_HALLUCINATION = "REPETITIVE_HALLUCINATION"
     LIKELY_HALLUCINATION = "LIKELY_HALLUCINATION"
 
@@ -17,7 +19,7 @@ class ValidationResult:
     """Standardized validation result for Whisper speech transcripts."""
     raw_text: str
     cleaned_text: str
-    status: str  # VALID, EMPTY, TOO_SHORT, REPETITIVE_HALLUCINATION, LIKELY_HALLUCINATION
+    status: str  # VALID, EMPTY, TOO_SHORT, FRAGMENT, WAKEWORD_ONLY, REPETITIVE_HALLUCINATION, LIKELY_HALLUCINATION
     is_valid: bool
     is_command_candidate: bool
     repetition_detected: bool
@@ -25,6 +27,7 @@ class ValidationResult:
     original_repetition_count: int = 1
     confidence: float = 1.0
     is_hallucination_compressed: bool = False
+    compression_ratio: float = 0.0
 
 class TranscriptValidator:
     """Validates Whisper transcription outputs, detects hallucinations,
@@ -33,8 +36,20 @@ class TranscriptValidator:
 
     KNOWN_CONVERSATIONAL_WORDS = {
         "okay", "ok", "yes", "yeah", "yup", "no", "nope", "please", "thanks", 
-        "thank you", "bye", "goodbye", "hello", "hi", "hey", "what", "oh",
-        "santra", "jarvis", "goliya", "buddy"
+        "thank you", "bye", "goodbye", "hello", "hi", "hey", "what", "oh"
+    }
+
+    WAKE_WORD_TOKENS = {
+        "santra", "jarvis", "goliya", "buddy", "sant", "samtra", "suntra", "santhra"
+    }
+
+    WAKE_PREFIX_TOKENS = {
+        "hey", "hello", "hi", "ok", "okay"
+    }
+
+    LOW_INFO_FRAGMENTS = {
+        "and else", "or else", "and then", "and", "or", "else", "then", "so", "but", "also",
+        "and also", "what else", "anything else"
     }
 
     KNOWN_HALLUCINATION_PHRASES = {
@@ -49,11 +64,11 @@ class TranscriptValidator:
         "increase", "decrease", "mute", "unmute", "take",
         "show", "list", "search", "find", "minimize", "maximize", "restore",
         "run", "calculate", "solve", "play", "pause", "resume",
-        "type", "insert", "send", "approve", "cancel", "deny"
+        "type", "insert", "send", "approve", "cancel", "deny", "explain"
     }
 
     QUERY_PREFIXES = {
-        "what", "what's", "whats", "how", "how's", "hows", "tell", "check", "get", "show"
+        "what", "what's", "whats", "how", "how's", "hows", "tell", "check", "get", "show", "explain"
     }
 
     COMMAND_KEYWORDS = {
@@ -68,15 +83,21 @@ class TranscriptValidator:
     }
 
     def __init__(self):
-        logger.info("Initializing Jarvis Transcript Validator & Hallucination Filter.")
+        logger.info("Initializing Jarvis Transcript Validator and Hallucination Filter.")
 
-    def validate(self, raw_text: Optional[str], confidence: float = 1.0, audio_duration: float = 0.0) -> ValidationResult:
+    def validate(
+        self,
+        raw_text: Optional[str],
+        confidence: float = 1.0,
+        audio_duration: float = 0.0,
+        compression_ratio: Optional[float] = None
+    ) -> ValidationResult:
         """Evaluates raw Whisper transcript text and returns a ValidationResult."""
         if raw_text is None:
             return ValidationResult(
                 raw_text="",
                 cleaned_text="",
-                status="EMPTY",
+                status=ValidationStatus.EMPTY,
                 is_valid=False,
                 is_command_candidate=False,
                 repetition_detected=False
@@ -87,10 +108,32 @@ class TranscriptValidator:
             return ValidationResult(
                 raw_text=raw_text,
                 cleaned_text="",
-                status="EMPTY",
+                status=ValidationStatus.EMPTY,
                 is_valid=False,
                 is_command_candidate=False,
                 repetition_detected=False
+            )
+
+        eff_comp_ratio = float(compression_ratio) if compression_ratio is not None else 0.0
+
+        # 0. Check Whisper Segment Compression Ratio Hallucination Signature (> 2.4)
+        if eff_comp_ratio > 2.4:
+            logger.warning(
+                f"[VALIDATOR] Discarding repetitive Whisper hallucination by compression_ratio: "
+                f"{eff_comp_ratio:.2f} > 2.4 (raw='{raw_text[:60]}...')"
+            )
+            return ValidationResult(
+                raw_text=raw_text,
+                cleaned_text="",
+                status=ValidationStatus.REPETITIVE_HALLUCINATION,
+                is_valid=False,
+                is_command_candidate=False,
+                repetition_detected=True,
+                repetition_ratio=1.0,
+                original_repetition_count=10,
+                confidence=confidence,
+                is_hallucination_compressed=False,
+                compression_ratio=eff_comp_ratio
             )
 
         # Check single non-word characters, pure punctuation or isolated 1-char noise
@@ -102,8 +145,52 @@ class TranscriptValidator:
                 status=ValidationStatus.TOO_SHORT,
                 is_valid=False,
                 is_command_candidate=False,
-                repetition_detected=False
+                repetition_detected=False,
+                compression_ratio=eff_comp_ratio
             )
+
+        # Check low-information prepositional/conjunction fragments (e.g. "And else.", "Or else.")
+        norm_alphanumeric = alphanumeric.lower().strip()
+        if norm_alphanumeric in self.LOW_INFO_FRAGMENTS:
+            logger.info(f"[VALIDATOR] Discarding low-information fragment: '{text}'")
+            return ValidationResult(
+                raw_text=raw_text,
+                cleaned_text="",
+                status=ValidationStatus.FRAGMENT,
+                is_valid=False,
+                is_command_candidate=False,
+                repetition_detected=False,
+                compression_ratio=eff_comp_ratio
+            )
+
+        # Check wake-word only utterances (e.g. "Santra", "Hey Santra", "Santra, Santra...", "Santra,Santra")
+        raw_tokens = [tok.lower() for tok in re.findall(r'[a-zA-Z0-9]+', text)]
+        wake_tokens_present = [tok for tok in raw_tokens if tok in self.WAKE_WORD_TOKENS]
+        if raw_tokens and all(tok in (self.WAKE_WORD_TOKENS | self.WAKE_PREFIX_TOKENS) for tok in raw_tokens):
+            if wake_tokens_present and len(raw_tokens) <= 2:
+                logger.info(f"[VALIDATOR] Wake-word address only: '{text}'")
+                return ValidationResult(
+                    raw_text=raw_text,
+                    cleaned_text=text,
+                    status=ValidationStatus.WAKEWORD_ONLY,
+                    is_valid=False,
+                    is_command_candidate=False,
+                    repetition_detected=False,
+                    compression_ratio=eff_comp_ratio
+                )
+            elif len(raw_tokens) > 2:
+                logger.info(f"[VALIDATOR] Repetitive wake-word loop discarded ({len(raw_tokens)}x): '{text[:60]}...'")
+                return ValidationResult(
+                    raw_text=raw_text,
+                    cleaned_text="",
+                    status=ValidationStatus.REPETITIVE_HALLUCINATION,
+                    is_valid=False,
+                    is_command_candidate=False,
+                    repetition_detected=True,
+                    repetition_ratio=1.0,
+                    original_repetition_count=len(raw_tokens),
+                    compression_ratio=eff_comp_ratio
+                )
 
         # 1. Repetitive Loop & Hallucination Analysis
         cleaned_text, rep_detected, rep_count, rep_ratio = self._analyze_and_compress_repetitions(text)
@@ -122,7 +209,8 @@ class TranscriptValidator:
                 repetition_ratio=rep_ratio,
                 original_repetition_count=rep_count,
                 confidence=confidence,
-                is_hallucination_compressed=False
+                is_hallucination_compressed=False,
+                compression_ratio=eff_comp_ratio
             )
 
         # Discard critically low-confidence transcripts (< 0.20) as noise or hallucination
@@ -139,7 +227,8 @@ class TranscriptValidator:
                     repetition_ratio=rep_ratio,
                     original_repetition_count=rep_count,
                     confidence=confidence,
-                    is_hallucination_compressed=False
+                    is_hallucination_compressed=False,
+                    compression_ratio=eff_comp_ratio
                 )
 
         # 2. Check for Hallucination Signatures
@@ -161,12 +250,17 @@ class TranscriptValidator:
                 any(cleaned_text.lower().startswith(p) for p in ["open", "launch", "type", "search", "close", "mute", "unmute", "lock", "shutdown", "restart", "volume"])
             )
 
-            if is_action_command:
+            # If the repetition was purely wake words, discard
+            if clean_tokens and all(tok in (self.WAKE_WORD_TOKENS | self.WAKE_PREFIX_TOKENS) for tok in clean_tokens):
+                status = ValidationStatus.REPETITIVE_HALLUCINATION
+                is_valid = False
+                logger.info(f"[VALIDATOR] Discarding repetitive wake-word hallucination ({rep_count}x '{cleaned_text}')")
+            elif is_action_command:
                 # Compressed repetitive command (decoder loop recovery e.g. "Open Chrome" looped 30x)
                 status = ValidationStatus.VALID
                 is_valid = True
                 logger.info(f"[VALIDATOR] Retained compressed repetitive command ({rep_count}x '{cleaned_text}'): raw='{raw_text[:60]}...'")
-            elif (len(cleaned_text.split()) == 1 and rep_count >= 4) or rep_count >= 5:
+            elif (len(cleaned_text.split()) == 1 and rep_count >= 3) or rep_count >= 4:
                 status = ValidationStatus.REPETITIVE_HALLUCINATION
                 is_valid = False
                 logger.info(f"[VALIDATOR] Discarding repetitive hallucination ({rep_count}x '{cleaned_text}'): raw='{raw_text[:60]}...'")
@@ -175,7 +269,7 @@ class TranscriptValidator:
                 is_valid = False
                 logger.info(f"[VALIDATOR] Discarding non-conversational repetitive hallucination ({rep_count}x '{cleaned_text}'): raw='{raw_text[:60]}...'")
             else:
-                # Natural conversational repetition (e.g., "okay okay okay", "bye bye bye", "hello hello", "thank you thank you")
+                # Natural conversational repetition (e.g., "okay okay", "hello hello")
                 status = ValidationStatus.VALID
                 is_valid = True
 
@@ -190,7 +284,8 @@ class TranscriptValidator:
                 repetition_ratio=rep_ratio,
                 original_repetition_count=rep_count,
                 confidence=confidence,
-                is_hallucination_compressed=rep_detected
+                is_hallucination_compressed=rep_detected,
+                compression_ratio=eff_comp_ratio
             )
 
         # 3. Determine if candidate looks like an actionable command
@@ -217,7 +312,8 @@ class TranscriptValidator:
             repetition_ratio=rep_ratio,
             original_repetition_count=rep_count,
             confidence=confidence,
-            is_hallucination_compressed=rep_detected
+            is_hallucination_compressed=rep_detected,
+            compression_ratio=eff_comp_ratio
         )
 
     def _analyze_and_compress_repetitions(self, text: str) -> (str, bool, int, float):
@@ -228,18 +324,28 @@ class TranscriptValidator:
         raw_phrases = [p.strip() for p in re.split(r'[,.!?]+', text) if p.strip()]
         if len(raw_phrases) >= 2:
             normalized_phrases = [re.sub(r'[^\w\s]', '', p).lower().strip() for p in raw_phrases if p.strip()]
-            # If all sub-phrases are identical
             if normalized_phrases and all(p == normalized_phrases[0] for p in normalized_phrases):
                 rep_count = len(normalized_phrases)
                 compressed = raw_phrases[0]
-                ratio = rep_count / float(len(text.split()))
+                ratio = rep_count / float(max(len(text.split()), 1))
                 return compressed, True, rep_count, ratio
 
         # Word-level repetition check (e.g. "okay okay okay okay", "bye bye bye")
         words = text.split()
         if len(words) >= 3:
-            norm_words = [re.sub(r'[^\w]', '', w).lower() for w in words]
-            # Check 1-word loop
+            norm_words = [re.sub(r'[^\w]', '', w).lower() for w in words if re.sub(r'[^\w]', '', w)]
+            if not norm_words:
+                return text, False, 1, 0.0
+
+            # Check single word dominant repetition (e.g. 'Santra, Santra, ... Sant')
+            from collections import Counter
+            counts = Counter(norm_words)
+            most_common_word, most_common_cnt = counts.most_common(1)[0]
+            if most_common_cnt >= 3 and (most_common_cnt / float(len(norm_words))) >= 0.70:
+                # 70%+ of the entire transcript is the exact same word
+                return most_common_word, True, most_common_cnt, (most_common_cnt / float(len(norm_words)))
+
+            # Check 1-word exact loop
             if all(w == norm_words[0] for w in norm_words):
                 return words[0].strip(' ,.!?'), True, len(words), 1.0
 

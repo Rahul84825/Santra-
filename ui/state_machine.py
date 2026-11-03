@@ -13,9 +13,18 @@ class SantraRuntimeState(str, Enum):
     INITIALIZING = "INITIALIZING"
     STANDBY = "STANDBY"
     LISTENING = "LISTENING"
+    TRANSCRIBING = "TRANSCRIBING"
+    VALIDATING_INPUT = "VALIDATING_INPUT"
+    ROUTING = "ROUTING"
+    WAITING_FOR_NVIDIA = "WAITING_FOR_NVIDIA"
+    GENERATING_RESPONSE = "GENERATING_RESPONSE"
+    STREAMING_RESPONSE = "STREAMING_RESPONSE"
     PROCESSING = "PROCESSING"
     EXECUTING = "EXECUTING"
     SPEAKING = "SPEAKING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    TIMED_OUT = "TIMED_OUT"
     SLEEPING = "SLEEPING"
     RECOVERING = "RECOVERING"
     ERROR = "ERROR"
@@ -28,11 +37,19 @@ class JarvisUIState(str, Enum):
     STANDBY = "STANDBY"
     LISTENING = "LISTENING"
     TRANSCRIBING = "TRANSCRIBING"
+    VALIDATING_INPUT = "VALIDATING_INPUT"
+    ROUTING = "ROUTING"
+    WAITING_FOR_NVIDIA = "WAITING_FOR_NVIDIA"
+    GENERATING_RESPONSE = "GENERATING_RESPONSE"
+    STREAMING_RESPONSE = "STREAMING_RESPONSE"
     UNDERSTANDING = "UNDERSTANDING"
     PROCESSING = "PROCESSING"
     THINKING = "THINKING"
     EXECUTING = "EXECUTING"
     SPEAKING = "SPEAKING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    TIMED_OUT = "TIMED_OUT"
     SLEEPING = "SLEEPING"
     WAKING = "WAKING"
     RECOVERING = "RECOVERING"
@@ -70,7 +87,7 @@ STATE_CONFIGS = {
     ),
     JarvisUIState.STANDBY: StateVisualConfig(
         title="STANDBY",
-        subtext="READY • SAY 'SANTRA' TO ACTIVATE",
+        subtext="READY - SAY 'SANTRA' TO ACTIVATE",
         primary_color=HUDColors.CYAN_PRIMARY,
         glow_color=HUDColors.CYAN_GLOW,
         rotation_speed=0.5,
@@ -94,6 +111,51 @@ STATE_CONFIGS = {
         rotation_speed=2.0,
         pulse_freq=0.10,
         particle_speed=2.0
+    ),
+    JarvisUIState.VALIDATING_INPUT: StateVisualConfig(
+        title="VALIDATING INPUT",
+        subtext="CHECKING SPEECH INTEGRITY",
+        primary_color=HUDColors.AMBER_STANDBY,
+        glow_color=HUDColors.AMBER_GLOW,
+        rotation_speed=2.1,
+        pulse_freq=0.11,
+        particle_speed=2.1
+    ),
+    JarvisUIState.ROUTING: StateVisualConfig(
+        title="ROUTING",
+        subtext="INTELLIGENCE LAYER SELECTION",
+        primary_color=HUDColors.CYAN_PRIMARY,
+        glow_color=HUDColors.CYAN_GLOW,
+        rotation_speed=2.3,
+        pulse_freq=0.12,
+        particle_speed=2.2
+    ),
+    JarvisUIState.WAITING_FOR_NVIDIA: StateVisualConfig(
+        title="WAITING FOR NVIDIA",
+        subtext="AWAITING NEMOTRON FIRST TOKEN",
+        primary_color=HUDColors.VIOLET_THINKING,
+        glow_color=HUDColors.VIOLET_GLOW,
+        rotation_speed=2.6,
+        pulse_freq=0.13,
+        particle_speed=2.4
+    ),
+    JarvisUIState.GENERATING_RESPONSE: StateVisualConfig(
+        title="GENERATING RESPONSE",
+        subtext="NVIDIA NEMOTRON REASONING",
+        primary_color=HUDColors.VIOLET_THINKING,
+        glow_color=HUDColors.VIOLET_GLOW,
+        rotation_speed=2.8,
+        pulse_freq=0.14,
+        particle_speed=2.5
+    ),
+    JarvisUIState.STREAMING_RESPONSE: StateVisualConfig(
+        title="STREAMING RESPONSE",
+        subtext="STREAMING NEURAL RESPONSE",
+        primary_color=HUDColors.TEAL_SPEAKING,
+        glow_color=HUDColors.TEAL_GLOW,
+        rotation_speed=2.5,
+        pulse_freq=0.13,
+        particle_speed=2.3
     ),
     JarvisUIState.UNDERSTANDING: StateVisualConfig(
         title="UNDERSTANDING",
@@ -140,9 +202,36 @@ STATE_CONFIGS = {
         pulse_freq=0.12,
         particle_speed=1.6
     ),
+    JarvisUIState.COMPLETED: StateVisualConfig(
+        title="COMPLETED",
+        subtext="ACTION COMPLETED",
+        primary_color=HUDColors.CYAN_PRIMARY,
+        glow_color=HUDColors.CYAN_GLOW,
+        rotation_speed=0.8,
+        pulse_freq=0.04,
+        particle_speed=0.8
+    ),
+    JarvisUIState.CANCELLED: StateVisualConfig(
+        title="CANCELLED",
+        subtext="OPERATION CANCELLED",
+        primary_color=HUDColors.AMBER_STANDBY,
+        glow_color=HUDColors.AMBER_GLOW,
+        rotation_speed=0.4,
+        pulse_freq=0.03,
+        particle_speed=0.4
+    ),
+    JarvisUIState.TIMED_OUT: StateVisualConfig(
+        title="TIMED OUT",
+        subtext="PROVIDER DEADLINE EXPIRED",
+        primary_color=HUDColors.CRIMSON_ERROR,
+        glow_color=HUDColors.CRIMSON_GLOW,
+        rotation_speed=0.5,
+        pulse_freq=0.05,
+        particle_speed=0.5
+    ),
     JarvisUIState.SLEEPING: StateVisualConfig(
         title="SYSTEM SLEEPING",
-        subtext="LOW-POWER IDLE • SAY 'SANTRA' OR CLICK WAKE",
+        subtext="LOW-POWER IDLE - SAY 'SANTRA' OR CLICK WAKE",
         primary_color=QColor(70, 120, 210),
         glow_color=QColor(30, 70, 160, 90),
         rotation_speed=0.15,
@@ -209,6 +298,22 @@ def map_runtime_status_to_ui_state(status: str) -> JarvisUIState:
         return JarvisUIState.LISTENING
     if "TRANSCRIB" in s:
         return JarvisUIState.TRANSCRIBING
+    if "VALIDAT" in s:
+        return JarvisUIState.VALIDATING_INPUT
+    if "ROUT" in s:
+        return JarvisUIState.ROUTING
+    if "WAIT" in s and ("NVIDIA" in s or "NEMOTRON" in s or "PROVIDER" in s):
+        return JarvisUIState.WAITING_FOR_NVIDIA
+    if "STREAM" in s:
+        return JarvisUIState.STREAMING_RESPONSE
+    if "GENERAT" in s:
+        return JarvisUIState.GENERATING_RESPONSE
+    if "TIMED" in s or "TIMEOUT" in s:
+        return JarvisUIState.TIMED_OUT
+    if "CANCEL" in s:
+        return JarvisUIState.CANCELLED
+    if "COMPLETE" in s:
+        return JarvisUIState.COMPLETED
     if "THINK" in s or "REASON" in s or "SYNTH" in s:
         return JarvisUIState.THINKING
     if "PROCESS" in s:

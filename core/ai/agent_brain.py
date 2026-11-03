@@ -99,7 +99,7 @@ class AgentBrain:
         }
         return tools_dict
 
-    def _build_system_prompt(self, user_query: str) -> str:
+    def _build_system_prompt(self, user_query: str, include_tools: bool = True) -> str:
         """Constructs system prompt with available tools and injected long-term memory."""
         mem_context = persistent_memory.build_memory_context_prompt(user_query)
 
@@ -139,15 +139,9 @@ class AgentBrain:
   * Correction: "Actually, sir, the figure is lower."
 - REPORTING: State facts directly. No filler (um, well, let me check). No apologies (never say sorry)."""
 
-        prompt = f"""You are SANTRA, an autonomous voice AI desktop assistant.
-You are speaking to one person in a British service register ("Sir").
-NVIDIA Nemotron is merely an external cognition provider powering your thought process; you are SANTRA with real local system access and authority on Windows 11. Never disclaim access to local applications or files.
-
-{rules}
-
-{mem_context}
-
-Available Tools:
+        tools_section = ""
+        if include_tools:
+            tools_section = f"""Available Tools:
 {tools_block}
 
 Format Guidelines:
@@ -159,6 +153,15 @@ Action Input: {{"param1": "value1"}}
 When you have the final answer, output:
 Final Answer: <spoken response or explanation for the user>
 """
+        prompt = f"""You are SANTRA, an autonomous voice AI desktop assistant.
+You are speaking to one person in a British service register ("Sir").
+NVIDIA Nemotron is merely an external cognition provider powering your thought process; you are SANTRA with real local system access and authority on Windows 11. Never disclaim access to local applications or files.
+
+{rules}
+
+{mem_context}
+
+{tools_section}"""
         return prompt
 
     def reason_and_execute(
@@ -166,7 +169,8 @@ Final Answer: <spoken response or explanation for the user>
         user_text: str,
         conversation_history: List[Dict[str, str]] = None,
         max_steps: int = 6,
-        timeout: float = 15.0
+        timeout: float = 15.0,
+        is_cancelled: Optional[Any] = None
     ) -> Dict[str, Any]:
         """Main ReAct agent loop: reasons over user intent, selects tools, verifies results, and synthesizes response."""
         t0 = time.time()
@@ -221,7 +225,10 @@ Final Answer: <spoken response or explanation for the user>
                 break
 
             step_count += 1
-            llm_response = self.provider_manager.generate_response(messages)
+            if is_cancelled and callable(is_cancelled) and is_cancelled():
+                logger.info("[AGENT_BRAIN] Reason & Execute aborted: cancelled by user.")
+                break
+            llm_response = self.provider_manager.generate_response(messages, is_cancelled=is_cancelled)
             if not llm_response:
                 break
 
@@ -305,10 +312,24 @@ Final Answer: <spoken response or explanation for the user>
                 }
 
         # Fallback synthesis after loop concludes
+        err_code = None
+        if hasattr(self.provider_manager, "get_last_error_code"):
+            err_code = self.provider_manager.get_last_error_code()
+
         if executed_tools:
             final_synth = f"I completed execution of {len(executed_tools)} tool{'s' if len(executed_tools) > 1 else ''} ({', '.join(executed_tools)}), sir, but was unable to complete the final response synthesis."
+        elif err_code == "CANCELLED" or (is_cancelled and callable(is_cancelled) and is_cancelled()):
+            final_synth = "The request was cancelled, sir."
+        elif err_code == "AI_PROVIDER_TIMEOUT":
+            final_synth = "I was unable to retrieve a response from the AI provider within the time limit, sir. Please try asking again."
+        elif err_code == "CREDENTIALS_INVALID":
+            final_synth = "Unable to authenticate with the AI provider, sir. Please verify your AI provider credentials."
+        elif err_code == "RATE_LIMITED":
+            final_synth = "The AI provider is currently busy, sir. Please try again in a moment."
+        elif err_code == "NETWORK_ERROR":
+            final_synth = "Unable to connect to the AI provider endpoint, sir. Please verify your network connection."
         else:
-            final_synth = "I was unable to retrieve a response because the AI provider did not return an answer, sir. Please verify your AI provider credentials and network connection."
+            final_synth = "I was unable to retrieve a response because the AI provider returned an empty answer, sir."
         return {
             "text": final_synth,
             "tool_used": executed_tools[-1] if executed_tools else None,

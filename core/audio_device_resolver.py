@@ -221,3 +221,67 @@ def resolve_audio_input_device(preferred: Optional[Any] = None, force_refresh: b
                 return AudioDeviceResult(i, d["name"], rate, resample)
 
     return AudioDeviceResult(None, "System Default", 16000, False)
+
+
+def resolve_audio_output_device(preferred: Optional[Any] = None, force_refresh: bool = False) -> AudioDeviceResult:
+    """
+    Intelligently resolves the audio output device index for playback.
+
+    Priority:
+    1. Explicit User Preference (exact numeric index or name substring)
+    2. Active System Default Output Device (via sd.default.device[1] with max_output_channels > 0)
+    3. Headset / Earbuds Output Device if present
+    4. First available output device fallback (e.g. Speakers)
+
+    Returns:
+        AudioDeviceResult tuple of (device_index, device_name) with hardware metadata.
+    """
+    if force_refresh:
+        refresh_device_cache()
+
+    from core.lazy_loader import lazy_import
+    sd = lazy_import("sounddevice")
+
+    try:
+        devices = list(sd.query_devices())
+        def_in, def_out = sd.default.device
+    except Exception as e:
+        logger.warning(f"Could not query default sound devices: {e}")
+        return AudioDeviceResult(None, "System Default Output", 44100, False)
+
+    if not devices:
+        return AudioDeviceResult(None, "System Default Output", 44100, False)
+
+    # 1. Check explicit preferred configuration (if not "auto", "none", "")
+    if preferred is not None and str(preferred).strip().lower() not in ["auto", "none", ""]:
+        # Numeric index
+        if isinstance(preferred, int) or (isinstance(preferred, str) and preferred.strip().isdigit()):
+            idx = int(preferred)
+            if 0 <= idx < len(devices) and devices[idx]["max_output_channels"] > 0:
+                name = devices[idx]["name"]
+                rate = int(devices[idx].get("default_samplerate", 44100))
+                logger.info(f"[AUDIO_ROUTER] Using explicitly configured audio output device [{idx}]: {name}")
+                return AudioDeviceResult(idx, name, rate, False)
+
+        # Substring match
+        pref_str = str(preferred).strip().lower()
+        for i, d in enumerate(devices):
+            if d["max_output_channels"] > 0 and pref_str in d["name"].lower():
+                rate = int(d.get("default_samplerate", 44100))
+                logger.info(f"[AUDIO_ROUTER] Matched explicitly preferred output name '{preferred}' -> [{i}]: {d['name']}")
+                return AudioDeviceResult(i, d["name"], rate, False)
+
+    # 2. Check System Default Output Device
+    if def_out is not None and 0 <= def_out < len(devices):
+        if devices[def_out]["max_output_channels"] > 0:
+            def_name = devices[def_out]["name"]
+            rate = int(devices[def_out].get("default_samplerate", 44100))
+            return AudioDeviceResult(def_out, def_name, rate, False)
+
+    # 3. Fallback to first available output device
+    for i, d in enumerate(devices):
+        if d["max_output_channels"] > 0:
+            rate = int(d.get("default_samplerate", 44100))
+            return AudioDeviceResult(i, d["name"], rate, False)
+
+    return AudioDeviceResult(None, "System Default Output", 44100, False)

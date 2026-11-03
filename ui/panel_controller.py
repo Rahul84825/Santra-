@@ -91,12 +91,7 @@ class PanelVisibilityController(QObject):
                 except Exception as win_err:
                     logger.debug(f"[PANEL_CONTROLLER] Win32 ShowWindow/SetForegroundWindow: {win_err}")
 
-            # 4. Qt Desktop Window Manager (DWM) bring-to-front pulse
-            self.window.setWindowFlags(self.window.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-            self.window.show()
-            self.window.setWindowFlags(self.window.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
-            self.window.show()
-
+            # 4. Bring window to front cleanly without HWND recreation
             self.window.raise_()
             self.window.activateWindow()
             logger.info("[PANEL_CONTROLLER] Santra HUD panel successfully restored and activated.")

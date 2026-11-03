@@ -93,14 +93,15 @@ def run_ui_mode(start_minimized=False, guard=None):
     runtime.register_observers(
         on_status_change=lambda status: (safe_emit(window.sig_status_changed, status), update_tray_status(status)),
         on_speech_text=lambda text: safe_emit(window.sig_speech_text_updated, text),
-        on_pipeline_stage=lambda raw, norm, intent, exec_str, resp, state: safe_emit(window.sig_pipeline_stage_updated, raw, norm, intent, exec_str, resp, state),
+        on_pipeline_stage=lambda raw, norm, intent, exec_str, resp, state, turn_id="": safe_emit(window.sig_pipeline_stage_updated, raw, norm, intent, exec_str, resp, state, str(turn_id or '')),
         on_action_complete=lambda action, success, msg: safe_emit(window.sig_last_action_updated, action, success, msg),
         on_history_update=lambda history: safe_emit(window.sig_history_updated, history),
         on_permission_dialog=lambda action, msg: safe_emit(window.sig_show_permission_dialog, action, msg),
         on_speech_debug=lambda text, conf, lang, dur: safe_emit(window.sig_speech_debug_updated, text, conf, lang, dur),
         on_audio_amplitude=lambda amp: safe_emit(window.sig_audio_amplitude_updated, amp),
         on_camera_state=lambda event: safe_emit(window.sig_camera_state_updated, event),
-        on_gesture=lambda event: safe_emit(window.sig_gesture_detected, event)
+        on_gesture=lambda event: safe_emit(window.sig_gesture_detected, event),
+        on_ai_mode_changed=lambda enabled: safe_emit(window.sig_ai_mode_changed, enabled)
     )
 
     from ui.panel_controller import PanelVisibilityController

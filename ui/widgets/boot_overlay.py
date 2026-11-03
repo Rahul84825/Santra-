@@ -128,12 +128,12 @@ class BootOverlayWidget(QWidget):
             painter.drawEllipse(QPointF(cx, cy), r_outer * 0.5, r_outer * 0.5)
 
             # Resolving Title
-            font_jarvis = QFont("Segoe UI Variable", 24, QFont.Weight.Black)
-            painter.setFont(font_jarvis)
+            font_santra = QFont("Segoe UI Variable", 24, QFont.Weight.Black)
+            painter.setFont(font_santra)
             painter.setPen(QPen(QColor(255, 255, 255, int(255 * self._alpha))))
-            painter.drawText(QRectF(cx - 150, cy - 25, 300, 50), Qt.AlignmentFlag.AlignCenter, "J.A.R.V.I.S")
+            painter.drawText(QRectF(cx - 150, cy - 25, 300, 50), Qt.AlignmentFlag.AlignCenter, "SANTRA")
 
             font_sub = QFont("Segoe UI Variable", 10, QFont.Weight.Bold)
             painter.setFont(font_sub)
-            painter.setPen(QPen(QColor(0, 240, 255, int(200 * self._alpha))))
-            painter.drawText(QRectF(cx - 150, cy + 30, 300, 30), Qt.AlignmentFlag.AlignCenter, "AUTONOMOUS CYBER-HUD ONLINE")
+            painter.setPen(QPen(QColor(14, 165, 233, int(220 * self._alpha))))
+            painter.drawText(QRectF(cx - 200, cy + 30, 400, 30), Qt.AlignmentFlag.AlignCenter, "AUTONOMOUS DESKTOP INTELLIGENCE")

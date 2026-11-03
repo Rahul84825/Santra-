@@ -1,0 +1,154 @@
+================================================================================
+SANTRA ITERATION 20: INITIAL FORENSIC AUDIT & ROOT CAUSE INVESTIGATION
+Date: November 2, 2026
+Environment: Windows 11 Build 26300 | Python 3.14.7 | PyQt 6.11.1
+================================================================================
+
+1. EXECUTIVE SUMMARY & EVIDENCE RECONCILIATION
+--------------------------------------------------------------------------------
+This forensic audit was performed prior to any code modifications. Two critical
+defects reported in the runtime logs and screenshot were investigated:
+1. Conversation Streaming Failure: "NameError: name 'sanitize_speech_text' is not defined"
+2. Windows Process Crash: Exit code 3221226505 (Hex: 0xC0000409, STATUS_STACK_BUFFER_OVERRUN)
+3. Command Palette Disappearance & App Exit: Premature dialog closure, lack of lifecycle
+   tracking, unsafe cross-thread QTimer invocations, and DWM window flag recreation.
+
+2. EVIDENCE A: CONVERSATION STREAMING FAILURE ("sanitize_speech_text")
+--------------------------------------------------------------------------------
+Location: core/jarvis_runtime.py (line 1434)
+Observed in log:
+  logs/jarvis.log:26910: [DEBUG] - Jarvis.ConversationManager - [CmdWorker-7A2E90] -
+  [CONVERSATION] Streaming exception: name 'sanitize_speech_text' is not defined
+
+Root Cause:
+- In core/jarvis_runtime.py, the streaming sentence callback `_on_sentence_chunk(sentence)`
+  invokes `clean_chunk = sanitize_speech_text(sentence)`.
+- However, `sanitize_speech_text` was never imported into core/jarvis_runtime.py from
+  `core.speech_sanitizer`.
+- When streaming tokens from the NVIDIA provider, the callback failed with a NameError.
+- ConversationManager intercepted the streaming exception and fell back to non-streaming
+  `reason_and_execute`, resulting in duplicate latency, dropped streaming tokens, and
+  fallback responses (such as "Sir, I am ready to explain, but you have not specified
+  the subject matter." or unparsed "Thought: ..." tokens).
+
+Fix:
+- Import `sanitize_speech_text` into core/jarvis_runtime.py.
+- Ensure streaming callbacks in ConversationManager and JarvisRuntime have complete
+  exception isolation and fallback preservation.
+- Sanitize "Thought:" and internal scratchpads before any TTS or UI display.
+
+3. EVIDENCE B: PROCESS TERMINATION EXIT CODE 3221226505 (0xC0000409)
+--------------------------------------------------------------------------------
+Exit code 3221226505 = 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN / __fastfail).
+Windows Application Event Log confirmed:
+  Faulting application name: pythonw.exe
+  Faulting module name: Qt6Core.dll, version: 6.11.1.0
+  Exception code: 0xc0000409
+  Fault offset: 0x000000000001cf68
+
+Root Cause Analysis:
+In PyQt6/Qt6Core, __fastfail(FAST_FAIL_FATAL_APP_EXIT) is triggered by `qFatal` whenever:
+a) A QObject method is invoked or created from a foreign non-Qt thread.
+   Specifically discovered in ui/panels/spotify_panel.py:
+   Line 590: `threading.Thread(target=self._background_poll, daemon=True).start()`
+   Lines 597-598: `QTimer.singleShot(0, lambda: self._update_playback_ui(state))`
+   `QTimer.singleShot` was being executed directly inside a Python background thread!
+   In Qt6, `QTimer` cannot be instantiated or operated on a non-Qt thread without a
+   QThread event loop. When the timer dispatches or when the dialog closes, Qt aborts.
+b) DWM Window Flag Mutation in ui/panel_controller.py:
+   Lines 95-98:
+     `self.window.setWindowFlags(self.window.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)`
+     `self.window.show()`
+     `self.window.setWindowFlags(self.window.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)`
+     `self.window.show()`
+   Calling `setWindowFlags` on an active, shown top-level window destroys and recreates the
+   underlying native Win32 HWND. When modal child dialogs or active mouse/keyboard events
+   are in-flight, this invalidates native window hierarchy and triggers Qt assertions.
+
+Fix:
+- Eliminate `QTimer.singleShot` calls from background threads. Use thread-safe Qt Signals.
+- Replace unsafe `setWindowFlags` toggles with Win32 `SetWindowPos` or safe Qt `raise_()` /
+  `activateWindow()`.
+- Add global Qt message handler and `sys.excepthook` to log any fatal Qt warnings before abort.
+
+4. EVIDENCE C: COMMAND PALETTE DEFECT TRACE
+--------------------------------------------------------------------------------
+For every command button in CommandPaletteDialog:
+1. "💻 Project Intelligence"
+   - Callback: self._open_project_intelligence
+   - Intent: Launch project intelligence panel dialog
+   - Worker: Main Qt GUI thread (QDialog.exec())
+   - Defect: self.accept() was called before opening, closing palette immediately.
+2. "🧪 Virtual Testing Lab"
+   - Callback: self._open_virtual_lab
+   - Intent: Launch virtual lab dialog
+   - Worker: Main Qt GUI thread (QDialog.exec())
+   - Defect: Premature palette close, modal stacking issues.
+3. "⚙️ AI Provider Settings"
+   - Callback: self._open_ai_settings
+   - Intent: Launch AI settings dialog
+   - Worker: Main Qt GUI thread (QDialog.exec())
+4. "🔍 Visual Screen Intelligence"
+   - Callback: self._open_screen_intelligence
+   - Intent: Launch screen OCR/vision intelligence dialog
+   - Worker: Main Qt GUI thread (QDialog.exec())
+5. "🗣️ Accent & Pronunciation"
+   - Callback: self._open_pronunciation_settings
+   - Intent: Launch pronunciation configuration dialog
+   - Worker: Main Qt GUI thread (QDialog.exec())
+6. "🔊 Test Output Audio"
+   - Callback: lambda -> sig_command_submitted.emit("test audio speakers")
+   - Intent: test_audio_speakers
+   - Worker: CmdWorker thread -> SAPI/TTS playback
+   - Defect: Palette vanished immediately with zero status indicator.
+7. "🎵 Spotify Control Suite"
+   - Callback: self._open_spotify_panel
+   - Intent: Launch Spotify dialog
+   - Worker: SpotifyAuthWorker / threading.Thread
+   - Defect: Background thread called QTimer.singleShot, crashing with 0xC0000409.
+8. "🌐 HiAnime in Brave"
+   - Callback: lambda -> sig_command_submitted.emit("open hianime")
+   - Intent: open_url (https://hianime.at/)
+   - Worker: CmdWorker-B2EDB6 -> BrowserManager.open_url
+   - Defect: Palette vanished immediately; focus transferred to Brave; no feedback on SANTRA.
+9. "💬 Chrome ChatGPT"
+   - Callback: lambda -> sig_command_submitted.emit("open chatgpt")
+   - Intent: open_url (https://chatgpt.com/)
+   - Worker: CmdWorker -> BrowserManager.open_url
+   - Defect: Same as HiAnime.
+10. "⚡ Trigger Wake Word"
+   - Callback: self._on_wake_clicked
+   - Intent: trigger_manual_talk()
+   - Worker: Listener / Runtime state transition
+
+5. UI/UX AUDIT & BRAND IDENTITY ISSUES
+--------------------------------------------------------------------------------
+- Window Title still reads: "J.A.R.V.I.S. // Autonomous System"
+- Boot Overlay still displays: "J.A.R.V.I.S."
+- Theme stylesheet still uses low-contrast cyan-on-black neon aesthetic.
+- MainWindow.paintEvent runs 60 FPS full-window repaints drawing 200 scanlines and gradients,
+  pegging CPU and causing noticeable lag.
+- History view rebuilds all 50 widgets from scratch on every turn.
+
+6. PROPOSED ARCHITECTURE FOR ITERATION 20
+--------------------------------------------------------------------------------
+1. Consistent SANTRA Branding:
+   - Window Title: "SANTRA — Autonomous Desktop Intelligence"
+   - Center/Header: Clean modern SANTRA typographic branding.
+   - All user-facing strings updated to SANTRA.
+2. Complete Modern UI Redesign:
+   - Top Header (Brand, Status, Audio, Mic, Settings)
+   - Left Navigation (Home, Commands, Conversation, Projects, Apps, Browser, Vision, Audio, Settings)
+   - Main Workspace (Rich conversation, streaming display, copy buttons, timestamps)
+   - Right-Side Info Panel (Active task, CPU/RAM/GPU telemetry, mode)
+   - Bottom Command Composer (Text input, mic button, execute, command palette, stop)
+3. Performance & Threading:
+   - Eliminate full-window 60 FPS paintEvent.
+   - Use Qt stylesheets and modular QWidgets.
+   - Incremental conversation updates.
+4. Robust Command Palette:
+   - In-palette command lifecycle: IDLE -> VALIDATING -> QUEUED -> RUNNING -> VERIFYING -> SUCCEEDED / FAILED.
+   - Status, progress, and result indicators inside the palette.
+   - Non-closing mode while commands execute.
+================================================================================
+

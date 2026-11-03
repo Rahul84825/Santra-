@@ -50,6 +50,19 @@ class ProviderManager:
                     prov.base_url = cfg.base_url
                 if hasattr(prov, "timeout") and cfg.timeout_sec:
                     prov.timeout = cfg.timeout_sec
+                if hasattr(prov, "max_retries") and getattr(cfg, "max_retries", None) is not None:
+                    prov.max_retries = cfg.max_retries
+
+    def get_diagnostics(self) -> Dict[str, Any]:
+        """Returns safe telemetry and authoritative configuration status."""
+        self._sync_with_settings()
+        prov = self.get_active_provider()
+        if prov and hasattr(prov, "get_diagnostics"):
+            return prov.get_diagnostics()
+        return {
+            "active_provider_key": self.active_provider_key,
+            "configured": bool(prov)
+        }
 
     @property
     def active_provider_key(self) -> str:
@@ -141,7 +154,7 @@ class ProviderManager:
 
         return None, text
 
-    def generate_response(self, messages: List[Dict[str, str]], context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def generate_response(self, messages: List[Dict[str, str]], context: Optional[Dict[str, Any]] = None, is_cancelled: Optional[Any] = None) -> Optional[str]:
         """Routes generation request to the best eligible AI provider with capability matching,
         multimodal formatting, and resilient fallback failover.
         """
@@ -287,6 +300,11 @@ class ProviderManager:
                 flight_key = nemotron_cache.generate_cache_key(query_to_cache, provider=prov_key, model=prov_model, context=ctx)
 
                 def _execute_provider():
+                    if hasattr(provider, "generate_response"):
+                        import inspect
+                        sig = inspect.signature(provider.generate_response)
+                        if "is_cancelled" in sig.parameters:
+                            return provider.generate_response(call_messages, context=context, is_cancelled=is_cancelled)
                     return provider.generate_response(call_messages, context=context)
 
                 res, was_coalesced = nemotron_cache.coalesce_and_execute(flight_key, _execute_provider)
@@ -320,6 +338,13 @@ class ProviderManager:
                 logger.warning(f"[ProviderManager] Error from {provider.get_name()}: {err_clean}. Attempting failover.")
 
         logger.error("[ProviderManager] All candidate AI providers failed or were unavailable.")
+        return None
+
+    def get_last_error_code(self) -> Optional[str]:
+        """Returns the authoritative error code from the active or candidate provider."""
+        active_prov = self.get_active_provider()
+        if active_prov and hasattr(active_prov, "get_last_error_code"):
+            return active_prov.get_last_error_code()
         return None
 
     def stream_response(

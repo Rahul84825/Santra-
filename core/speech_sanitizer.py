@@ -34,6 +34,23 @@ class SpeechSanitizer:
 
         clean = text.strip()
 
+        # 0. Strip internal thinking/reasoning tags and ReAct execution structures
+        clean = re.sub(r"<think>[\s\S]*?</think>", "", clean, flags=re.IGNORECASE)
+
+        # If "Final Answer:" is present, extract only the user-facing text after it
+        final_answer_match = re.search(r"\bFinal\s+Answer:\s*([\s\S]+)$", clean, flags=re.IGNORECASE)
+        if final_answer_match:
+            clean = final_answer_match.group(1).strip()
+        else:
+            clean = re.sub(r"(?:^|\n)\s*Thought:\s*.*?(?=(?:\n\s*(?:Action|Observation|Final Answer):|\Z))", "", clean, flags=re.IGNORECASE | re.DOTALL)
+            clean = re.sub(r"(?:^|\n)\s*Action:\s*.*?(?=(?:\n\s*(?:Action Input|Observation|Final Answer|Thought):|\Z))", "", clean, flags=re.IGNORECASE | re.DOTALL)
+            clean = re.sub(r"(?:^|\n)\s*Action\s+Input:\s*.*?(?=(?:\n\s*(?:Observation|Final Answer|Thought|Action):|\Z))", "", clean, flags=re.IGNORECASE | re.DOTALL)
+            clean = re.sub(r"(?:^|\n)\s*Observation:\s*.*?(?=(?:\n\s*(?:Thought|Action|Final Answer):|\Z))", "", clean, flags=re.IGNORECASE | re.DOTALL)
+            clean = re.sub(r"\bThought:\s*.*?\bAction:\s*[a-zA-Z0-9_\-]+(?:\s*Action\s+Input:\s*\{.*?\})?", "", clean, flags=re.IGNORECASE)
+            clean = re.sub(r"\bAction:\s*[a-zA-Z0-9_\-]+\s*Action\s+Input:\s*\{.*?\}", "", clean, flags=re.IGNORECASE)
+            clean = re.sub(r"\bAction\s+Input:\s*\{.*?\}", "", clean, flags=re.IGNORECASE)
+            clean = re.sub(r"\bAction:\s*[a-zA-Z0-9_\-]+(?:\(\))?", "", clean, flags=re.IGNORECASE)
+
         # 1. Eliminate raw stack traces completely
         if "traceback" in clean.lower() or "file \"" in clean.lower():
             clean = self._stack_trace_pattern.sub("An internal execution error occurred.", clean)

@@ -234,6 +234,22 @@ class CommandExecutor:
                 self._record_history(intent_node, res)
                 return res
 
+            elif intent in ["open_browser", "browser.launch"]:
+                browser_name = intent_node.get("browser") or target or "chrome"
+                url = intent_node.get("url")
+                res = self.browser_mgr.open_browser(browser_name=browser_name, url=url)
+                success = res.get("success", False)
+                message = res.get("message", f"Opened {browser_name.title()} browser.")
+                outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
+            elif intent in ["youtube_search"]:
+                q = intent_node.get("query") or intent_node.get("target") or "trending"
+                b = intent_node.get("browser", "default")
+                res = self.browser_mgr.youtube_search(q, browser=b)
+                success = res.get("success", False)
+                message = res.get("message", f"Searching YouTube for '{q}'.")
+                outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+
             elif intent == "open_website":
                 browser_name = intent_node.get("browser")
                 url = intent_node.get("url")

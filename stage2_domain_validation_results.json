@@ -1,0 +1,79 @@
+[
+  {
+    "domain": "Shopping",
+    "query": "Find the best wireless gaming controller under \u20b92,000 in India.",
+    "status": "COMPLETED",
+    "latency_sec": 16.48,
+    "sources_count": 10,
+    "evidence_count": 19,
+    "products_count": 10,
+    "citations_count": 8,
+    "answer_preview": "The Kreo Surge XB Wireless Gaming Controller is listed at \u20b91,000 on amazon.in, which is within the \u20b92,000 budget in India [1]. This controller features Hall Effect Joysticks & Triggers, Tri-Mode, Turb"
+  },
+  {
+    "domain": "Technology",
+    "query": "What is the latest NVIDIA GPU architecture?",
+    "status": "COMPLETED",
+    "latency_sec": 17.13,
+    "sources_count": 8,
+    "evidence_count": 8,
+    "products_count": 0,
+    "citations_count": 8,
+    "answer_preview": "The NVIDIA Hopper\u2122 architecture is described as a massive leap in accelerated computing, enabling the secure scaling of diverse workloads across data centers, ranging from small enterprise needs to ex"
+  },
+  {
+    "domain": "Programming",
+    "query": "What is the latest stable Python version?",
+    "status": "COMPLETED",
+    "latency_sec": 10.21,
+    "sources_count": 11,
+    "evidence_count": 11,
+    "products_count": 0,
+    "citations_count": 8,
+    "answer_preview": "Python 3.15 is identified as the latest stable release of the Python programming language [6]. Python 3.15.2 is a maintenance release of Python 3.15, specifically an expedited security release release"
+  },
+  {
+    "domain": "Gaming",
+    "query": "What are the latest Valorant patch notes?",
+    "status": "COMPLETED",
+    "latency_sec": 13.92,
+    "sources_count": 8,
+    "evidence_count": 8,
+    "products_count": 0,
+    "citations_count": 8,
+    "answer_preview": "VALORANT Patch Notes 13.05 include upcoming Pick'Ems for Champs, penalties for stream sniping and instalock tools, and future changes to the Agent Gear system [5]. You can browse the latest available "
+  },
+  {
+    "domain": "News",
+    "query": "Give me the latest important technology news in India.",
+    "status": "COMPLETED",
+    "latency_sec": 16.01,
+    "sources_count": 8,
+    "evidence_count": 9,
+    "products_count": 0,
+    "citations_count": 8,
+    "answer_preview": "Latest technology news in India can be found covering various topics such as mobile phones, laptops, gadgets, computer, apps, and games [1]. Established news sources provide updates on smartphones, la"
+  },
+  {
+    "domain": "Comparison",
+    "query": "Compare React and Next.js.",
+    "status": "COMPLETED",
+    "latency_sec": 10.38,
+    "sources_count": 12,
+    "evidence_count": 12,
+    "products_count": 2,
+    "citations_count": 8,
+    "answer_preview": "The provided evidence does not contain any comparison or detailed information regarding the architectural, syntax, or performance differences between React and Next.js [1, 2, 3, 4, 5, 6].\n\nThe availab"
+  },
+  {
+    "domain": "General Knowledge",
+    "query": "Explain how database indexing works.",
+    "status": "COMPLETED",
+    "latency_sec": 1.25,
+    "sources_count": 0,
+    "evidence_count": 0,
+    "products_count": 0,
+    "citations_count": 0,
+    "answer_preview": "External evidence was unavailable. Based on foundational principles, database indexing works by creating a special data structure (like a sorted list or a B-tree) that stores a small, organized pointe"
+  }
+]

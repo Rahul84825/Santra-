@@ -1,0 +1,196 @@
+# SANTRA — STAGE 1 BASELINE AUDIT REPORT
+## Intelligence Routing, Provider Telemetry, Execution Registry & Internal Trace Forensics
+
+Platform: Windows 11 AMD64 (Native Python 3.14 + PyQt6)
+Date: November 2, 2026
+Status: CONFIRMED ROOT CAUSES IDENTIFIED (NO SPECULATIVE FIXES)
+
+================================================================================
+1. EXECUTIVE OVERVIEW
+================================================================================
+
+An exhaustive forensic audit of the SANTRA runtime, GUI layer, command dispatchers, AI routing, and audio pipelines was executed to resolve five critical baseline defects observed during live Windows 11 testing:
+
+1. Command Palette / Registry Mismatch: 30 of 40 capabilities failed on click with "FAILED: No handler", while displaying "READY" statically before execution.
+2. Autonomous Runtime vs. Nemotron Separation: Architectural boundary confusion between local deterministic reflex execution (Layer 1/2) and external LLM cognition (Layer 3).
+3. Active Pipeline Displaying "N/A (NVIDIA NEMOTRON...)": Active pipeline card displaying "N/A" even when cloud reasoning completed successfully.
+4. Internal Execution Trace Leakage: User-facing assistant responses and TTS speech output exposing private internal chain-of-thought and ReAct tool scaffolding ("Thought: ... Action: sleep_system Action Input: {}").
+5. Transcription Field Contamination: UI caption showing 'Transcribing: "Action: sleepsystem. Action Input: {}"', causing apparent microphone loopback.
+
+================================================================================
+2. COMMAND PALETTE & EXECUTION REGISTRY AUDIT
+================================================================================
+
+2.1 Capability Catalogue & Architecture
+
+The codebase contains two distinct tool registries and a central command execution engine:
+
+- ToolRegistry (Metadata) [core/tool_registry.py]:
+  Authoritative singleton tool_registry containing 95 ToolDefinition metadata objects (descriptions, expected argument types, risk levels, verification strategies). None of these definitions wire an executable handler callback (tool.handler is None).
+
+- ToolRegistry (AI Tools) [core/ai/tools/registry.py]:
+  Contains 55 executable tool methods (_open_application, _open_url, _search_google, _search_youtube, etc.) designed for LLM function calling.
+
+- CommandExecutor (Execution Engine) [modules/system/executor.py]:
+  The true operational execution engine utilized by JarvisRuntime. Contains intent routers and OS control implementations for app control, browser management, filesystem operations, system telemetry, and window focus.
+
+2.2 Why the Command Palette Failed with "FAILED: No handler"
+
+In ui/panels/command_palette_dialog.py:
+- The dialog loads 10 system hubs ("code", "lab", "ai", "screen", "accent", "spotify", "test_speakers", "hianime", "chatgpt", "wake").
+- It appends the first 30 capabilities from core.tool_registry.tool_registry.list_all_tools()[:30] with keys formatted as "tool:<tool_name>".
+- Total cards = 40.
+
+The Execution Failure Chain:
+1. When a tool card is clicked, _handle_command_execution(action_key, command_title) checks:
+   - cb = self.callbacks.get(action_key)
+   - if cb and callable(cb): cb()
+   - elif self.on_command_submit: self.on_command_submit(phrase)
+   - else: record.status = FAILED; matching_card.set_lifecycle_state(FAILED, "No handler")
+2. In ui/main_window.py:636-655, callbacks is populated ONLY for the 10 system hubs ("code", "lab", etc.). None of the "tool:*" keys are provided.
+3. Crucially, on_command_submit was omitted entirely in MainWindow._open_command_palette (dialog = CommandPaletteDialog(self, callbacks=callbacks)), defaulting to None.
+4. Therefore, every single tool capability clicked immediately fell into the else block, logging:
+   "Execution failed: No handler for 'tool:<name>'".
+
+2.3 Why Unclicked Cards Displayed "READY"
+In ui/panels/command_palette_dialog.py:148:
+  self.lbl_status = QLabel("● READY")
+Every card statically initialized to READY upon instantiation regardless of whether a handler existed, whether dependencies were installed, or whether argument validation was complete.
+
+2.4 Command Execution Registry Mismatches
+
+- open_browser: Defined in tool_registry.py as "open_browser". Handled in executor.py under open_app / open_website. executor.py lacked explicit branch for intent == "open_browser".
+- open_website: Defined as "open_website". executor.py has intent == "open_website", but requires "target" URL parameter. Palette passed empty arguments.
+- browser_action: Defined as "browser_action". executor.py requires "action_type"; palette passed empty arguments.
+- desktop.replace_selection: Defined as "desktop.replace_selection". Requires focused UI control + text parameter.
+- desktop.send_message: Classified HIGH risk; blocked without explicit confirmation token.
+- youtube_search: Defined as "youtube_search". executor.py checked intent == "youtube_control", causing key mismatch.
+
+================================================================================
+3. AUTONOMOUS VS. NEMOTRON SEPARATION (ITEM A)
+================================================================================
+
+Responsibilities Matrix:
+
+1. SANTRA Autonomous Runtime (core/jarvis_runtime.py):
+   Central daemon managing state machines (LISTENING, PROCESSING, SPEAKING, STANDBY, SLEEPING), audio device hot-swapping, VAD barge-in, background workers, and thread synchronization.
+
+2. Intent Router (core/intent_engine.py & core/ai/intelligence_router.py):
+   Deterministic pattern matcher classifying queries into:
+   - Layer 1 (Reflex): Local app launch, window control, volume, power, media, screenshot (<50ms).
+   - Layer 2 (Context): Conversational greetings, identity, status, time, date, local memory.
+   - Layer 3 (Deep Cognition): Complex reasoning, code analysis, document comprehension, external knowledge.
+
+3. LLM Brain (core/ai/agent_brain.py):
+   Orchestrates multi-turn ReAct loops, tool selection, plan generation, and thought synthesis.
+
+4. NVIDIA Nemotron (core/ai/providers/nvidia_provider.py):
+   External cloud inference provider invoked exclusively when local deterministic intent resolution fails or when complex reasoning is explicitly demanded.
+
+5. Tool Registry (core/tool_registry.py):
+   Single source of truth for tool metadata, risk profiles, parameter schemas, and verification rules.
+
+6. Conversation Manager (core/conversation_manager.py):
+   Maintains conversational context, pending action state, session persistence, and explanation continuity.
+
+================================================================================
+4. ACTIVE PIPELINE SHOWING "N/A (NVIDIA NEMOTRON...)" (ITEM B)
+================================================================================
+
+Confirmed Root Cause:
+In core/jarvis_runtime.py:1484:
+  stage_source = conv_res.get("source", "Conversation")
+  self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", f"N/A ({stage_source})", response_text, "Speaking")
+
+And in ui/main_window.py:1105-1106:
+  if hasattr(self, "lbl_side_active_tool"):
+      self.lbl_side_active_tool.setText(exec_str.upper())
+
+The runtime code literally hardcoded 'f"N/A ({stage_source})"'. When Nemotron answered, stage_source was "NVIDIA Nemotron", producing "N/A (NVIDIA NEMOTRON)" on the UI sidebar.
+
+Proposed Telemetry State Machine:
+- LOCAL_EXECUTION: Running local reflex OS tools (<50ms).
+- NEMOTRON_REQUESTING: Socket connected, payload dispatched to integrate.api.nvidia.com.
+- NEMOTRON_PROCESSING: Streaming first token / TTFT pending.
+- NEMOTRON_RESPONSE_RECEIVED: Complete response payload received and validated.
+- NEMOTRON_FAILED: HTTP error, timeout, or rate-limit encountered (with diagnostic code).
+- PROVIDER_UNAVAILABLE: API key missing or endpoint unreachable.
+- ROUTING_UNRESOLVED: Query could not be resolved by either deterministic or cloud engines.
+
+================================================================================
+5. INTERNAL EXECUTION TRACE LEAKAGE (ITEM C)
+================================================================================
+
+Confirmed Forensic Evidence from logs/jarvis.log (lines 30615-30670):
+1. User Spoke: "Yes, put the computer into sleep mode."
+2. Routing Failure: IntentEngine analyzed "yes put the computer into sleep mode". Because of the leading conversational token "yes", it failed to match deterministic system regex and logged:
+   "Unmapped command falling back to conversation: 'yes put the computer into sleep mode'"
+   "[ROUTER] Routed to LAYER 2 CONVERSATION (Fallback)"
+3. Nemotron Invocated: ConversationManager dispatched query to https://integrate.api.nvidia.com:443.
+4. Nemotron Raw Output:
+   "Thought: The user has explicitly confirmed they want the computer put into sleep mode. I will invoke the sleep_system tool. Action: sleep_system\nAction Input: {}"
+5. Leakage into Speech and UI: ConversationManager.process_query streamed chunks without stripping ReAct protocol tokens. The text was forwarded verbatim into TTSManager.enqueue_stream_sentence() and response_manager.conversation().
+
+================================================================================
+6. TRANSCRIPTION FIELD CONTAMINATION (ITEM D)
+================================================================================
+
+Confirmed Root Cause:
+In ui/main_window.py:1088-1090:
+  def _on_speech_text_updated(self, text: str):
+      self._caption_text = text
+      self.lbl_caption.setText(f"Transcribing: \"{text}\"")
+
+And in core/jarvis_runtime.py:1442:
+  def _on_sentence_chunk(self, chunk: str, uid: str, is_first: bool = False):
+      self._update_speech_text(clean_chunk)
+
+Finding:
+This was NOT an acoustic microphone feedback loop. It was a UI channel conflation defect.
+The method _update_speech_text in JarvisRuntime is used to announce both incoming user transcriptions and outgoing assistant sentence chunks.
+However, MainWindow._on_speech_text_updated indiscriminately prepended 'Transcribing: "..."' to ANY text received on that signal.
+When Nemotron output the leaked chunk "Action: sleepsystem. Action Input: {}", the UI formatted it as:
+  'Transcribing: "Action: sleepsystem. Action Input: {}"'.
+
+================================================================================
+7. CAPABILITY AUDIT MATRIX
+================================================================================
+
+Capability | Handler | Registration Status | Execution Test | Actual Result | Remaining Issue
+-------------------------------------------------------------------------------------------------------------
+open_app | executor.py:open_app | REGISTERED | Launch Chrome | READY (Succeeded) | None
+close_app | executor.py:close_app | REGISTERED | Close Chrome | READY (Succeeded) | Requires exact title
+open_browser | browser_mgr.open_browser | MISCONFIGURED | Open Chrome | FAILED (No intent) | Needs explicit branch
+open_website | executor.py:open_website | REGISTERED | Open google.com | READY (Succeeded) | Needs argument prompt
+browser_action | browser_automation.py | REGISTERED | Open URL via CDP | READY (Succeeded) | Requires CDP connection
+browser_tab_control | executor.py:tab_control | REGISTERED | New Tab | BLOCKED (No focus) | Graceful failure if unfocused
+web_search | executor.py:web_search | REGISTERED | Google test search | READY (Succeeded) | None
+youtube_search | executor.py:youtube_control | MISCONFIGURED | Search "python" | FAILED (Key mismatch) | Intent name mismatch
+desktop.replace_selection | text_entry_service.py | REGISTERED | Replace text | BLOCKED (No UIA focus) | Reports missing control
+desktop.send_message | message_workflow.py | REGISTERED | Submit message | BLOCKED (Safety gate) | Requires confirmation token
+volume_control | system_control.set_volume | REGISTERED | Set volume | READY (Succeeded) | None
+lock_pc | system_control.lock | REGISTERED | Lock OS | READY (Succeeded) | None
+sleep_pc | system_control.sleep | REGISTERED | Put to sleep | READY (Safety Gated) | Requires confirmation
+system_metrics | system_info.py | REGISTERED | Get CPU/RAM | READY (Succeeded) | None
+
+================================================================================
+8. ACTIONABLE REMEDIATION ROADMAP (STAGE 2)
+================================================================================
+
+1. Palette Wiring (ui/panels/command_palette_dialog.py & ui/main_window.py):
+   - Connect palette execution directly to runtime.process_command() and executor dispatch.
+   - For tools requiring parameters, open an inline argument dialog.
+   - Dynamically compute card status from tool_registry.get_tool_status().
+
+2. Telemetry Rectification (core/jarvis_runtime.py & ui/main_window.py):
+   - Replace f"N/A ({stage_source})" with dedicated stage labels: LOCAL_REFLEX, NEMOTRON_STREAMING, NEMOTRON_COMPLETED.
+   - Update UI sidebar card to display actual pipeline stage and latency.
+
+3. ReAct Trace Sanitization (core/speech_sanitizer.py & core/conversation_manager.py):
+   - Implement strict regex filtering to strip all "Thought: ...", "Action: ...", and "Action Input: ..." blocks before streaming tokens reach TTS or UI conversation history.
+   - If an LLM returns a ReAct tool invocation without a "Final Answer:", execute the tool internally and synthesize a clean natural confirmation.
+
+4. Speech Channel Separation (ui/main_window.py):
+   - Separate signals for sig_transcription_updated (user voice input only) and sig_assistant_caption_updated (assistant speech output).
+   - Reserve 'Transcribing: "..."' strictly for incoming microphone STT.
+

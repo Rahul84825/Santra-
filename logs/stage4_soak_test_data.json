@@ -1,0 +1,76 @@
+{
+  "cycles_completed": 100,
+  "total_duration_sec": 2.48,
+  "baseline_rss_mb": 52.06,
+  "final_rss_mb": 68.32,
+  "net_rss_growth_mb": 16.26,
+  "baseline_threads": 7,
+  "final_threads": 7,
+  "thread_leak_count": 0,
+  "latency_ms": {
+    "mean": 16.45,
+    "p50": 14.19,
+    "p95": 40.36,
+    "p99": 90.8,
+    "min": 4.32,
+    "max": 90.8
+  },
+  "database": {
+    "initial_tables": 19,
+    "final_tables": 19,
+    "initial_records": 3055,
+    "final_records": 3055,
+    "core_records_preserved": true,
+    "sqlite_integrity_check": "ok"
+  },
+  "checkpoints": [
+    {
+      "rss_mb": 53.35,
+      "vms_mb": 37.87,
+      "threads": 7,
+      "cpu_pct": 0.0,
+      "cycle": 1,
+      "avg_latency_ms": 9.71
+    },
+    {
+      "rss_mb": 56.44,
+      "vms_mb": 40.99,
+      "threads": 7,
+      "cpu_pct": 0.0,
+      "cycle": 10,
+      "avg_latency_ms": 5.93
+    },
+    {
+      "rss_mb": 61.56,
+      "vms_mb": 46.17,
+      "threads": 7,
+      "cpu_pct": 0.0,
+      "cycle": 25,
+      "avg_latency_ms": 5.34
+    },
+    {
+      "rss_mb": 70.05,
+      "vms_mb": 54.7,
+      "threads": 7,
+      "cpu_pct": 0.0,
+      "cycle": 50,
+      "avg_latency_ms": 15.64
+    },
+    {
+      "rss_mb": 59.65,
+      "vms_mb": 45.48,
+      "threads": 7,
+      "cpu_pct": 0.0,
+      "cycle": 75,
+      "avg_latency_ms": 26.0
+    },
+    {
+      "rss_mb": 67.87,
+      "vms_mb": 52.48,
+      "threads": 7,
+      "cpu_pct": 0.0,
+      "cycle": 100,
+      "avg_latency_ms": 17.64
+    }
+  ]
+}

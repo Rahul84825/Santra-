@@ -47,7 +47,7 @@ class NemotronCacheManager:
         self,
         query: str,
         provider: str = "nvidia",
-        model: str = "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        model: str = "nvidia/nemotron-3.5-bolt-e4b",
         context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Computes deterministic SHA256 cache key without exposing secrets,
@@ -76,7 +76,7 @@ class NemotronCacheManager:
         self,
         query: str,
         provider: str = "nvidia",
-        model: str = "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        model: str = "nvidia/nemotron-3.5-bolt-e4b",
         context: Optional[Dict[str, Any]] = None
     ) -> CacheLookupResult:
         """Evaluates cache hierarchy: Policy -> Exact (Layer A) -> Knowledge (Layer C) -> Semantic (Layer B)."""
@@ -179,7 +179,7 @@ class NemotronCacheManager:
         query: str,
         response: str,
         provider: str = "nvidia",
-        model: str = "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        model: str = "nvidia/nemotron-3.5-bolt-e4b",
         layer: CacheLayer = CacheLayer.EXACT,
         context: Optional[Dict[str, Any]] = None,
         source_reference: str = ""

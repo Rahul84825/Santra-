@@ -23,14 +23,17 @@ from modules.system.executor import CommandExecutor
 from core.tracing import tracer
 from core.response_registry import response_registry, CommandOutcome
 
+from core.speech_sanitizer import sanitize_speech_text
 from core.ai.intelligence_router import intelligence_router, MODE_FAST_LOCAL, MODE_CONTEXT, MODE_REASONING, MODE_QUESTION
 from core.proactive_daemon import proactive_daemon
 
 logger = logging.getLogger("Jarvis.Runtime")
 
 VALID_STATES = {
-    "STANDBY", "ACTIVE", "LISTENING", "TRANSCRIBING", "UNDERSTANDING",
-    "EXECUTING", "THINKING", "PROCESSING", "SYNTHESIZING", "SPEAKING",
+    "STANDBY", "ACTIVE", "LISTENING", "TRANSCRIBING", "VALIDATING_INPUT", "ROUTING",
+    "WAITING_FOR_NVIDIA", "GENERATING_RESPONSE", "STREAMING_RESPONSE",
+    "UNDERSTANDING", "EXECUTING", "THINKING", "PROCESSING", "SYNTHESIZING", "SPEAKING",
+    "COMPLETED", "CANCELLED", "TIMED_OUT",
     "SLEEPING", "WAKING", "STOPPED", "ERROR"
 }
 
@@ -44,7 +47,7 @@ LEGAL_TRANSITIONS = {
     "PROCESSING": {"EXECUTING", "SYNTHESIZING", "SPEAKING", "STANDBY", "ACTIVE", "THINKING", "PROCESSING", "LISTENING", "SLEEPING", "STOPPED", "ERROR"},
     "THINKING": {"EXECUTING", "SYNTHESIZING", "SPEAKING", "STANDBY", "ACTIVE", "LISTENING", "PROCESSING", "SLEEPING", "STOPPED", "ERROR"},
     "SYNTHESIZING": {"SPEAKING", "STANDBY", "ACTIVE", "LISTENING", "SLEEPING", "STOPPED", "ERROR"},
-    "SPEAKING": {"SPEAKING", "SYNTHESIZING", "STANDBY", "ACTIVE", "LISTENING", "SLEEPING", "STOPPED", "ERROR"},
+    "SPEAKING": {"SPEAKING", "SYNTHESIZING", "STANDBY", "ACTIVE", "LISTENING", "TRANSCRIBING", "PROCESSING", "UNDERSTANDING", "THINKING", "EXECUTING", "SLEEPING", "STOPPED", "ERROR"},
     "SLEEPING": {"WAKING", "SLEEPING", "STOPPED", "ERROR"},
     "WAKING": {"ACTIVE", "STANDBY", "LISTENING", "SLEEPING", "WAKING", "STOPPED", "ERROR"},
     "STOPPED": {"STANDBY", "ACTIVE"},
@@ -78,6 +81,9 @@ class JarvisRuntime:
         self._executed_utterance_ids = set()
         self._executed_utterances_order = []
         self._utterance_exec_lock = threading.Lock()
+        self._sleep_cancel_event = threading.Event()
+        self._cancelled_utterance_ids = set()
+        self._cancelled_lock = threading.Lock()
 
         # Observers / Callbacks
         self.on_status_change_cb: Optional[Callable[[str], None]] = None
@@ -91,6 +97,8 @@ class JarvisRuntime:
         self.on_camera_state_cb: Optional[Callable] = None
         self.on_gesture_cb: Optional[Callable] = None
         self.panel_visibility_cb: Optional[Callable[[str], None]] = None
+        self.on_ai_mode_changed_cb: Optional[Callable[[bool], None]] = None
+        self.ai_mode: bool = False
 
         # Core Engines
         self.history_tracker = ExecutionHistory(limit=100)
@@ -246,8 +254,22 @@ class JarvisRuntime:
                 "provider": tts_name
             },
             "tools_registered": tools_count,
+            "ai_mode": self.ai_mode,
             "actionable_errors": actionable_errors
         }
+
+    def set_ai_mode(self, enabled: bool) -> str:
+        """Explicitly enables or disables deep AI reasoning mode."""
+        self.ai_mode = bool(enabled)
+        msg = "AI mode activated. Deep reasoning with Nemotron is online." if self.ai_mode else "AI mode deactivated. Returned to standard hybrid mode."
+        logger.info(f"[AI_MODE] Switched to {'AI_MODE' if self.ai_mode else 'NORMAL_MODE'}")
+        if self.on_ai_mode_changed_cb:
+            self._trigger_cb(self.on_ai_mode_changed_cb, self.ai_mode)
+        return msg
+
+    def toggle_ai_mode(self) -> str:
+        """Toggles AI mode."""
+        return self.set_ai_mode(not self.ai_mode)
 
     def stop(self):
         """Halts all background threads cleanly."""
@@ -286,7 +308,8 @@ class JarvisRuntime:
         on_speech_debug=None,
         on_audio_amplitude=None,
         on_camera_state=None,
-        on_gesture=None
+        on_gesture=None,
+        on_ai_mode_changed=None
     ):
         if on_status_change: self.on_status_change_cb = on_status_change
         if on_speech_text: self.on_speech_text_cb = on_speech_text
@@ -298,6 +321,7 @@ class JarvisRuntime:
         if on_audio_amplitude: self.on_audio_amplitude_cb = on_audio_amplitude
         if on_camera_state: self.on_camera_state_cb = on_camera_state
         if on_gesture: self.on_gesture_cb = on_gesture
+        if on_ai_mode_changed: self.on_ai_mode_changed_cb = on_ai_mode_changed
 
     def _on_panel_visibility(self, action: str):
         if self.panel_visibility_cb:
@@ -308,7 +332,7 @@ class JarvisRuntime:
             if self.current_status == status:
                 return
             allowed = LEGAL_TRANSITIONS.get(self.current_status, VALID_STATES)
-            if status not in allowed:
+            if status not in allowed and status not in VALID_STATES:
                 logger.warning(f"Illegal state transition attempted: {self.current_status} -> {status}. Ignoring.")
                 return
 
@@ -697,6 +721,22 @@ class JarvisRuntime:
 
         clean_text = text.lower().strip()
 
+        # Defense-in-depth: STT & fragment validation gate
+        from core.transcript_validator import transcript_validator, ValidationStatus
+        val = transcript_validator.validate(text)
+        if not val.is_valid:
+            if val.status == ValidationStatus.WAKEWORD_ONLY:
+                logger.info(f"[UTTERANCE {utterance_id}][WAKE_ACK] Pure wake-word address received: '{text}'")
+                self.response_manager.conversation("I'm listening, Sir.", speak=True)
+                self._update_status("STANDBY", utterance_id)
+                self._update_speech_text("I'm listening, Sir.")
+            else:
+                logger.info(f"[UTTERANCE {utterance_id}][DISCARDED] Discarding invalid speech input (status={val.status}): '{text}'")
+                self._update_status("STANDBY", utterance_id)
+            if self._active_utterance_id == utterance_id:
+                self._active_utterance_id = None
+            return
+
         # -------------------------------------------------------------
         # 0A. Universal Voice Typing Interception
         # -------------------------------------------------------------
@@ -1067,9 +1107,20 @@ class JarvisRuntime:
         raw_full_text = raw_full_text or text
         trace = tracer.get_current_trace()
 
+        def _check_cancelled():
+            if self.current_status == "SLEEPING":
+                return True
+            if self._sleep_cancel_event.is_set():
+                return True
+            with self._cancelled_lock:
+                if uid in self._cancelled_utterance_ids:
+                    return True
+            return False
+
+        self._update_status("ROUTING", uid)
         # Route via 3-Layer Intelligence Router
         t0_route = time.time()
-        req = intelligence_router.route(text, session_context=self.conversation_manager.get_context(), normalized=normalized)
+        req = intelligence_router.route(text, session_context=self.conversation_manager.get_context(), normalized=normalized, ai_mode=self.ai_mode)
         routing_ms = (time.time() - t0_route) * 1000
         normalized_text = req.normalized_text
         logger.info(f"[UTTERANCE {uid}][ROUTER] Mode='{req.mode}' | Layer={req.layer} | Intent='{req.intent}' | Target='{req.target}' ({routing_ms:.1f}ms)")
@@ -1102,6 +1153,23 @@ class JarvisRuntime:
                 audio_dur_s=audio_dur_s
             )
 
+        # Case 0C: Cancellation and Negation Safety Protection
+        if req.intent in ["CANCELLATION", "NEGATION"]:
+            if self.pending_intent:
+                self.pending_intent = None
+            if hasattr(self, "multi_step_planner") and self.multi_step_planner:
+                self.multi_step_planner.cancel_active_task()
+            if req.intent == "CANCELLATION":
+                msg = "Action canceled. Standing by."
+                self.response_manager.cancellation(msg, speak=speak)
+            else:
+                msg = "Understood. I will not perform that action."
+                self.response_manager.conversation(msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            self._notify_pipeline_stage(raw_full_text, normalized_text, f"intent:{req.intent.lower()}", "LOCAL EXECUTION", msg, "Speaking")
+            return {"success": True, "action": req.action or "cancellation", "message": msg}
+
         # Case 1: Clarification Needed
         if req.intent == "CLARIFICATION_REQUIRED":
             clarification_msg = req.clarification_prompt or f"Could you please clarify what you mean by '{req.target}'?"
@@ -1117,7 +1185,7 @@ class JarvisRuntime:
             )
             self.conversation_manager.set_pending_action(pending_ctx)
             self.response_manager.conversation(clarification_msg, speak=speak)
-            self._notify_pipeline_stage(raw_full_text, normalized_text, "clarify:request", "N/A (Clarification)", clarification_msg, "Speaking")
+            self._notify_pipeline_stage(raw_full_text, normalized_text, "clarify:request", "LOCAL EXECUTION", clarification_msg, "Speaking")
             return {"success": True, "action": "clarification", "message": clarification_msg}
 
         # Case 1B: Task Follow-up & Lifecycle Controls (Track C)
@@ -1145,9 +1213,11 @@ class JarvisRuntime:
                 if self.conversation_manager.has_interrupted_explanation():
                     msg, remaining = self.conversation_manager.resume_explanation()
                     logger.info(f"[EXPLANATION_RESUMED][{uid}] Resuming {len(remaining)} sentences: '{msg}'")
-                    self.response_manager.conversation(msg, speak=speak)
                     if speak and hasattr(self.tts_manager, "speak_sentences") and len(remaining) > 1:
-                        self.tts_manager.speak_sentences(remaining, interrupt=True)
+                        self.tts_manager.speak_sentences(remaining, interrupt=True, job_id=uid)
+                        self.response_manager.conversation(msg, speak=False)
+                    else:
+                        self.response_manager.conversation(msg, speak=speak)
                 else:
                     res_task = self.multi_step_planner.continue_task(confirm=True)
                     msg = res_task.execution_summary or "Task resumed."
@@ -1200,10 +1270,69 @@ class JarvisRuntime:
             self._update_speech_text(summary)
             return {"success": proc_res.get("success", False), "action": f"learned_proc_{learned_proc['name']}", "message": summary}
 
-        # Case 2: Layer 3 - Complex Reasoning / Agentic Multi-Step Task
+        # Case 2: Layer 3 - Complex Reasoning / Agentic Multi-Step Task / Universal Research
         if req.layer == 3 or req.mode == MODE_REASONING:
             self._update_status("THINKING", uid)
             logger.info(f"[UTTERANCE {uid}][AGENTIC_REASONING] Processing Layer 3 request for: '{text}'")
+
+            # Check if this is a Universal Research inquiry
+            if req.intent == "UNIVERSAL_RESEARCH" or req.action in [
+                "SHOPPING_RESEARCH", "PRODUCT_COMPARISON", "TECHNOLOGY_RESEARCH",
+                "GAMING_RESEARCH", "PROGRAMMING_RESEARCH", "NEWS_RESEARCH",
+                "DOCUMENT_RESEARCH", "LIVE_RESEARCH", "RESEARCH_FOLLOW_UP"
+            ]:
+                self._update_status("RESEARCH_PLANNING", uid)
+                self._notify_pipeline_stage(raw_full_text, normalized_text, f"research:{req.action}", "SANTRA Research Engine", "Formulating research plan...", "Planning", turn_id=uid)
+                from core.research import research_manager
+
+                def _on_stage(stage: str, desc: str):
+                    self._update_status(stage, uid)
+                    self._notify_pipeline_stage(raw_full_text, normalized_text, f"research:{req.action}", f"RESEARCH [{stage}]", desc, stage.title(), turn_id=uid)
+
+                spoken_sentences = []
+                stream_id = uid
+                def _on_research_sentence_chunk(sentence: str):
+                    if not speak or not sentence.strip():
+                        return
+                    clean_chunk = sanitize_speech_text(sentence)
+                    if not clean_chunk:
+                        return
+                    spoken_sentences.append(clean_chunk)
+                    if len(spoken_sentences) == 1:
+                        self._update_status("STREAMING_RESPONSE", uid)
+                    elif self.current_status not in ["SPEAKING", "STREAMING_RESPONSE"]:
+                        self._update_status("SYNTHESIZING", uid)
+                    self._update_speech_text(clean_chunk)
+                    is_first = (len(spoken_sentences) == 1)
+                    idx = len(spoken_sentences) - 1
+                    if is_first:
+                        self._notify_pipeline_stage(raw_full_text, normalized_text, f"research:{req.action}", "NVIDIA NEMOTRON — SYNTHESIZING", clean_chunk, "Synthesizing", turn_id=uid)
+                    self.tts_manager.enqueue_stream_sentence(
+                        clean_chunk,
+                        stream_job_id=stream_id,
+                        sentence_index=idx,
+                        interrupt=is_first
+                    )
+
+                res_res = research_manager.execute_research(
+                    text,
+                    on_stage_change=_on_stage,
+                    on_sentence_chunk=_on_research_sentence_chunk if speak else None,
+                    is_cancelled=_check_cancelled
+                )
+                if _check_cancelled() or res_res.get("status") == "CANCELLED":
+                    logger.info(f"[UTTERANCE {uid}][RESEARCH] Research cancelled. Suppressing speech and memory save.")
+                    self.tts_manager.interrupt(force=True)
+                    self._update_status("STANDBY", uid)
+                    return {"success": False, "action": "universal_research", "message": "Research cancelled.", "cancelled": True}
+                answer = res_res.get("answer", "")
+                self.memory.add_interaction(text, answer)
+                self.response_manager.conversation(answer, speak=speak)
+                self._update_status("COMPLETED", uid)
+                self._update_speech_text(answer)
+                time.sleep(0.1)
+                self._update_status("STANDBY", uid)
+                return {"success": True, "action": "universal_research", "message": answer, "research_id": res_res.get("research_id")}
 
             # Check if this is an explicit reasoning / coding prompt rather than desktop OS automation
             is_pure_reasoning = req.intent == "NEMOTRON_REASONING" or any(text.lower().startswith(p) for p in ["nvidia:", "nemotron:"])
@@ -1266,7 +1395,7 @@ class JarvisRuntime:
 
             # Fallback to AgentBrain ReAct loop
             t0_agent = time.time()
-            agent_res = self.conversation_manager.agent.reason_and_execute(text, conversation_history=self.conversation_manager.history)
+            agent_res = self.conversation_manager.agent.reason_and_execute(text, conversation_history=self.conversation_manager.history, is_cancelled=_check_cancelled)
             agent_ms = (time.time() - t0_agent) * 1000
             response_text = agent_res.get("text")
             if not response_text or not response_text.strip():
@@ -1277,6 +1406,8 @@ class JarvisRuntime:
             source_lbl = agent_res.get("source", "Santra ReAct Agent")
             self._notify_pipeline_stage(raw_full_text, normalized_text, f"agent:{req.action}", f"AgentBrain ({source_lbl})", response_text, "Speaking")
 
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(response_text)
             total_ms = (time.time() - (t0_start or t0_proc)) * 1000
             logger.info(f"[PERFORMANCE][{uid}] capture={audio_dur_s:.2f}s whisper={whisper_ms:.0f}ms routing={routing_ms:.1f}ms agent={agent_ms:.0f}ms total={total_ms:.0f}ms")
             return {"success": True, "action": "reasoning_agent", "message": response_text, "source": source_lbl}
@@ -1368,7 +1499,7 @@ class JarvisRuntime:
                 resp_text = self.response_manager.local_engine.format_intent_response({"intent": intent_lower, "raw": normalized_text})
                 res = self.response_manager.conversation(resp_text, speak=speak)
 
-            self._notify_pipeline_stage(raw_full_text, normalized_text, f"{intent_lower}:respond", f"N/A ({intent_lower.title()})", resp_text, "Speaking")
+            self._notify_pipeline_stage(raw_full_text, normalized_text, f"{intent_lower}:respond", "LOCAL EXECUTION", resp_text, "Speaking")
             total_ms = (time.time() - (t0_start or t0_proc)) * 1000
             logger.info(f"[PERFORMANCE][{uid}] capture={audio_dur_s:.2f}s whisper={whisper_ms:.0f}ms routing={routing_ms:.1f}ms exec=0ms total={total_ms:.0f}ms")
             return {"success": True, "action": intent_lower, "message": resp_text}
@@ -1417,13 +1548,17 @@ class JarvisRuntime:
             if exec_res.get("success"):
                 self.conversation_manager.update_context(req.action, req.target)
 
+            msg = exec_res.get("message", "Executed.")
+            self._notify_pipeline_stage(raw_full_text, normalized_text, f"{intent_lower}:{req.action}", "LOCAL EXECUTION", msg, "Speaking", turn_id=uid)
+
             total_ms = (time.time() - (t0_start or t0_proc)) * 1000
             logger.info(f"[PERFORMANCE][{uid}] capture={audio_dur_s:.2f}s whisper={whisper_ms:.0f}ms routing={routing_ms:.1f}ms exec={exec_ms:.0f}ms total={total_ms:.0f}ms")
             return exec_res
         else:
             # Case 5: Informational Questions & Conversation
             logger.info(f"[UTTERANCE {uid}] Query routed to ConversationManager.")
-            self._update_status("PROCESSING", uid)
+            self._update_status("WAITING_FOR_NVIDIA", uid)
+            self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", "NVIDIA NEMOTRON — REQUESTING", "Querying NVIDIA Nemotron...", "Processing", turn_id=uid)
             t0_conv = time.time()
 
             spoken_sentences = []
@@ -1435,10 +1570,15 @@ class JarvisRuntime:
                 if not clean_chunk:
                     return
                 spoken_sentences.append(clean_chunk)
-                self._update_status("SPEAKING", uid)
+                if len(spoken_sentences) == 1:
+                    self._update_status("STREAMING_RESPONSE", uid)
+                elif self.current_status not in ["SPEAKING", "STREAMING_RESPONSE"]:
+                    self._update_status("SYNTHESIZING", uid)
                 self._update_speech_text(clean_chunk)
                 is_first = (len(spoken_sentences) == 1)
                 idx = len(spoken_sentences) - 1
+                if is_first:
+                    self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", "NVIDIA NEMOTRON — PROCESSING", clean_chunk, "Synthesizing", turn_id=uid)
                 self.tts_manager.enqueue_stream_sentence(
                     clean_chunk,
                     stream_job_id=stream_id,
@@ -1446,44 +1586,103 @@ class JarvisRuntime:
                     interrupt=is_first
                 )
 
-            if speak:
-                conv_res = self.conversation_manager.process_query(
-                    text,
-                    on_sentence=_on_sentence_chunk,
-                    is_cancelled=lambda: (
-                        (self._active_utterance_id is not None and self._active_utterance_id != uid) or
-                        self.tts_manager._interrupt_event.is_set()
+            try:
+                if speak:
+                    conv_res = self.conversation_manager.process_query(
+                        text,
+                        on_sentence=_on_sentence_chunk,
+                        is_cancelled=_check_cancelled
                     )
-                )
-            else:
-                conv_res = self.conversation_manager.process_query(text)
-            conv_ms = (time.time() - t0_conv) * 1000
-            response_text = conv_res["text"]
-            self.memory.add_interaction(text, response_text)
-
-            # Store structured explanation if response has multiple sentences and no parent explanation is paused
-            has_parent = self.conversation_manager.has_interrupted_explanation()
-            if not has_parent and response_text and ("." in response_text or "!" in response_text or "?" in response_text):
-                self.conversation_manager.set_active_explanation(
-                    topic=req.target or text,
-                    goal=text,
-                    text=response_text
-                )
-
-            # Deliver speech if not already streamed as sentence chunks
-            if not spoken_sentences:
-                # Deliver speech: use sentence tracker for new multi-sentence explanations; regular speech for answers
-                if not has_parent and speak and self.conversation_manager.explanation_state and len(self.conversation_manager.explanation_state.sentences) > 1:
-                    self.tts_manager.speak_sentences(self.conversation_manager.explanation_state.sentences, interrupt=True)
                 else:
-                    self.response_manager.conversation(response_text, speak=speak)
+                    conv_res = self.conversation_manager.process_query(text)
+                conv_ms = (time.time() - t0_conv) * 1000
 
-            stage_source = conv_res.get("source", "Conversation")
-            self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", f"N/A ({stage_source})", response_text, "Speaking")
+                # Check if cancelled during or after request
+                if _check_cancelled() or (isinstance(conv_res, dict) and conv_res.get("cancelled")):
+                    logger.info(f"[REQUEST_CANCELLED][{uid}] Utterance cancelled or superseded.")
+                    self._update_status("CANCELLED", uid)
+                    self._update_speech_text("Request cancelled.")
+                    time.sleep(0.1)
+                    self._update_status("STANDBY", uid)
+                    return {"success": False, "action": "conversation", "message": "Request cancelled.", "source": "Cancelled"}
 
-            total_ms = (time.time() - (t0_start or t0_proc)) * 1000
-            logger.info(f"[PERFORMANCE][{uid}] capture={audio_dur_s:.2f}s whisper={whisper_ms:.0f}ms routing={routing_ms:.1f}ms conv={conv_ms:.0f}ms total={total_ms:.0f}ms")
-            return {"success": True, "action": "conversation", "message": response_text, "source": stage_source}
+                response_text = conv_res.get("text", "") if isinstance(conv_res, dict) else ""
+                err_code = getattr(self.conversation_manager.provider_manager, "get_last_error_code", lambda: None)()
+
+                # Check if timed out
+                if not response_text and err_code == "AI_PROVIDER_TIMEOUT":
+                    timeout_msg = "The AI request timed out before receiving a response, Sir. Please try asking again."
+                    logger.warning(f"[REQUEST_TIMED_OUT][{uid}] Nemotron request timed out after {conv_ms:.1f}ms.")
+                    self._update_status("TIMED_OUT", uid)
+                    self._update_speech_text(timeout_msg)
+                    self.response_manager.conversation(timeout_msg, speak=speak)
+                    self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", "NVIDIA NEMOTRON — TIMED OUT", timeout_msg, "Timed Out", turn_id=uid)
+                    time.sleep(0.3)
+                    self._update_status("STANDBY", uid)
+                    return {"success": False, "action": "conversation", "message": timeout_msg, "source": "Timed Out"}
+
+                # Check general empty or failed response
+                if not response_text:
+                    if err_code == "CREDENTIALS_INVALID":
+                        fail_msg = "Unable to authenticate with the AI provider, Sir. Please verify your NVIDIA API key."
+                    elif err_code == "RATE_LIMITED":
+                        fail_msg = "The AI provider is currently rate-limited, Sir. Please try again in a moment."
+                    elif err_code == "NETWORK_ERROR":
+                        fail_msg = "Unable to reach the NVIDIA NIM endpoint, Sir. Please check your internet connection."
+                    else:
+                        fail_msg = "I was unable to retrieve a response from the AI provider, Sir."
+                    logger.warning(f"[REQUEST_FAILED][{uid}] Provider failed: {err_code}")
+                    self._update_status("STANDBY", uid)
+                    self._update_speech_text(fail_msg)
+                    self.response_manager.conversation(fail_msg, speak=speak)
+                    self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", "NVIDIA NEMOTRON — FAILED", fail_msg, "Failed", turn_id=uid)
+                    return {"success": False, "action": "conversation", "message": fail_msg, "source": "Failed"}
+
+                self.memory.add_interaction(text, response_text)
+
+                # Store structured explanation if response has multiple sentences and no parent explanation is paused
+                has_parent = self.conversation_manager.has_interrupted_explanation()
+                if not has_parent and response_text and ("." in response_text or "!" in response_text or "?" in response_text):
+                    self.conversation_manager.set_active_explanation(
+                        topic=req.target or text,
+                        goal=text,
+                        text=response_text
+                    )
+
+                # Deliver speech if not already streamed as sentence chunks
+                if not spoken_sentences:
+                    if not has_parent and speak and self.conversation_manager.explanation_state and len(self.conversation_manager.explanation_state.sentences) > 1:
+                        self.tts_manager.speak_sentences(self.conversation_manager.explanation_state.sentences, interrupt=True)
+                    else:
+                        self.response_manager.conversation(response_text, speak=speak)
+
+                stage_source = conv_res.get("source", "Conversation") if isinstance(conv_res, dict) else "Conversation"
+                pipeline_status = "NVIDIA NEMOTRON — RESPONSE RECEIVED"
+                self._notify_pipeline_stage(raw_full_text, normalized_text, f"chat:{req.action}", pipeline_status, response_text, "Speaking", turn_id=uid)
+
+                self._update_status("COMPLETED", uid)
+                self._update_speech_text(response_text)
+                time.sleep(0.05)
+                self._update_status("STANDBY", uid)
+
+                total_ms = (time.time() - (t0_start or t0_proc)) * 1000
+                logger.info(f"[PERFORMANCE][{uid}] capture={audio_dur_s:.2f}s whisper={whisper_ms:.0f}ms routing={routing_ms:.1f}ms conv={conv_ms:.0f}ms total={total_ms:.0f}ms")
+                return {"success": True, "action": "conversation", "message": response_text, "source": stage_source}
+
+            except Exception as e:
+                logger.error(f"[CONVERSATION_EXCEPTION][{uid}] Error processing conversation turn: {e}", exc_info=True)
+                err_msg = "An error occurred while processing the conversation request, Sir."
+                self._update_status("STANDBY", uid)
+                self._update_speech_text(err_msg)
+                return {"success": False, "action": "conversation", "message": err_msg, "source": "Error"}
+
+            finally:
+                # Ensure runtime NEVER remains stuck in WAITING_FOR_NVIDIA
+                with self._state_lock:
+                    if self.current_status in ["WAITING_FOR_NVIDIA", "ROUTING", "VALIDATING_INPUT", "GENERATING_RESPONSE"]:
+                        self.current_status = "STANDBY"
+                        if self.on_status_change_cb:
+                            self._trigger_cb(self.on_status_change_cb, "STANDBY")
 
     def _execute_intent(self, intent_node: dict, confirm: bool = False, speak: bool = True, utterance_id: Optional[str] = None) -> dict:
         uid = utterance_id or uuid.uuid4().hex[:6].upper()
@@ -1521,6 +1720,18 @@ class JarvisRuntime:
             return res
 
         # Handle Standby, Sleep & Listening Lifecycle Actions Directly in Runtime
+        if action in ["enable_ai_mode", "disable_ai_mode"]:
+            enabled = (action == "enable_ai_mode")
+            msg = self.set_ai_mode(enabled)
+            res = {"success": True, "action": action, "target": "ai_mode", "message": msg}
+            self.response_manager.conversation(msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, action, True, msg)
+            self._notify_pipeline_stage("", "", f"ai_mode:{action}", "LOCAL EXECUTION", msg, "Speaking")
+            return res
+
         if action == "wake_acknowledgment":
             msg = "I'm listening, Sir. How can I help?"
             res = {"success": True, "action": "wake_acknowledgment", "target": "runtime", "message": msg}
@@ -1757,9 +1968,9 @@ class JarvisRuntime:
 
         return {"success": success, "outcome": outcome.value, "action": action, "message": spoken}
 
-    def _notify_pipeline_stage(self, raw, norm, intent_str, exec_str, resp_str, state):
+    def _notify_pipeline_stage(self, raw, norm, intent_str, exec_str, resp_str, state, turn_id=None):
         if self.on_pipeline_stage_cb:
-            self._trigger_cb(self.on_pipeline_stage_cb, raw, norm, intent_str, exec_str, resp_str, state)
+            self._trigger_cb(self.on_pipeline_stage_cb, raw, norm, intent_str, exec_str, resp_str, state, turn_id)
 
     # ==========================================
     # DUPLEX AUDIO & SPEAKER STATUS
@@ -1770,19 +1981,23 @@ class JarvisRuntime:
         self._update_status("SYNTHESIZING")
 
     def _on_speaker_started(self):
+        if self.current_status in ["SLEEPING", "STOPPED"]:
+            logger.info(f"[TTS_LIFECYCLE] Suppressing speaker started status transition while in {self.current_status}.")
+            return
         self._tts_speaking_lock = True
         self.listener.set_speaking_active(True)
         self._update_status("SPEAKING")
         logger.info("[TTS_LIFECYCLE] Speaking started. Listener VAD suppressed.")
 
     def _on_speaker_stopped(self):
+        if self.current_status in ["SLEEPING", "STOPPED"]:
+            return
         if not self.tts_manager.is_speaking():
             self._tts_speaking_lock = False
             self.listener.set_speaking_active(False)
-            if self.current_status not in ["SLEEPING", "STOPPED"]:
-                self._update_status("STANDBY")
-                self._update_speech_text("Standby. Say 'Santra' or speak into microphone.")
-                logger.info("[TTS_LIFECYCLE] Speaking finished. Listener VAD unsuppressed (cooldown=0.35s). Voice Core on Standby.")
+            self._update_status("STANDBY")
+            self._update_speech_text("Standby. Say 'Santra' or speak into microphone.")
+            logger.info("[TTS_LIFECYCLE] Speaking finished. Listener VAD unsuppressed (cooldown=0.35s). Voice Core on Standby.")
 
     def toggle_mute(self):
         """Toggles the microphone mute state."""
@@ -1848,12 +2063,18 @@ class JarvisRuntime:
 
         logger.info(f"[SLEEP_MODE] Entering Sleep Mode (reason='{reason}')...")
 
-        # 1. Stop ongoing TTS playback safely
-        if self._tts_speaking_lock or self.tts_manager.is_speaking():
-            self.tts_manager.interrupt(force=True)
-            self._tts_speaking_lock = False
+        # 1. Mark cancellation event and invalidate active utterances
+        with self._cancelled_lock:
+            self._sleep_cancel_event.set()
+            if self._active_utterance_id:
+                self._cancelled_utterance_ids.add(self._active_utterance_id)
+                logger.info(f"[SLEEP_MODE] Active utterance {self._active_utterance_id} marked CANCELLED.")
 
-        # 2. Cancel non-critical pending intents / tasks
+        # 2. Put TTS manager into sleep mode (halts audio and invalidates queued generations)
+        self.tts_manager.set_sleep_mode(True)
+        self._tts_speaking_lock = False
+
+        # 3. Cancel non-critical pending intents / tasks
         self.pending_intent = None
         if hasattr(self, "multi_step_planner"):
             try:
@@ -1861,11 +2082,11 @@ class JarvisRuntime:
             except Exception as pe:
                 logger.debug(f"Error cancelling active task on sleep: {pe}")
 
-        # 3. Audio confirmation before going silent if speech enabled
+        # 4. Audio confirmation before going silent if speech enabled
         confirm_msg = "Entering sleep mode, Sir. Say 'Santra' to wake me."
         if speak and not self.muted:
             try:
-                self.response_manager.conversation(confirm_msg, speak=True)
+                self.tts_manager.speak(confirm_msg, interrupt=True, job_id="sleep_confirm")
             except Exception as se:
                 logger.debug(f"Error speaking sleep confirmation: {se}")
 
@@ -1892,7 +2113,7 @@ class JarvisRuntime:
         logger.info("[SLEEP_MODE] SANTRA is now SLEEPING. Listening strictly for wake phrase 'Santra'.")
         return True
 
-    def wake_up(self, source: str = "voice") -> bool:
+    def wake_up(self, source: str = "voice", force: bool = False) -> bool:
         """Transitions JARVIS from SLEEPING to WAKING then ACTIVE/STANDBY/LISTENING.
         - Validates wake event (applies debounce).
         - Re-enables full listening and transcription pipeline.
@@ -1902,7 +2123,7 @@ class JarvisRuntime:
         - Preserves trailing command audio via listener pre-roll.
         """
         now = time.time()
-        if (now - getattr(self, "_last_wake_time", 0.0)) < 0.8:
+        if not force and (now - getattr(self, "_last_wake_time", 0.0)) < 0.8:
             logger.debug("[WAKE_UP_DEBOUNCED] Ignoring rapid duplicate wake event (<0.8s).")
             return True
         self._last_wake_time = now
@@ -1912,6 +2133,10 @@ class JarvisRuntime:
         # 1. Transition to WAKING
         self._update_status("WAKING")
         self._update_speech_text("Waking up...")
+
+        with self._cancelled_lock:
+            self._sleep_cancel_event.clear()
+        self.tts_manager.set_sleep_mode(False)
 
         # 2. Restore normal listener pipeline
         self.listener.set_sleep_mode(False)

@@ -94,6 +94,8 @@ class ImageDownloadWorker(QThread):
 class SpotifyDialog(QDialog):
     """Main Holographic Spotify Management Panel for Santra."""
 
+    sig_poll_data_ready = pyqtSignal(object, list)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("SANTRA // Spotify Intelligence & Playback Control")
@@ -113,6 +115,9 @@ class SpotifyDialog(QDialog):
 
         self._apply_styles()
         self._init_ui()
+
+        # Connect thread-safe polling signal to GUI slot
+        self.sig_poll_data_ready.connect(self._on_poll_data_ready)
 
         # State Polling Timer (every 2.5 seconds when dialog is active)
         self._poll_timer = QTimer(self)
@@ -584,7 +589,7 @@ class SpotifyDialog(QDialog):
 
     def _on_poll_tick(self):
         """Periodic background refresh of playback status & devices."""
-        if not spotify_service.is_connected():
+        if not spotify_service.is_connected() or not self.isVisible():
             return
         # Run light poll off thread
         threading.Thread(target=self._background_poll, daemon=True).start()
@@ -593,11 +598,20 @@ class SpotifyDialog(QDialog):
         try:
             state = spotify_service.get_current_playback()
             devices = spotify_service.get_devices()
-            # Update UI on main thread safely
-            QTimer.singleShot(0, lambda: self._update_playback_ui(state))
-            QTimer.singleShot(0, lambda: self._update_devices_ui(devices))
+            # Safely emit Qt signal across thread boundary to Qt GUI thread
+            self.sig_poll_data_ready.emit(state, devices)
         except Exception:
             pass
+
+    def _on_poll_data_ready(self, state, devices):
+        if not self.isVisible():
+            return
+        self._update_playback_ui(state)
+        self._update_devices_ui(devices)
+
+    def closeEvent(self, event):
+        self._poll_timer.stop()
+        super().closeEvent(event)
 
     def _refresh_all_state(self):
         """Refreshes connection status, user profile, devices, and playlists."""

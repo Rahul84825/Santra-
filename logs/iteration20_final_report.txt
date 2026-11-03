@@ -1,0 +1,186 @@
+================================================================================
+SANTRA — ITERATION 20: COMPLETE UI REDESIGN, BRAND IDENTITY, 
+COMMAND EXECUTION STABILITY & CRASH FORENSICS
+FINAL ENGINEERING & VERIFICATION REPORT
+================================================================================
+Timestamp: 2026-11-02T11:47:30+05:30
+Status: COMPLETE & VERIFIED
+Operating System: Windows 11 Build 26300 (x86_64)
+Python Runtime: Python 3.14.7 (PyQt6 6.10.2)
+GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & BRAND IDENTITY CONVERGENCE
+--------------------------------------------------------------------------------
+All legacy brand references to "J.A.R.V.I.S." across visible UI layers, windows, 
+dialogs, headers, and boot sequences have been transitioned to the unified brand:
+    Name: SANTRA
+    Tagline: AUTONOMOUS DESKTOP INTELLIGENCE
+    Window Title: "SANTRA — Autonomous Desktop Intelligence"
+
+Modifications:
+- ui/main_window.py: Updated window title, header branding, and logging.
+- ui/widgets/boot_overlay.py: Updated boot sequence typography and initialization.
+- ui/theme.py: Created SantraTokens and modern dark graphite theme (#0d1117).
+- Git Configuration: Corrected git configuration typo (usern.name -> user.name, 
+  usern.email -> user.email) setting global user.name="Rahul82845" and 
+  user.email="activegamer789@gmail.com".
+
+--------------------------------------------------------------------------------
+2. MODERN 5-ZONE UI REDESIGN & ERGONOMICS
+--------------------------------------------------------------------------------
+Replaced the low-contrast holographic HUD with a modern, high-contrast, 
+5-zone native desktop layout:
+
+Zone 1: Top Header Bar (headerBar)
+- Brand mark "SANTRA" with cyan accent dot and "AUTONOMOUS DESKTOP INTELLIGENCE".
+- Centered Status Pill badge (e.g., "● STANDBY", "● LISTENING", "● THINKING", "● SPEAKING", "● SLEEPING") 
+  with dynamic color-coding and subtle borders.
+- Active Recording Audio Device badge (e.g. "🎙 Built-in Realtek Microphone").
+- Quick-action shortcuts: "🎙️ TALK", "▤ COMMANDS", "🌙 SLEEP".
+
+Zone 2: Left Navigation Sidebar (navSidebar)
+- Fixed 210px navigation rail with high-contrast buttons and category header:
+  * 💬 Conversation (active conversation view)
+  * ▤ Commands (Ctrl+K -> CommandPaletteDialog)
+  * 📁 Projects & Code (Ctrl+Shift+C -> ProjectIntelligencePanel)
+  * 👁️ Visual Screen (Ctrl+Shift+S -> ScreenIntelligencePanel)
+  * 🔬 Virtual Testing Lab (Ctrl+Shift+L -> VirtualLabDialog)
+  * 🎵 Spotify Suite (Ctrl+Shift+M -> SpotifyDialog)
+  * 🎙️ Voice & Pronounce (Ctrl+Shift+P -> PronunciationSettingsDialog)
+  * ⚙️ AI Engine Settings (Ctrl+Shift+A -> AISettingsDialog)
+- System build badge (SANTRA v2.0 • Windows 11 Native • NVIDIA RTX 3050).
+
+Zone 3: Main Workspace (workspaceFrame)
+- Top status row: Active Tool Chip (e.g., ACCESSING: OPEN_BROWSER) and Universal Voice Typing badge.
+- Scrollable conversation history (log_scroll) featuring high-contrast cards:
+  * User cards: Slate #1e293b, cyan timestamp header "[11:30:00] YOU ➜", selectable text.
+  * SANTRA cards: Navy/graphite #0f172a with sky border #0284c7, selectable text.
+  * Code blocks: Styled monospace block with language indicator, syntax highlighting colors, 
+    and one-click "📋 Copy Code" button.
+- Live STT Caption Banner (lbl_caption) displaying real-time streaming Whisper transcription.
+
+Zone 4: Right Telemetry & Status Sidebar (infoSidebar)
+- Mini embedded Arc Reactor (148x148px) centered in a sleek card frame.
+- System State Card: Active status + Core engine configuration.
+- Resource Monitor Card: Real-time CPU and RAM percentage readout with styled progress bars (psutil).
+- Audio Hardware Card: Active recording endpoint, live amplitude level bar, and hot-swap status.
+- Active Pipeline Card: Dynamic execution tool name.
+
+Zone 5: Bottom Command Composer (input_container)
+- High-contrast command input with placeholder.
+- Exactly 5 spacious, ergonomic controls:
+  1. cmd_input (QLineEdit)
+  2. btn_execute ("EXECUTE ➜", primary cyan accent)
+  3. btn_palette ("COMMANDS ▤", opens Command Palette)
+  4. btn_sleep ("🌙 SLEEP", toggles sleep mode)
+  5. btn_mic ("🎙️ TALK", activates microphone)
+
+--------------------------------------------------------------------------------
+3. UI LAG ELIMINATION & RENDERING PERFORMANCE
+--------------------------------------------------------------------------------
+Root Causes of Lag Identified:
+1. paintEvent in MainWindow ran an uncached 60 FPS QTimer loop drawing 250+ vector scanlines 
+   and radial gradients across 1240x820 pixels on the main Qt GUI thread.
+2. Conversation view previously executed _rebuild_log_view(), tearing down and rebuilding 
+   all 50 QWidget trees on every single message turn or streaming chunk.
+3. Telemetry queries ran without caching or window-state awareness.
+
+Remediations Applied:
+1. Removed scanline loops and full-window vector gradients from MainWindow.paintEvent(). 
+   Surfaces are styled via Qt hardware-accelerated stylesheets.
+2. Implemented incremental message addition: _append_turn_widget() creates and appends only 
+   the newly arrived card (O(1) operation). A max-bound of 60 cards is maintained by pruning 
+   the oldest widget from the top.
+3. Throttled background telemetry to a 1.5s interval.
+4. Added changeEvent, hideEvent, and showEvent handlers: When SANTRA is minimized or hidden 
+   to the system tray, all telemetry and HUD timers immediately stop, dropping idle CPU/GPU 
+   utilization to ~0.0%.
+
+--------------------------------------------------------------------------------
+4. COMMAND PALETTE STABILITY & EXECUTION LIFECYCLE
+--------------------------------------------------------------------------------
+Problem:
+Users clicking actions in the command palette observed actions either not executing or 
+abruptly closing/terminating the application window.
+
+Remediations Applied in ui/panels/command_palette_dialog.py:
+1. Formal Command Execution Lifecycle States:
+   IDLE -> VALIDATING -> QUEUED -> RUNNING -> SUCCEEDED / FAILED / BLOCKED / CANCELLED
+2. Kept dialog open during and after execution:
+   Instead of auto-closing or calling accept() before execution, the dialog remains open, 
+   updating the button and status badge with real-time feedback (e.g. "✓ SUCCEEDED", "✗ FAILED").
+3. Exception Isolation:
+   All callback dispatches are wrapped in isolated try/except blocks with logging and visual 
+   error reporting on the card, preventing unhandled exceptions from propagating to Qt's event loop.
+4. Dynamic Tool Capabilities:
+   Derived 95 tools directly from core.tool_registry.tool_registry + quick actions + platform hubs, 
+   categorized into Web & Media, Development, System & Audio, AI & Vision, and Applications.
+
+--------------------------------------------------------------------------------
+5. FORENSIC AUDIT OF WINDOWS PROCESS EXIT 3221226505 (0xC0000409)
+--------------------------------------------------------------------------------
+Exit code 3221226505 corresponds to NTSTATUS 0xC0000409:
+    STATUS_STACK_BUFFER_OVERRUN (Fast Fail / __fastfail)
+Occurs in Qt6Core.dll when an invariant check fails or cross-thread violation occurs.
+
+Root Causes Identified & Fixed:
+1. Cross-Thread QTimer Manipulation in ui/panels/spotify_panel.py:
+   A raw background Python thread (threading.Thread(target=self._run_poll)) was invoking 
+   QTimer.singleShot(0, self._apply_poll_data) directly. In Qt6 on Windows, calling QTimer 
+   from a thread lacking a QEventLoop triggers an unrecoverable qFatal abort (0xC0000409).
+   Fix: Replaced with a thread-safe Qt Signal:
+       sig_poll_data_ready = pyqtSignal(object, list)
+   emitted from the worker thread and queued to the main GUI thread slot.
+2. Destructive setWindowFlags in ui/panel_controller.py:
+   Calling setWindowFlags() on active top-level windows destroys and recreates the Win32 HWND. 
+   If modal dialogs or sub-panels were in flight, the Windows message pump dereferenced stale 
+   HWND pointers.
+   Fix: Replaced destructive flag cycling with non-destructive raise_() and activateWindow().
+
+--------------------------------------------------------------------------------
+6. CONVERSATIONAL STREAMING & INTELLIGENCE REPAIR
+--------------------------------------------------------------------------------
+Defects Resolved:
+1. NameError: name 'sanitize_speech_text' is not defined:
+   In core/jarvis_runtime.py (line 1434), streaming chunks called sanitize_speech_text(chunk), 
+   which was not imported in that module. This crashed the streaming loop and caused 
+   ConversationManager to abandon streaming and fall back to full offline reasoning.
+   Fix: Added 'from core.speech_sanitizer import sanitize_speech_text' to core/jarvis_runtime.py.
+2. Reasoning/Thought Prefix Filtering:
+   Enhanced core/speech_sanitizer.py to automatically detect and strip <think>...</think> and 
+   "Thought: ..." blocks generated by DeepSeek/Nemotron models before sending to TTS.
+3. Antecedent Resolution & "Explain" Continuation:
+   Added Rule 12b to core/conversation_manager.py resolve_pronouns_and_references():
+   Phrases like "Explain.", "Explain further", "Re-explain", "Explain in detail" now bind 
+   directly to the active task_context.current_topic.
+4. Immediate Clarification Contract:
+   If the user says "Explain." without any prior topic context, ConversationManager immediately 
+   returns a friendly clarification: "What subject or concept would you like me to explain, Sir?" 
+   instead of an awkward error or hallucinated response.
+
+--------------------------------------------------------------------------------
+7. VERIFICATION & TEST EVIDENCE
+--------------------------------------------------------------------------------
+1. test_iteration16_remediation_verification.py:
+   - 6/6 tests PASS (including 5 spacious bottom bar controls, voice consistency, identity prompt, 
+     application discovery grounding, and no standby label during sleep).
+2. test_panel_recovery.py:
+   - 8/8 tests PASS (including hidden panel restoration, offscreen geometry recovery, and thread safety).
+3. tests/smoke_test_runtime.py:
+   - PASS: Tool registry capabilities (95 tools), browser status, NVIDIA Nemotron content drafting, 
+     Exact cache hit in 20.78ms, natural command routing, and multi-step plan generation.
+4. Speech Sanitization & Conversation Continuation:
+   - PASS: <think> prefix stripped cleanly.
+   - PASS: "Explain." bound to active topic ("Explain binary search algorithm in detail.").
+   - PASS: "Explain." without topic returns polite clarification.
+5. Command Palette Execution:
+   - PASS: Command triggers execute successfully, lifecycle states update to SUCCEEDED, 
+     and application remains alive with zero crashes.
+6. Markdown Policy:
+   - ZERO project-owned .md files exist in repository.
+
+================================================================================
+END OF REPORT — SANTRA ITERATION 20 ACCEPTED
+================================================================================
+

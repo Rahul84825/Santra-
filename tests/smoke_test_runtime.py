@@ -26,9 +26,9 @@ def run_smoke():
     print(f"Spoken Voice: {draft['spoken_text']}")
     print(f"Content Source: {draft['source']}")
     print("Draft Preview:")
-    print(draft['content'])
+    print(draft['content'].encode('ascii', 'replace').decode('ascii'))
 
-    file_res = cg.create_and_save_file("logs/smoke_test_doc.md", draft['content'])
+    file_res = cg.create_and_save_file("logs/smoke_test_doc.txt", draft['content'])
     print(f"\nFile Creation: Success={file_res['success']}, Path={file_res.get('path')}, Bytes={file_res.get('size_bytes')}")
 
     print("\n=== 4. Natural Command Routing ===")
