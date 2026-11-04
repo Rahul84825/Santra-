@@ -48,6 +48,12 @@ class CommandNormalizer:
 
         # Synonym and phrase replacements (order matters: longer/more specific phrases first)
         self.phrase_mappings = [
+            # Proper Noun & Game / Software Phonetic Normalization
+            (r"\b(?:ballorant|valerant|valorent|valor\s+ant|well\s+rant|vellerant|velorent)\b", "valorant"),
+            (r"\b(?:anti\s+gravity|anti-gravity|integraty|integravity|antigravety|antigraviti)\b", "antigravity"),
+            (r"\b(?:pyth\s+on|py\s+than|py\s+thon|pyton|pythone)\b", "python"),
+            (r"\b(?:many\s+project|miniproject)\b", "mini project"),
+
             # System power & lock actions
             (r"\bput\s+(my|the)?\s*(pc|computer|laptop)\s+on\s+lock\b", "lock computer"),
             (r"\b(?:make|send|put)\s+(?:my|the)?\s*(?:pc|computer|laptop|system|machine)\s+(?:to|into)?\s*sleep(?:\s+mode)?\b", "sleep computer"),

@@ -371,6 +371,37 @@ class SpeechTranscriber:
 
                 pass
 
+    def build_contextual_prompt(self) -> str:
+        """Constructs a high-precision decoding prompt incorporating SANTRA identity,
+        installed applications, user projects, developer tooling, and gaming titles.
+        Biases Faster-Whisper away from common phonetic misrecognitions.
+        """
+        terms = [
+            "Santra", "Hey Santra", "Valorant", "Antigravity", "Antigravity IDE",
+            "Python", "VS Code", "Visual Studio Code", "Brave", "Chrome",
+            "YouTube", "Spotify", "Notepad", "Mini Project", "Desktop",
+            "machine learning", "C++", "PowerShell", "Terminal", "Steam", "Discord"
+        ]
+        try:
+            from core.apps.application_discovery import app_discovery
+            installed = app_discovery.get_all_installed_applications()
+            for a in installed[:15]:
+                d_name = getattr(a, "display_name", "")
+                if d_name and d_name not in terms:
+                    terms.append(d_name)
+        except Exception:
+            pass
+        try:
+            from core.os.project_registry import project_registry
+            projs = project_registry.list_projects()
+            for p in projs[:5]:
+                p_name = p.get("name") or p.get("alias")
+                if p_name and p_name not in terms:
+                    terms.append(p_name)
+        except Exception:
+            pass
+        return f"SANTRA desktop assistant. Commands for Valorant, CS2, Antigravity, VS Code, GitHub, Python, React, Node.js, MongoDB, PyQt6, NVIDIA Nemotron. Context: {', '.join(terms)}."
+
     def transcribe(self, audio_file_path: str, beam_size: int = None) -> str:
 
         """Transcribes the given audio file and returns the text output.
@@ -477,21 +508,14 @@ class SpeechTranscriber:
 
         try:
 
+            domain_conditioning = "SANTRA desktop assistant. Commands for Valorant, CS2, Antigravity, VS Code, GitHub, Python, React, Node.js, MongoDB, PyQt6, NVIDIA Nemotron."
             if self.initial_prompt is not None:
-
-                initial_prompt = self.initial_prompt
-
+                if domain_conditioning in self.initial_prompt:
+                    initial_prompt = self.initial_prompt
+                else:
+                    initial_prompt = f"{domain_conditioning} {self.initial_prompt}"
             else:
-
-                initial_prompt = (
-
-                    "Jarvis, open VS Code, YouTube, Chrome, Spotify, Notepad, Calculator, lock computer, "
-
-                    "take a screenshot, calculate, system status, shutdown, restart, volume up, volume down, "
-
-                    "mute, unmute, minimize, maximize, what time is it, what is the date, search google, play music."
-
-                )
+                initial_prompt = self.build_contextual_prompt()
 
             effective_vad_filter = False if self.vad_filter is None else bool(self.vad_filter)
 

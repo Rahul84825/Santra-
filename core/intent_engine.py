@@ -229,6 +229,19 @@ class IntentEngine:
                     }
 
         # -------------------------------------------------------------
+        # 0. GLOBAL STOP & CANCELLATION (TOP PRIORITY)
+        # -------------------------------------------------------------
+        if clean in ["stop", "stop listening", "cancel", "terminate", "halt", "pause", "be quiet", "shut up", "stop talking", "abort"]:
+            return {
+                "intent": "system_action",
+                "action": "stop",
+                "target": None,
+                "confidence": 1.0,
+                "query": clean,
+                "raw_text": effective_raw
+            }
+
+        # -------------------------------------------------------------
         # 0A. DEDICATED YOUTUBE SEARCH INTENT (TOP PRECEDENCE)
         # -------------------------------------------------------------
         is_yt, yt_query, yt_browser = self.normalizer.extract_youtube_search(effective_raw)
@@ -1394,6 +1407,11 @@ class IntentEngine:
         # -------------------------------------------------------------
         # 18. OPEN FOLDER & FILE INTENTS
         # -------------------------------------------------------------
+        named_folder_m = re.match(r"^(?:open|show|explore|view)\s+(?:my\s+|the\s+)?(.+?)\s+folder$", clean, re.IGNORECASE)
+        if named_folder_m:
+            f_target = named_folder_m.group(1).strip()
+            return {"intent": "file_access", "action": "open_folder", "target": f_target, "confidence": 0.96, "query": clean, "raw_text": raw_text}
+
         folder_match = re.search(r"^(?:open|show|go\s+to|take\s+me\s+to|show\s+me)\s+(?:the\s+|my\s+)?(downloads|documents|desktop|pictures|videos|music)(?:\s+folder)?$", clean)
         if folder_match:
             folder_target = folder_match.group(1).strip()
@@ -1981,11 +1999,13 @@ class IntentEngine:
         # -------------------------------------------------------------
         # 23. FILESYSTEM FOLDER CREATION & SAVING INTENTS
         # -------------------------------------------------------------
-        m_folder_loc = re.match(r"^(?:create|make)\s+(?:a\s+)?folder(?:\s+called\s+['\"]?(.+?)['\"]?)?\s+(?:on|in|inside)\s+(?:my\s+)?(.+?)$", clean)
+        m_folder_loc = re.match(r"^(?:create|make|build)\s+(?:a\s+)?folder(?:\s+(?:called|named)\s+['\"]?(.+?)['\"]?)?\s+(?:on|in|inside)\s+(?:my\s+|the\s+)?(.+?)$", clean, re.IGNORECASE)
+        if not m_folder_loc:
+            m_folder_loc = re.match(r"^(?:create|make|build)\s+(?:a\s+)?folder\s+['\"]?(.+?)['\"]?\s+(?:on|in|inside)\s+(?:my\s+|the\s+)?(.+?)$", clean, re.IGNORECASE)
         if m_folder_loc:
             f_name = m_folder_loc.group(1).strip() if m_folder_loc.group(1) else "New Folder"
             loc = m_folder_loc.group(2).strip()
-            return {"intent": "filesystem_control", "action": "create_folder", "target": f_name, "location": loc, "confidence": 0.95, "raw_text": raw_text}
+            return {"intent": "filesystem_control", "action": "create_folder", "target": f_name, "location": loc, "confidence": 0.96, "raw_text": raw_text}
 
         if clean in ["create folder", "create a folder", "make a folder", "make folder", "new folder"]:
             return {"intent": "filesystem_control", "action": "create_folder", "target": "", "missing_arg": "folder_name", "confidence": 0.95, "raw_text": raw_text}

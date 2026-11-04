@@ -103,6 +103,22 @@ class AgentBrain:
         """Constructs system prompt with available tools and injected long-term memory."""
         mem_context = persistent_memory.build_memory_context_prompt(user_query)
 
+        # Stage 2: ALEE Knowledge Explorer Read Bridge
+        alee_context = ""
+        try:
+            from core.evolution.knowledge_explorer import knowledge_explorer
+            items = knowledge_explorer.retrieve_relevant_knowledge(user_query, top_k=3)
+            if items:
+                snippets = []
+                for it in items:
+                    src = it.get("source_url") or it.get("category", "local_doc")
+                    c_text = it.get("content", "").strip()[:400]
+                    snippets.append("Source: " + str(src) + chr(10) + str(c_text))
+                sep = chr(10) + "---" + chr(10)
+                alee_context = "VERIFIED KNOWLEDGE & DOCUMENT CONTEXT:" + chr(10) + sep.join(snippets) + chr(10)
+        except Exception as ke:
+            logger.debug(f"Knowledge bridge retrieval error: {ke}")
+
         tool_descriptions = []
         for name, data in self.tools.items():
             tool_descriptions.append(f"- {name}: {data['description']}")
@@ -160,6 +176,8 @@ NVIDIA Nemotron is merely an external cognition provider powering your thought p
 {rules}
 
 {mem_context}
+
+{alee_context}
 
 {tools_section}"""
         return prompt

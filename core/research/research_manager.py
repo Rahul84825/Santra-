@@ -257,7 +257,27 @@ class ResearchManager:
             }
 
         # Stage 7: Final Answer Formatting and Citation Attachment
-        session.final_answer = research_synthesizer.format_final_response(reasoning_output, session.citations)
+        clean_reasoning = reasoning_output.strip() if reasoning_output else ""
+        if not clean_reasoning or clean_reasoning.lower().startswith("i encountered an error synthesizing"):
+            if session.evidence:
+                ev_lines = []
+                for ev in session.evidence[:5]:
+                    ent = ev.entity_name or "Detail"
+                    excerpt = ev.evidence_excerpt.strip() if ev.evidence_excerpt else ""
+                    if excerpt:
+                        ev_lines.append(f"- **{ent}**: {excerpt}")
+                if ev_lines:
+                    clean_reasoning = (
+                        f"Based on verified research findings for '{session.query}':\n\n"
+                        + "\n".join(ev_lines)
+                    )
+            elif session.sources:
+                src_list = ", ".join(f"[{s.title}]({s.url})" for s in session.sources[:3] if s.url)
+                clean_reasoning = f"I explored relevant web sources ({src_list}), but could not extract definitive corroborating evidence to fully answer your question."
+            else:
+                clean_reasoning = f"I conducted a multi-source research search for '{session.query}', but found no verified evidence or reliable sources matching this request."
+
+        session.final_answer = research_synthesizer.format_final_response(clean_reasoning, session.citations)
         session.completed_at = time.time()
         session.status = ResearchStatus.COMPLETED
         _update_stage(ResearchStatus.COMPLETED, "Research completed.")
@@ -267,6 +287,19 @@ class ResearchManager:
             research_memory.save_session(session)
         except Exception as me:
             logger.error(f"[ResearchManager] Failed to persist session to database: {me}")
+
+        # Stage 8B: ALEE Automatic Research Capture
+        try:
+            from core.evolution.knowledge_explorer import knowledge_explorer
+            src_urls = [s.url for s in session.sources if getattr(s, "url", None)]
+            knowledge_explorer.ingest_research_knowledge(
+                query=session.query,
+                answer=session.final_answer,
+                source_urls=src_urls,
+                category="research"
+            )
+        except Exception as alee_err:
+            logger.debug(f"[ALEE] Automatic research capture notice: {alee_err}")
 
         # Retain as active research session for natural follow-ups
         self.active_session = session

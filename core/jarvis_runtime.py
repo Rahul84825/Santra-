@@ -27,6 +27,15 @@ from core.speech_sanitizer import sanitize_speech_text
 from core.ai.intelligence_router import intelligence_router, MODE_FAST_LOCAL, MODE_CONTEXT, MODE_REASONING, MODE_QUESTION
 from core.proactive_daemon import proactive_daemon
 
+try:
+    from core.evolution.collector import evolution_collector
+    from core.evolution.scheduler import evolution_scheduler
+    from core.evolution.resource_guard import resource_guard
+except ImportError:
+    evolution_collector = None
+    evolution_scheduler = None
+    resource_guard = None
+
 logger = logging.getLogger("Jarvis.Runtime")
 
 VALID_STATES = {
@@ -84,6 +93,8 @@ class JarvisRuntime:
         self._sleep_cancel_event = threading.Event()
         self._cancelled_utterance_ids = set()
         self._cancelled_lock = threading.Lock()
+        self._last_raw_transcript: str = ""
+        self._last_normalized_transcript: str = ""
 
         # Observers / Callbacks
         self.on_status_change_cb: Optional[Callable[[str], None]] = None
@@ -155,6 +166,20 @@ class JarvisRuntime:
 
         # Wire Subsystem Callbacks
         self._wire_subsystems()
+
+        # Wire ALEE ResourceGuard activity observer
+        if resource_guard:
+            try:
+                resource_guard.register_activity_check(
+                    lambda: self.current_status in [
+                        "LISTENING", "TRANSCRIBING", "ROUTING", "THINKING",
+                        "SYNTHESIZING", "SPEAKING", "STREAMING_RESPONSE",
+                        "RESEARCH_PLANNING", "WAITING_FOR_NVIDIA"
+                    ]
+                )
+            except Exception as ge:
+                logger.debug(f"Could not register resource guard check: {ge}")
+
         logger.info("[JARVIS_ONLINE] Voice Core Subsystems Initialized & Ready.")
 
     def _wire_subsystems(self):
@@ -213,6 +238,13 @@ class JarvisRuntime:
             logger.warning(f"Wake-word detector startup warning: {ww_err}.")
 
         self.proactive_daemon.start(self._on_proactive_alert)
+
+        if evolution_scheduler:
+            try:
+                evolution_scheduler.start()
+            except Exception as se:
+                logger.warning(f"Could not start evolution scheduler: {se}")
+
         self._update_status("STANDBY")
         logger.info("[JARVIS_ONLINE] Standing by for wake word...")
 
@@ -285,6 +317,18 @@ class JarvisRuntime:
         self.wakeword_detector.stop()
         self.listener.stop()
         self.tts_manager.stop()
+
+        if evolution_scheduler:
+            try:
+                evolution_scheduler.stop()
+            except Exception:
+                pass
+        if evolution_collector:
+            try:
+                evolution_collector.shutdown()
+            except Exception:
+                pass
+
         logger.info("Jarvis Voice Core terminated cleanly.")
 
     def _on_proactive_alert(self, title: str, message: str, speak: bool = False):
@@ -540,6 +584,11 @@ class JarvisRuntime:
         try:
             t0_whisper = time.time()
             text = self.transcriber.transcribe(wav_path)
+            if evolution_collector and text:
+                try:
+                    text = evolution_collector.apply_known_aliases(text)
+                except Exception as ae:
+                    logger.debug(f"Alias resolution error in on_speech_end: {ae}")
             whisper_duration_s = time.time() - t0_whisper
             meta = getattr(self.transcriber, "last_metadata", {}) or {}
             audio_dur_s = meta.get("duration", 0.0)
@@ -688,6 +737,12 @@ class JarvisRuntime:
             return
 
         self._active_utterance_id = utterance_id
+
+        if evolution_collector and text:
+            try:
+                text = evolution_collector.apply_known_aliases(text)
+            except Exception as ae:
+                logger.debug(f"Alias resolution error in process_command_worker: {ae}")
 
         # Guard against processing in SLEEPING mode (suppress background speech, allow wake phrases)
         if self.current_status == "SLEEPING":
@@ -1123,6 +1178,9 @@ class JarvisRuntime:
         req = intelligence_router.route(text, session_context=self.conversation_manager.get_context(), normalized=normalized, ai_mode=self.ai_mode)
         routing_ms = (time.time() - t0_route) * 1000
         normalized_text = req.normalized_text
+        if req.intent != "CORRECTION":
+            self._last_raw_transcript = raw_full_text or text
+            self._last_normalized_transcript = normalized_text or text
         logger.info(f"[UTTERANCE {uid}][ROUTER] Mode='{req.mode}' | Layer={req.layer} | Intent='{req.intent}' | Target='{req.target}' ({routing_ms:.1f}ms)")
 
         # Case 0A: Instant Reflex for Stop Talking
@@ -1143,6 +1201,14 @@ class JarvisRuntime:
         if req.intent == "CORRECTION":
             corrected_query = self.conversation_manager.apply_correction(text)
             logger.info(f"[UTTERANCE {uid}][CORRECTION] Corrected query from '{text}' -> '{corrected_query}'")
+            if evolution_collector:
+                try:
+                    evolution_collector.record_correction(
+                        failed_transcript=self._last_raw_transcript or text,
+                        corrected_transcript=corrected_query
+                    )
+                except Exception as ce:
+                    logger.debug(f"Correction recording error: {ce}")
             return self._process_single_command(
                 corrected_query,
                 raw_full_text=raw_full_text,
@@ -1287,7 +1353,8 @@ class JarvisRuntime:
 
                 def _on_stage(stage: str, desc: str):
                     self._update_status(stage, uid)
-                    self._notify_pipeline_stage(raw_full_text, normalized_text, f"research:{req.action}", f"RESEARCH [{stage}]", desc, stage.title(), turn_id=uid)
+                    # Telemetry status update only - do NOT pass stage descriptions as the final conversational answer!
+                    self._notify_pipeline_stage(raw_full_text, normalized_text, f"research:{req.action}", f"RESEARCH [{stage}]", "", stage.title(), turn_id=uid)
 
                 spoken_sentences = []
                 stream_id = uid
@@ -1326,7 +1393,24 @@ class JarvisRuntime:
                     self._update_status("STANDBY", uid)
                     return {"success": False, "action": "universal_research", "message": "Research cancelled.", "cancelled": True}
                 answer = res_res.get("answer", "")
+                if not answer or not answer.strip():
+                    answer = "I completed research on your query, but could not extract sufficient verified findings to provide a complete answer."
+
                 self.memory.add_interaction(text, answer)
+                # Stage 2: ALEE Automatic Research Knowledge Capture
+                try:
+                    from core.evolution.knowledge_explorer import knowledge_explorer
+                    knowledge_explorer.ingest_research_knowledge(
+                        query=text,
+                        answer=answer,
+                        source_urls=[res_res.get("research_id", "")],
+                        category="research"
+                    )
+                except Exception as rke:
+                    logger.debug(f"[EVOLUTION] Research knowledge capture error: {rke}")
+
+                # CRITICAL: Deliver the synthesized research answer to the UI conversation turn!
+                self._notify_pipeline_stage(raw_full_text, normalized_text, f"research:{req.action}", "SANTRA Research Engine", answer, "Completed", turn_id=uid)
                 self.response_manager.conversation(answer, speak=speak)
                 self._update_status("COMPLETED", uid)
                 self._update_speech_text(answer)
@@ -1954,6 +2038,22 @@ class JarvisRuntime:
             )
         except Exception as ve:
             logger.debug(f"Failed to verify/record execution experience: {ve}")
+
+        # ALEE Stage 1: Async Non-Blocking Experience Ingestion
+        if evolution_collector:
+            try:
+                exec_latency = (t_tool_end - t_tool_start) * 1000 if 't_tool_start' in locals() and 't_tool_end' in locals() else 0.0
+                evolution_collector.record_experience(
+                    user_request=intent_node.get("raw") or action,
+                    intent=intent,
+                    action=action,
+                    parameters=intent_node,
+                    success=success,
+                    message=message,
+                    latency_ms=exec_latency
+                )
+            except Exception as ee:
+                logger.debug(f"[EVOLUTION] Collector recording error: {ee}")
 
         self._update_status("STANDBY", uid)
         self._update_speech_text(spoken)

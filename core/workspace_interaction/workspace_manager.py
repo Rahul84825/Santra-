@@ -517,11 +517,14 @@ class WorkspaceManager:
     def resolve_workspace(self, folder_or_project_name: str) -> Dict[str, Any]:
         """Resolves the actual path for a folder or project name, handling pronouns and ambiguity."""
         clean = folder_or_project_name.lower().strip()
-        if clean in ["that folder", "this folder", "the folder", "this project", "that project", "it"]:
+        if clean in ["that folder", "this folder", "the folder", "this project", "that project", "it", "current folder", "current project", "workspace", ""]:
             last = self.get_last_active_folder()
             if last:
                 return {"success": True, "path": last, "name": last.name}
-            return {"success": False, "status": "NO_PREVIOUS_FOLDER", "message": "No active or recent folder was found."}
+            # Fallback to current working directory or active project
+            from pathlib import Path
+            cwd = Path(os.getcwd())
+            return {"success": True, "path": cwd, "name": cwd.name}
 
         matches = self.find_folders(folder_or_project_name)
         if len(matches) == 1:

@@ -682,14 +682,31 @@ class WindowsPlatform(BasePlatform):
     def get_folder_path(self, folder_name: str) -> Path:
         name = folder_name.lower().strip()
         home = Path.home()
-        if "download" in name:
+
+        # Resolve actual Desktop folder on Windows (handling OneDrive Attachments/Desktop)
+        desktop_candidates = [
+            home / "OneDrive" / "Attachments" / "Desktop",
+            home / "OneDrive" / "Desktop",
+            home / "Desktop"
+        ]
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders")
+            val, _ = winreg.QueryValueEx(key, "Desktop")
+            reg_d = Path(os.path.expandvars(val))
+            if reg_d.exists():
+                desktop_candidates.insert(0, reg_d)
+        except Exception:
+            pass
+        desktop_dir = next((d for d in desktop_candidates if d.exists()), home / "Desktop")
+
+        if "desktop" in name:
+            return desktop_dir
+        elif "download" in name:
             return home / "Downloads"
         elif "document" in name:
             onedrive = home / "OneDrive" / "Documents"
             return onedrive if onedrive.exists() else home / "Documents"
-        elif "desktop" in name:
-            onedrive = home / "OneDrive" / "Desktop"
-            return onedrive if onedrive.exists() else home / "Desktop"
         elif "picture" in name:
             onedrive = home / "OneDrive" / "Pictures"
             return onedrive if onedrive.exists() else home / "Pictures"
@@ -697,6 +714,16 @@ class WindowsPlatform(BasePlatform):
             return home / "Videos"
         elif "music" in name:
             return home / "Music"
+
+        # Check if folder exists directly on Desktop or Documents
+        on_desktop = desktop_dir / folder_name
+        if on_desktop.exists() and on_desktop.is_dir():
+            return on_desktop
+
+        on_docs = (home / "Documents") / folder_name
+        if on_docs.exists() and on_docs.is_dir():
+            return on_docs
+
         return home
 
     def open_folder(self, folder_name: str) -> bool:

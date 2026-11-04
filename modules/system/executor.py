@@ -1145,11 +1145,19 @@ class CommandExecutor:
                     else:
                         message = res.get("error", "Could not list directory.")
                 elif action == "create_folder":
-                    folder_path = self.filesystem_mgr.resolve_path(target or "New Folder")
+                    loc = intent_node.get("location", "")
+                    target_name = target or "New Folder"
+                    if loc and "desktop" in loc.lower():
+                        from core.platform import platform_manager
+                        dest_base = platform_manager.get_folder_path("desktop")
+                        folder_path = dest_base / target_name
+                    else:
+                        folder_path = self.filesystem_mgr.resolve_path(target_name)
                     try:
                         os.makedirs(folder_path, exist_ok=True)
                         success = folder_path.exists() and folder_path.is_dir()
-                        message = f"Created folder {folder_path.name}." if success else "Failed to create folder."
+                        loc_str = f" on your {loc.title()}" if loc else ""
+                        message = f"Created folder '{folder_path.name}'{loc_str}." if success else f"Failed to create folder '{target_name}'."
                     except Exception as fe:
                         success = False
                         message = f"Error creating folder: {fe}"

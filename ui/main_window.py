@@ -1251,7 +1251,14 @@ class MainWindow(QMainWindow):
     def _on_pipeline_stage_updated(self, raw: str, norm: str, intent: str, exec_str: str, resp: str, state: str, turn_id: str = ""):
         if raw and not any(t["text"] == raw for t in self._turns if t["role"] == "user"):
             self._add_or_update_turn("user", raw, turn_id=f"user_{turn_id}" if turn_id else None, is_final=True)
-        if resp and resp.strip() not in ["Querying NVIDIA Nemotron...", "Thinking..."]:
+        if resp and resp.strip() not in ["Querying NVIDIA Nemotron...", "Thinking...", "Processing..."]:
+            # Suppress internal stage progress strings from overwriting chat card
+            if resp.strip() in [
+                "Research completed.", "Formulating research plan...", "Executing searches...",
+                "Extracting evidence...", "Synthesizing research answer with NVIDIA Nemotron...",
+                "Streaming cited research answer..."
+            ]:
+                return
             is_final = (state.lower() in ["speaking", "completed", "done", "standby"])
             self._add_or_update_turn("jarvis", resp, turn_id=turn_id if turn_id else None, is_final=is_final)
 
