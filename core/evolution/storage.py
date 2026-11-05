@@ -203,6 +203,75 @@ class EvolutionStorage:
                 conn.commit()
                 logger.info("[MIGRATION] ALEE schema version 2 applied successfully.")
 
+            if current_ver < 3:
+                logger.info("[MIGRATION] Applying ALEE schema version 3 (Autonomous Skills Registry)...")
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS skills (
+                        skill_id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        trigger_phrases TEXT NOT NULL,
+                        description TEXT,
+                        steps_json TEXT NOT NULL,
+                        version INTEGER DEFAULT 1,
+                        status TEXT DEFAULT 'SANDBOX',
+                        success_count INTEGER DEFAULT 0,
+                        failure_count INTEGER DEFAULT 0,
+                        created_at REAL NOT NULL,
+                        updated_at REAL NOT NULL
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_skills_status ON skills(status);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);")
+
+                cursor.execute(
+                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                    (3, "Stage 4 autonomous skills table")
+                )
+                conn.commit()
+                logger.info("[MIGRATION] ALEE schema version 3 applied successfully.")
+
+            if current_ver < 4:
+                logger.info("[MIGRATION] Applying ALEE schema version 4 (Controlled Evolution Proposals & Snapshots)...")
+                # 1. Evolution Proposals Table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS evolution_proposals (
+                        proposal_id TEXT PRIMARY KEY,
+                        proposal_type TEXT NOT NULL,
+                        target_key TEXT NOT NULL,
+                        proposed_value_json TEXT NOT NULL,
+                        reason TEXT NOT NULL,
+                        evidence_count INTEGER DEFAULT 1,
+                        status TEXT DEFAULT 'PENDING',
+                        created_at REAL NOT NULL,
+                        reviewed_at REAL
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_prop_status ON evolution_proposals(status);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_prop_type ON evolution_proposals(proposal_type);")
+
+                # 2. Evolution Snapshots (Audit & Rollback Log) Table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS evolution_snapshots (
+                        snapshot_id TEXT PRIMARY KEY,
+                        proposal_id TEXT NOT NULL,
+                        previous_state_json TEXT NOT NULL,
+                        new_state_json TEXT NOT NULL,
+                        benchmark_score_before REAL DEFAULT 100.0,
+                        benchmark_score_after REAL DEFAULT 100.0,
+                        applied_at REAL NOT NULL,
+                        rolled_back_at REAL,
+                        FOREIGN KEY (proposal_id) REFERENCES evolution_proposals(proposal_id)
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_snap_proposal ON evolution_snapshots(proposal_id);")
+
+                cursor.execute(
+                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                    (4, "Stage 5 evolution proposals and versioned snapshots tables")
+                )
+                conn.commit()
+                logger.info("[MIGRATION] ALEE schema version 4 applied successfully.")
+
             cursor.close()
 
     # ==========================================
@@ -405,12 +474,25 @@ class EvolutionStorage:
         Returns top results ranked by bm25 score in < 5ms.
         """
         import re
-        clean_tokens = [re.sub(r"[^\w\-_]", "", t) for t in query.split()]
-        clean_tokens = [t for t in clean_tokens if len(t) >= 2]
-        if not clean_tokens:
-            return []
-
-        fts_match_expr = " OR ".join(f'"{t}"' for t in clean_tokens)
+        if " OR " in query or '"' in query:
+            fts_match_expr = query
+        else:
+            raw_tokens = [re.sub(r"[^\w\-_]", "", t) for t in query.split()]
+            raw_tokens = [t for t in raw_tokens if len(t) >= 2]
+            stopwords = {
+                "what", "is", "the", "how", "does", "can", "you", "tell", "me", "about",
+                "in", "on", "for", "with", "to", "of", "a", "an", "my", "please", "sir",
+                "do", "did", "are", "was", "were", "be", "been", "being", "have", "has",
+                "had", "it", "its", "this", "that", "these", "those", "i", "we", "they",
+                "them", "he", "she", "him", "her", "and", "or", "but", "if", "so", "as",
+                "at", "by", "from", "up", "into", "over", "after", "then", "just", "now",
+                "there", "here", "where", "which", "who", "whom", "why", "all", "any"
+            }
+            meaningful = [t for t in raw_tokens if t.lower() not in stopwords]
+            tokens_to_use = meaningful if meaningful else raw_tokens
+            if not tokens_to_use:
+                return []
+            fts_match_expr = " OR ".join(f'"{t}"' for t in tokens_to_use)
         with self._lock:
             conn = self._get_connection()
             cursor = conn.cursor()
@@ -463,6 +545,442 @@ class EvolutionStorage:
                 logger.warning(f"[FTS5] Index optimization error: {e}")
 
     # ==========================================
+    # SKILLS API (STAGE 4)
+    # ==========================================
+    def upsert_skill(self, skill: Dict[str, Any]) -> str:
+        """Inserts or updates an autonomous skill definition."""
+        skill_id = skill.get("skill_id") or f"skill_{int(time.time() * 1000)}"
+        name = skill.get("name", "unnamed_skill")
+        triggers = skill.get("trigger_phrases", [])
+        if isinstance(triggers, list):
+            triggers_json = json.dumps(triggers)
+        else:
+            triggers_json = str(triggers)
+
+        description = skill.get("description", "")
+        steps = skill.get("steps", skill.get("steps_json", []))
+        if isinstance(steps, list):
+            steps_json = json.dumps(steps)
+        else:
+            steps_json = str(steps)
+
+        version = int(skill.get("version", 1))
+        status = skill.get("status", "SANDBOX")
+        success_count = int(skill.get("success_count", 0))
+        failure_count = int(skill.get("failure_count", 0))
+        now = time.time()
+        created_at = float(skill.get("created_at", now))
+        updated_at = float(skill.get("updated_at", now))
+
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO skills (
+                    skill_id, name, trigger_phrases, description, steps_json,
+                    version, status, success_count, failure_count, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(skill_id) DO UPDATE SET
+                    name=excluded.name,
+                    trigger_phrases=excluded.trigger_phrases,
+                    description=excluded.description,
+                    steps_json=excluded.steps_json,
+                    version=excluded.version,
+                    status=excluded.status,
+                    success_count=MAX(skills.success_count, excluded.success_count),
+                    failure_count=MAX(skills.failure_count, excluded.failure_count),
+                    updated_at=excluded.updated_at
+            """, (
+                skill_id, name, triggers_json, description, steps_json,
+                version, status, success_count, failure_count, created_at, updated_at
+            ))
+            conn.commit()
+            cursor.close()
+
+        return skill_id
+
+    def get_skill(self, skill_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a single skill by ID."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT skill_id, name, trigger_phrases, description, steps_json,
+                       version, status, success_count, failure_count, created_at, updated_at
+                FROM skills WHERE skill_id = ?
+            """, (skill_id,))
+            row = cursor.fetchone()
+            cursor.close()
+
+            if not row:
+                return None
+
+            try:
+                triggers = json.loads(row[2])
+            except Exception:
+                triggers = [row[2]]
+            try:
+                steps = json.loads(row[4])
+            except Exception:
+                steps = []
+
+            return {
+                "skill_id": row[0],
+                "name": row[1],
+                "trigger_phrases": triggers,
+                "description": row[3],
+                "steps": steps,
+                "version": row[5],
+                "status": row[6],
+                "success_count": row[7],
+                "failure_count": row[8],
+                "created_at": row[9],
+                "updated_at": row[10]
+            }
+
+    def get_all_skills(self) -> List[Dict[str, Any]]:
+        """Retrieves all registered skills."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT skill_id, name, trigger_phrases, description, steps_json,
+                       version, status, success_count, failure_count, created_at, updated_at
+                FROM skills ORDER BY created_at DESC
+            """)
+            rows = cursor.fetchall()
+            cursor.close()
+
+            skills = []
+            for row in rows:
+                try:
+                    triggers = json.loads(row[2])
+                except Exception:
+                    triggers = [row[2]]
+                try:
+                    steps = json.loads(row[4])
+                except Exception:
+                    steps = []
+                skills.append({
+                    "skill_id": row[0],
+                    "name": row[1],
+                    "trigger_phrases": triggers,
+                    "description": row[3],
+                    "steps": steps,
+                    "version": row[5],
+                    "status": row[6],
+                    "success_count": row[7],
+                    "failure_count": row[8],
+                    "created_at": row[9],
+                    "updated_at": row[10]
+                })
+            return skills
+
+    def get_verified_skills(self) -> List[Dict[str, Any]]:
+        """Retrieves all verified and active skills."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT skill_id, name, trigger_phrases, description, steps_json,
+                       version, status, success_count, failure_count, created_at, updated_at
+                FROM skills WHERE status = 'VERIFIED'
+                ORDER BY success_count DESC
+            """)
+            rows = cursor.fetchall()
+            cursor.close()
+
+            skills = []
+            for row in rows:
+                try:
+                    triggers = json.loads(row[2])
+                except Exception:
+                    triggers = [row[2]]
+                try:
+                    steps = json.loads(row[4])
+                except Exception:
+                    steps = []
+                skills.append({
+                    "skill_id": row[0],
+                    "name": row[1],
+                    "trigger_phrases": triggers,
+                    "description": row[3],
+                    "steps": steps,
+                    "version": row[5],
+                    "status": row[6],
+                    "success_count": row[7],
+                    "failure_count": row[8],
+                    "created_at": row[9],
+                    "updated_at": row[10]
+                })
+            return skills
+
+    def update_skill_status(self, skill_id: str, status: str) -> bool:
+        """Updates the operational status of a skill ('SANDBOX', 'VERIFIED', 'DEPRECATED', 'BLOCKED')."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE skills SET status = ?, updated_at = ? WHERE skill_id = ?
+            """, (status, time.time(), skill_id))
+            affected = cursor.rowcount > 0
+            conn.commit()
+            cursor.close()
+            return affected
+
+    def record_skill_execution(self, skill_id: str, success: bool) -> bool:
+        """Updates skill execution counts based on success/failure."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if success:
+                cursor.execute("""
+                    UPDATE skills SET success_count = success_count + 1, updated_at = ? WHERE skill_id = ?
+                """, (time.time(), skill_id))
+            else:
+                cursor.execute("""
+                    UPDATE skills SET failure_count = failure_count + 1, updated_at = ? WHERE skill_id = ?
+                """, (time.time(), skill_id))
+            affected = cursor.rowcount > 0
+            conn.commit()
+            cursor.close()
+            return affected
+
+    # ==========================================
+    # PROPOSALS & SNAPSHOTS API (STAGE 5)
+    # ==========================================
+    def upsert_proposal(self, proposal: Dict[str, Any]) -> str:
+        """Inserts or updates an evolution proposal."""
+        prop_type = proposal.get("proposal_type", "INTENT_RULE")
+        prop_id = proposal.get("proposal_id") or f"prop_{prop_type.lower()}_{int(time.time() * 1000)}"
+        target_key = proposal.get("target_key", "")
+        p_val = proposal.get("proposed_value_json", proposal.get("proposed_value", {}))
+        val_json = json.dumps(p_val) if isinstance(p_val, (dict, list)) else str(p_val)
+        reason = proposal.get("reason", "")
+        evidence_count = int(proposal.get("evidence_count", 1))
+        status = proposal.get("status", "PENDING")
+        now = time.time()
+        created_at = float(proposal.get("created_at", now))
+        reviewed_at = proposal.get("reviewed_at")
+
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO evolution_proposals (
+                    proposal_id, proposal_type, target_key, proposed_value_json,
+                    reason, evidence_count, status, created_at, reviewed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(proposal_id) DO UPDATE SET
+                    proposed_value_json=excluded.proposed_value_json,
+                    reason=excluded.reason,
+                    evidence_count=MAX(evolution_proposals.evidence_count, excluded.evidence_count),
+                    status=CASE WHEN evolution_proposals.status = 'APPROVED' THEN evolution_proposals.status ELSE excluded.status END,
+                    reviewed_at=CASE WHEN evolution_proposals.status = 'APPROVED' THEN evolution_proposals.reviewed_at ELSE excluded.reviewed_at END
+            """, (
+                prop_id, prop_type, target_key, val_json,
+                reason, evidence_count, status, created_at, reviewed_at
+            ))
+            conn.commit()
+            cursor.close()
+
+        return prop_id
+
+    def get_proposal(self, proposal_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a single proposal by ID."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT proposal_id, proposal_type, target_key, proposed_value_json,
+                       reason, evidence_count, status, created_at, reviewed_at
+                FROM evolution_proposals WHERE proposal_id = ?
+            """, (proposal_id,))
+            row = cursor.fetchone()
+            cursor.close()
+
+            if not row:
+                return None
+
+            try:
+                p_val = json.loads(row[3])
+            except Exception:
+                p_val = row[3]
+
+            return {
+                "proposal_id": row[0],
+                "proposal_type": row[1],
+                "target_key": row[2],
+                "proposed_value": p_val,
+                "reason": row[4],
+                "evidence_count": row[5],
+                "status": row[6],
+                "created_at": row[7],
+                "reviewed_at": row[8]
+            }
+
+    def get_pending_proposals(self) -> List[Dict[str, Any]]:
+        """Retrieves all pending proposals awaiting approval."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT proposal_id, proposal_type, target_key, proposed_value_json,
+                       reason, evidence_count, status, created_at, reviewed_at
+                FROM evolution_proposals WHERE status = 'PENDING'
+                ORDER BY created_at DESC
+            """)
+            rows = cursor.fetchall()
+            cursor.close()
+
+            proposals = []
+            for row in rows:
+                try:
+                    p_val = json.loads(row[3])
+                except Exception:
+                    p_val = row[3]
+                proposals.append({
+                    "proposal_id": row[0],
+                    "proposal_type": row[1],
+                    "target_key": row[2],
+                    "proposed_value": p_val,
+                    "reason": row[4],
+                    "evidence_count": row[5],
+                    "status": row[6],
+                    "created_at": row[7],
+                    "reviewed_at": row[8]
+                })
+            return proposals
+
+    def get_all_proposals(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieves proposals ordered by creation date."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT proposal_id, proposal_type, target_key, proposed_value_json,
+                       reason, evidence_count, status, created_at, reviewed_at
+                FROM evolution_proposals
+                ORDER BY created_at DESC LIMIT ?
+            """, (limit,))
+            rows = cursor.fetchall()
+            cursor.close()
+
+            proposals = []
+            for row in rows:
+                try:
+                    p_val = json.loads(row[3])
+                except Exception:
+                    p_val = row[3]
+                proposals.append({
+                    "proposal_id": row[0],
+                    "proposal_type": row[1],
+                    "target_key": row[2],
+                    "proposed_value": p_val,
+                    "reason": row[4],
+                    "evidence_count": row[5],
+                    "status": row[6],
+                    "created_at": row[7],
+                    "reviewed_at": row[8]
+                })
+            return proposals
+
+    def update_proposal_status(self, proposal_id: str, status: str, reviewed_at: Optional[float] = None) -> bool:
+        """Updates the status of a proposal ('PENDING', 'APPROVED', 'REJECTED', 'ROLLED_BACK', 'FAILED')."""
+        rev_t = reviewed_at if reviewed_at is not None else time.time()
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE evolution_proposals SET status = ?, reviewed_at = ? WHERE proposal_id = ?
+            """, (status, rev_t, proposal_id))
+            affected = cursor.rowcount > 0
+            conn.commit()
+            cursor.close()
+            return affected
+
+    def record_snapshot(
+        self,
+        proposal_id: str,
+        previous_state: Dict[str, Any],
+        new_state: Dict[str, Any],
+        score_before: float,
+        score_after: float
+    ) -> str:
+        """Records a versioned audit snapshot for reversible rollbacks."""
+        snapshot_id = f"snap_{int(time.time() * 1000)}"
+        prev_json = json.dumps(previous_state)
+        new_json = json.dumps(new_state)
+        now = time.time()
+
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO evolution_snapshots (
+                    snapshot_id, proposal_id, previous_state_json, new_state_json,
+                    benchmark_score_before, benchmark_score_after, applied_at, rolled_back_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+            """, (
+                snapshot_id, proposal_id, prev_json, new_json,
+                float(score_before), float(score_after), now
+            ))
+            conn.commit()
+            cursor.close()
+
+        return snapshot_id
+
+    def get_snapshot_for_proposal(self, proposal_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves the latest audit snapshot for a given proposal."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT snapshot_id, proposal_id, previous_state_json, new_state_json,
+                       benchmark_score_before, benchmark_score_after, applied_at, rolled_back_at
+                FROM evolution_snapshots WHERE proposal_id = ?
+                ORDER BY applied_at DESC LIMIT 1
+            """, (proposal_id,))
+            row = cursor.fetchone()
+            cursor.close()
+
+            if not row:
+                return None
+
+            try:
+                prev_st = json.loads(row[2])
+            except Exception:
+                prev_st = {}
+            try:
+                new_st = json.loads(row[3])
+            except Exception:
+                new_st = {}
+
+            return {
+                "snapshot_id": row[0],
+                "proposal_id": row[1],
+                "previous_state": prev_st,
+                "new_state": new_st,
+                "benchmark_score_before": row[4],
+                "benchmark_score_after": row[5],
+                "applied_at": row[6],
+                "rolled_back_at": row[7]
+            }
+
+    def mark_snapshot_rolled_back(self, snapshot_id: str) -> bool:
+        """Marks a snapshot as rolled back with a timestamp."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE evolution_snapshots SET rolled_back_at = ? WHERE snapshot_id = ?
+            """, (time.time(), snapshot_id))
+            affected = cursor.rowcount > 0
+            conn.commit()
+            cursor.close()
+            return affected
+
+    # ==========================================
     # TELEMETRY & STATS
     # ==========================================
     def get_stats(self) -> Dict[str, Any]:
@@ -487,6 +1005,24 @@ class EvolutionStorage:
             cursor.execute("SELECT COUNT(*) FROM knowledge_items")
             total_knowledge = cursor.fetchone()[0] or 0
 
+            cursor.execute("SELECT COUNT(*) FROM skills")
+            total_skills = cursor.fetchone()[0] or 0
+
+            cursor.execute("SELECT COUNT(*) FROM skills WHERE status = 'VERIFIED'")
+            verified_skills = cursor.fetchone()[0] or 0
+
+            cursor.execute("SELECT COUNT(*) FROM evolution_proposals WHERE status = 'PENDING'")
+            pending_props = cursor.fetchone()[0] or 0
+
+            cursor.execute("SELECT COUNT(*) FROM evolution_proposals WHERE status = 'APPROVED'")
+            approved_props = cursor.fetchone()[0] or 0
+
+            cursor.execute("SELECT COUNT(*) FROM evolution_proposals")
+            total_props = cursor.fetchone()[0] or 0
+
+            cursor.execute("SELECT COUNT(*) FROM evolution_snapshots")
+            total_snaps = cursor.fetchone()[0] or 0
+
             cursor.close()
 
             return {
@@ -496,7 +1032,13 @@ class EvolutionStorage:
                 "success_rate": round(success_rate, 4),
                 "total_aliases": total_aliases,
                 "active_aliases": active_aliases,
-                "total_knowledge_items": total_knowledge
+                "total_knowledge_items": total_knowledge,
+                "total_skills": total_skills,
+                "verified_skills": verified_skills,
+                "pending_proposals_count": pending_props,
+                "approved_proposals_count": approved_props,
+                "total_proposals": total_props,
+                "total_snapshots": total_snaps
             }
 
     def close(self):

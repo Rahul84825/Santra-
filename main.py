@@ -101,7 +101,8 @@ def run_ui_mode(start_minimized=False, guard=None):
         on_audio_amplitude=lambda amp: safe_emit(window.sig_audio_amplitude_updated, amp),
         on_camera_state=lambda event: safe_emit(window.sig_camera_state_updated, event),
         on_gesture=lambda event: safe_emit(window.sig_gesture_detected, event),
-        on_ai_mode_changed=lambda enabled: safe_emit(window.sig_ai_mode_changed, enabled)
+        on_ai_mode_changed=lambda enabled: safe_emit(window.sig_ai_mode_changed, enabled),
+        on_evolution_update=lambda rep: safe_emit(window.sig_evolution_updated, rep)
     )
 
     from ui.panel_controller import PanelVisibilityController

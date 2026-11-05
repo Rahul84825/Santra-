@@ -1,25 +1,31 @@
 {
-  "timestamp": "2026-11-05T01:11:41.459045",
-  "status": "HEALTHY",
+  "timestamp": "2026-11-06T00:20:52.473053",
+  "status": "PAUSED_HIGH_LOAD",
   "database_stats": {
-    "total_experiences": 0,
-    "successful_experiences": 0,
-    "failed_experiences": 0,
-    "success_rate": 1.0,
+    "total_experiences": 1281,
+    "successful_experiences": 1216,
+    "failed_experiences": 65,
+    "success_rate": 0.9493,
     "total_aliases": 11,
     "active_aliases": 11,
-    "total_knowledge_items": 1
+    "total_knowledge_items": 5,
+    "total_skills": 7,
+    "verified_skills": 6,
+    "pending_proposals_count": 0,
+    "approved_proposals_count": 5,
+    "total_proposals": 5,
+    "total_snapshots": 16
   },
   "system_resources": {
     "can_run": false,
-    "cpu_percent": 47.4,
-    "memory_percent": 77.8,
+    "cpu_percent": 63.9,
+    "memory_percent": 77.1,
     "battery_plugged": true,
-    "battery_percent": 74,
+    "battery_percent": 80,
     "game_detected": null,
     "voice_active": false,
     "reasons": [
-      "CPU high (47.4% > 30.0%)"
+      "CPU high (63.9% > 30.0%)"
     ]
   },
   "active_aliases_count": 11,
@@ -36,5 +42,67 @@
     "vs code": "vscode",
     "visual studio": "vscode"
   },
-  "last_maintenance_unix": 1793821301.459072
+  "weakness_analysis": {
+    "failing_intents": [
+      {
+        "operation": "create_file",
+        "total_executions": 54,
+        "failed_count": 54,
+        "success_rate": 0.0,
+        "most_common_error": "failed",
+        "avg_latency_ms": 0.0
+      },
+      {
+        "operation": "close_application",
+        "total_executions": 3,
+        "failed_count": 2,
+        "success_rate": 33.3,
+        "most_common_error": "failed",
+        "avg_latency_ms": 0.0
+      }
+    ],
+    "slow_operations": [],
+    "pending_aliases": [],
+    "overall_metrics": {
+      "total_commands_all_time": 1281,
+      "total_commands_24h": 0,
+      "overall_success_rate": 94.9,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.0,
+      "active_alias_count": 11,
+      "verified_knowledge_count": 5
+    }
+  },
+  "benchmarks": {
+    "passed": true,
+    "score": 100.0,
+    "total_benchmark_time_ms": 0.54,
+    "benchmarks": {
+      "alias_resolution": {
+        "passed": true,
+        "latency_ms": 0.032,
+        "target_ms": 1.0,
+        "tested_pairs": 5
+      },
+      "bm25_retrieval": {
+        "passed": true,
+        "latency_ms": 0.3208,
+        "target_ms": 5.0,
+        "hits_found": 1
+      },
+      "safety_defense": {
+        "passed": true,
+        "latency_ms": 0.1862,
+        "blocked_count": 4,
+        "total_attacks": 4
+      }
+    }
+  },
+  "pending_proposals_count": 0,
+  "approved_improvements_count": 5,
+  "proposals_summary": {
+    "pending_count": 0,
+    "proposals": []
+  },
+  "last_maintenance_unix": 1793904652.473109
 }

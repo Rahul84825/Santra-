@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
     sig_typing_state_changed = pyqtSignal(str, dict)
     sig_show_message_approval = pyqtSignal(str, str, str, object)
     sig_ai_mode_changed = pyqtSignal(bool)
+    sig_evolution_updated = pyqtSignal(dict)
 
     def __init__(self):
         super().__init__()
@@ -582,6 +583,58 @@ class MainWindow(QMainWindow):
         card_task_layout.addWidget(self.lbl_side_active_tool)
         info_layout.addWidget(card_task)
 
+        # ALEE Autonomous Evolution Status Card
+        card_evolution = QFrame()
+        card_evolution.setProperty("class", "santraCard")
+        card_evo_layout = QVBoxLayout(card_evolution)
+        card_evo_layout.setContentsMargins(10, 8, 10, 8)
+        card_evo_layout.setSpacing(4)
+
+        lbl_evo_title = QLabel("ALEE EVOLUTION STATUS")
+        lbl_evo_title.setStyleSheet("color: #64748b; font-size: 9px; font-weight: 700; letter-spacing: 0.12em;")
+        card_evo_layout.addWidget(lbl_evo_title)
+
+        evo_stats_row = QHBoxLayout()
+        self.lbl_evo_aliases = QLabel("Aliases: 11")
+        self.lbl_evo_aliases.setStyleSheet("color: #38bdf8; font-size: 10px; font-weight: 600;")
+        evo_stats_row.addWidget(self.lbl_evo_aliases)
+        self.lbl_evo_knowledge = QLabel("Docs: 1")
+        self.lbl_evo_knowledge.setStyleSheet("color: #a78bfa; font-size: 10px; font-weight: 600;")
+        evo_stats_row.addWidget(self.lbl_evo_knowledge, alignment=Qt.AlignmentFlag.AlignRight)
+        card_evo_layout.addLayout(evo_stats_row)
+
+        evo_score_row = QHBoxLayout()
+        self.lbl_evo_score = QLabel("Score: 100% PASS")
+        self.lbl_evo_score.setStyleSheet("color: #10b981; font-size: 9px; font-weight: 700;")
+        evo_score_row.addWidget(self.lbl_evo_score)
+        self.lbl_evo_guard = QLabel("LEARNING IDLE")
+        self.lbl_evo_guard.setStyleSheet("color: #94a3b8; font-size: 9px; font-weight: 600;")
+        evo_score_row.addWidget(self.lbl_evo_guard, alignment=Qt.AlignmentFlag.AlignRight)
+        card_evo_layout.addLayout(evo_score_row)
+
+        evo_props_row = QHBoxLayout()
+        self.lbl_evo_proposals = QLabel("Proposals: 0 Pending")
+        self.lbl_evo_proposals.setStyleSheet("color: #64748b; font-size: 9px; font-weight: 600;")
+        evo_props_row.addWidget(self.lbl_evo_proposals)
+        card_evo_layout.addLayout(evo_props_row)
+
+        btn_open_evo = QPushButton("⚡ OPEN EVOLUTION CENTER")
+        btn_open_evo.setStyleSheet("""
+            background: #1e293b;
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 4px 6px;
+            margin-top: 4px;
+        """)
+        btn_open_evo.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_open_evo.clicked.connect(self._open_evolution_dialog)
+        card_evo_layout.addWidget(btn_open_evo)
+
+        info_layout.addWidget(card_evolution)
+
         info_layout.addStretch(1)
         body_layout.addWidget(self.info_sidebar)
 
@@ -675,6 +728,7 @@ class MainWindow(QMainWindow):
             callbacks = {
                 "research": self._open_research_panel,
                 "code": self._open_project_intelligence,
+                "evolution": self._open_evolution_dialog,
                 "lab": self._open_virtual_lab,
                 "ai": self._open_ai_settings,
                 "screen": self._open_screen_intelligence,
@@ -689,6 +743,23 @@ class MainWindow(QMainWindow):
             dialog.exec()
         except Exception as e:
             logger.error(f"Failed to open Command Palette: {e}", exc_info=True)
+
+    def _open_evolution_dialog(self):
+        try:
+            from ui.evolution_dialog import EvolutionCenterDialog
+            dialog = EvolutionCenterDialog(self)
+            dialog.data_changed.connect(self._refresh_evolution_telemetry)
+            dialog.exec()
+        except Exception as e:
+            logger.error(f"Failed to open Evolution Center: {e}", exc_info=True)
+
+    def _refresh_evolution_telemetry(self):
+        try:
+            from core.evolution.scheduler import evolution_scheduler
+            report = evolution_scheduler.run_maintenance_now()
+            self._on_evolution_updated(report)
+        except Exception as e:
+            logger.debug(f"Evolution telemetry refresh error: {e}")
 
     def _test_audio_speakers(self):
         self.sig_command_submitted.emit("test audio speakers")
@@ -793,6 +864,7 @@ class MainWindow(QMainWindow):
         self.sig_typing_state_changed.connect(self._update_typing_badge)
         self.sig_show_message_approval.connect(self._show_message_approval_dialog)
         self.sig_ai_mode_changed.connect(self._on_ai_mode_changed)
+        self.sig_evolution_updated.connect(self._on_evolution_updated)
 
         # Wire typing coordinator callback
         try:
@@ -802,6 +874,58 @@ class MainWindow(QMainWindow):
             )
         except Exception as e:
             logger.debug(f"Typing coordinator callback registration: {e}")
+
+    def _on_evolution_updated(self, data: dict):
+        """Thread-safe update of ALEE telemetry badge."""
+        if not data:
+            return
+        active_aliases = data.get("active_aliases_count", 0)
+        db_stats = data.get("database_stats") or {}
+        total_knowledge = db_stats.get("total_knowledge_items", 0)
+        verified_skills = db_stats.get("verified_skills", 0)
+        benchmarks = data.get("benchmarks") or {}
+        score = benchmarks.get("score", 100.0)
+        status = data.get("status", "HEALTHY")
+
+        if hasattr(self, "lbl_evo_aliases"):
+            self.lbl_evo_aliases.setText(f"Aliases: {active_aliases}")
+        if hasattr(self, "lbl_evo_knowledge"):
+            if "verified_skills" in db_stats:
+                self.lbl_evo_knowledge.setText(f"Docs: {total_knowledge} · Skills: {verified_skills}")
+            else:
+                self.lbl_evo_knowledge.setText(f"Docs: {total_knowledge}")
+        if hasattr(self, "lbl_evo_score"):
+            self.lbl_evo_score.setText(f"Score: {int(score)}% PASS" if score >= 90 else f"Score: {int(score)}%")
+        if hasattr(self, "lbl_evo_guard"):
+            if status == "PAUSED_VOICE":
+                self.lbl_evo_guard.setText("PAUSED (VOICE)")
+                self.lbl_evo_guard.setStyleSheet("color: #f59e0b; font-size: 9px; font-weight: 600;")
+            elif status == "PAUSED_GAMING":
+                self.lbl_evo_guard.setText("PAUSED (GAME)")
+                self.lbl_evo_guard.setStyleSheet("color: #f59e0b; font-size: 9px; font-weight: 600;")
+            elif status == "PAUSED_BATTERY":
+                self.lbl_evo_guard.setText("PAUSED (BATT)")
+                self.lbl_evo_guard.setStyleSheet("color: #f59e0b; font-size: 9px; font-weight: 600;")
+            elif status == "PAUSED_HIGH_LOAD":
+                self.lbl_evo_guard.setText("PAUSED (LOAD)")
+                self.lbl_evo_guard.setStyleSheet("color: #f59e0b; font-size: 9px; font-weight: 600;")
+            elif status == "PAUSED_CONSTRAINTS":
+                self.lbl_evo_guard.setText("PAUSED (RES)")
+                self.lbl_evo_guard.setStyleSheet("color: #f59e0b; font-size: 9px; font-weight: 600;")
+            elif status == "DEGRADED":
+                self.lbl_evo_guard.setText("DEGRADED")
+                self.lbl_evo_guard.setStyleSheet("color: #ef4444; font-size: 9px; font-weight: 600;")
+            else:
+                self.lbl_evo_guard.setText("LEARNING IDLE")
+                self.lbl_evo_guard.setStyleSheet("color: #10b981; font-size: 9px; font-weight: 600;")
+
+        pending_props = data.get("pending_proposals_count", db_stats.get("pending_proposals_count", 0))
+        if hasattr(self, "lbl_evo_proposals"):
+            self.lbl_evo_proposals.setText(f"Proposals: {pending_props} Pending")
+            if pending_props > 0:
+                self.lbl_evo_proposals.setStyleSheet("color: #f59e0b; font-size: 9px; font-weight: 600;")
+            else:
+                self.lbl_evo_proposals.setStyleSheet("color: #64748b; font-size: 9px; font-weight: 600;")
 
     def _update_typing_badge(self, state: str, details: dict):
         if state in ["listening", "active", "transcribing", "text_ready", "inserting"]:

@@ -811,8 +811,52 @@ class CommandExecutor:
                     content = intent_node.get("content") or intent_node.get("text") or "# Created by JARVIS\n"
                     lang = intent_node.get("language")
                     allow_ow = bool(confirm or intent_node.get("allow_overwrite", False))
+
+                    # Check EvolutionManager active rule
+                    rule = {}
+                    try:
+                        from core.evolution.evolution_manager import evolution_manager
+                        rule = evolution_manager.get_active_rule("create_file")
+                    except Exception:
+                        pass
+
+                    # Apply active rule mitigations (sanitization, parent directory creation, atomic fallback)
+                    if rule.get("ensure_parent_dirs") or rule.get("strategy") == "atomic_write_fallback":
+                        import re
+                        fn = re.sub(r'[<>:"/\\|?*]', '_', fn).strip() or "file.txt"
+                        from core.files.path_resolver import path_resolver
+                        dest_path, _ = path_resolver.resolve_destination(dest)
+                        if dest_path:
+                            dest_path.mkdir(parents=True, exist_ok=True)
+                        if rule.get("auto_overwrite", False):
+                            allow_ow = True
+
                     res_fc = file_creator.create_file(filename=fn, destination=dest, content=content, language=lang, allow_overwrite=allow_ow)
-                    if res_fc.requires_confirmation:
+                    if not res_fc.success and (rule.get("strategy") == "atomic_write_fallback" or not res_fc.requires_confirmation):
+                        # Direct atomic fallback write
+                        try:
+                            from core.files.path_resolver import path_resolver
+                            dest_p, _ = path_resolver.resolve_destination(dest)
+                            if not dest_p:
+                                onedrive_desktop = Path.home() / "OneDrive" / "Attachments" / "Desktop"
+                                dest_p = onedrive_desktop if onedrive_desktop.exists() else Path.home() / "Desktop"
+                            dest_p.mkdir(parents=True, exist_ok=True)
+                            target_file = dest_p / fn
+                            temp_target = dest_p / f".tmp_{int(time.time()*1000)}_{fn}"
+                            with open(temp_target, "w", encoding="utf-8") as tf:
+                                tf.write(content)
+                            if target_file.exists():
+                                target_file.unlink()
+                            temp_target.rename(target_file)
+                            success = True
+                            message = f"Created file '{fn}' at {target_file}."
+                            self.last_created_file = str(target_file)
+                            outcome = CommandOutcome.SUCCESS
+                        except Exception as af_err:
+                            success = res_fc.success
+                            message = res_fc.message or str(af_err)
+                            outcome = CommandOutcome.EXECUTION_FAILED
+                    elif res_fc.requires_confirmation:
                         return {
                             "success": False,
                             "outcome": CommandOutcome.PERMISSION_DENIED.value,
@@ -821,11 +865,12 @@ class CommandExecutor:
                             "pending_confirmation": True,
                             "pending_intent": intent_node
                         }
-                    success = res_fc.success
-                    message = res_fc.message
-                    if success and getattr(res_fc, "file_path", None):
-                        self.last_created_file = res_fc.file_path
-                    outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
+                    else:
+                        success = res_fc.success
+                        message = res_fc.message
+                        if success and getattr(res_fc, "file_path", None):
+                            self.last_created_file = res_fc.file_path
+                        outcome = CommandOutcome.SUCCESS if success else CommandOutcome.EXECUTION_FAILED
 
             elif intent in ["files.search", "file_management.search", "file_search"]:
                 from core.files.file_memory import file_memory_manager
@@ -964,12 +1009,56 @@ class CommandExecutor:
                     outcome = CommandOutcome.SUCCESS
 
             elif intent == "close_app":
-                if not target:
+                rule = {}
+                try:
+                    from core.evolution.evolution_manager import evolution_manager
+                    rule = evolution_manager.get_active_rule("close_application")
+                except Exception:
+                    pass
+
+                clean_target = (target or "").strip().lower()
+                # If target is a contextual pronoun ("it", "this", "file", "battery", "window", "active")
+                if clean_target in ["it", "this", "file", "battery", "window", "active"]:
+                    from modules.system import window_control
+                    try:
+                        closed_win = window_control.close_active_window()
+                        if closed_win:
+                            success = True
+                            outcome = CommandOutcome.SUCCESS
+                            message = "Active window closed, Sir."
+                        else:
+                            success = False
+                            outcome = CommandOutcome.EXECUTION_FAILED
+                            message = "Could not close active window, Sir."
+                    except Exception:
+                        success = False
+                        outcome = CommandOutcome.EXECUTION_FAILED
+                        message = "Could not close active window, Sir."
+                elif not target:
                     success = False
                     outcome = CommandOutcome.MISSING_ARGUMENT
                     message = "Which application should I close, Sir?"
                 else:
                     success = app_control.close_app(target)
+                    if not success:
+                        # Fallback: fuzzy match process name stripping .exe or searching window titles
+                        target_clean = target.lower().replace(".exe", "").strip()
+                        import psutil
+                        for proc in psutil.process_iter(['name', 'pid']):
+                            try:
+                                pname = (proc.info.get('name') or '').lower()
+                                if target_clean in pname or pname.startswith(target_clean):
+                                    proc.terminate()
+                                    try:
+                                        proc.wait(timeout=rule.get("grace_period_s", 2.0))
+                                    except psutil.TimeoutExpired:
+                                        if rule.get("force_kill_fallback", True):
+                                            proc.kill()
+                                    success = True
+                                    break
+                            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                pass
+
                     if success:
                         outcome = CommandOutcome.SUCCESS
                         message = f"{target.title()} is closed, Sir."

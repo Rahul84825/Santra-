@@ -18,7 +18,6 @@ logger = logging.getLogger("Santra.Evolution.ResourceGuard")
 GAME_PROCESS_NAMES: Set[str] = {
     "valorant-win64-shipping.exe",
     "valorant.exe",
-    "riotclientservices.exe",
     "cs2.exe",
     "csgo.exe",
     "gta5.exe",

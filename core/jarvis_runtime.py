@@ -109,6 +109,7 @@ class JarvisRuntime:
         self.on_gesture_cb: Optional[Callable] = None
         self.panel_visibility_cb: Optional[Callable[[str], None]] = None
         self.on_ai_mode_changed_cb: Optional[Callable[[bool], None]] = None
+        self.on_evolution_update_cb: Optional[Callable[[Dict[str, Any]], None]] = None
         self.ai_mode: bool = False
 
         # Core Engines
@@ -241,7 +242,10 @@ class JarvisRuntime:
 
         if evolution_scheduler:
             try:
+                evolution_scheduler.on_maintenance_complete = lambda rep: self._trigger_cb(self.on_evolution_update_cb, rep)
                 evolution_scheduler.start()
+                initial_rep = evolution_scheduler.run_maintenance_now()
+                self._trigger_cb(self.on_evolution_update_cb, initial_rep)
             except Exception as se:
                 logger.warning(f"Could not start evolution scheduler: {se}")
 
@@ -353,7 +357,8 @@ class JarvisRuntime:
         on_audio_amplitude=None,
         on_camera_state=None,
         on_gesture=None,
-        on_ai_mode_changed=None
+        on_ai_mode_changed=None,
+        on_evolution_update=None
     ):
         if on_status_change: self.on_status_change_cb = on_status_change
         if on_speech_text: self.on_speech_text_cb = on_speech_text
@@ -366,6 +371,7 @@ class JarvisRuntime:
         if on_camera_state: self.on_camera_state_cb = on_camera_state
         if on_gesture: self.on_gesture_cb = on_gesture
         if on_ai_mode_changed: self.on_ai_mode_changed_cb = on_ai_mode_changed
+        if on_evolution_update: self.on_evolution_update_cb = on_evolution_update
 
     def _on_panel_visibility(self, action: str):
         if self.panel_visibility_cb:
@@ -1335,6 +1341,25 @@ class JarvisRuntime:
             self._update_status("STANDBY", uid)
             self._update_speech_text(summary)
             return {"success": proc_res.get("success", False), "action": f"learned_proc_{learned_proc['name']}", "message": summary}
+
+        # Case 1D: Stage 4 Verified ALEE Skills (< 1ms Fast Trigger Matching)
+        try:
+            from core.evolution.skill_developer import skill_developer
+            matched_skill = skill_developer.match_trigger(text)
+            if matched_skill:
+                logger.info(f"[UTTERANCE {uid}][SKILL_MATCH] Matched verified skill '{matched_skill['name']}'")
+                skill_res = skill_developer.execute_skill(matched_skill, runtime=self, speak=speak)
+                summary = skill_res.get("message", "Skill executed successfully.")
+                if skill_res.get("success"):
+                    self.response_manager.success(summary, spoken_text=summary, speak=speak)
+                else:
+                    self.response_manager.failure(summary, spoken_text=summary, speak=speak)
+                self._notify_pipeline_stage(raw_full_text, normalized_text, f"skill:{matched_skill['name']}", "SkillDeveloper", summary, "Speaking")
+                self._update_status("STANDBY", uid)
+                self._update_speech_text(summary)
+                return {"success": skill_res.get("success", False), "action": f"skill_{matched_skill['name']}", "message": summary}
+        except Exception as se:
+            logger.debug(f"[EVOLUTION] Skill trigger match notice: {se}")
 
         # Case 2: Layer 3 - Complex Reasoning / Agentic Multi-Step Task / Universal Research
         if req.layer == 3 or req.mode == MODE_REASONING:

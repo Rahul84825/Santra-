@@ -12,7 +12,7 @@ import time
 import logging
 import datetime
 import threading
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 from core.evolution.storage import EvolutionStorage, evolution_storage
 from core.evolution.resource_guard import ResourceGuard, resource_guard
 from core.evolution.collector import ExperienceCollector, evolution_collector
@@ -48,6 +48,7 @@ class EvolutionScheduler:
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._last_run_time: float = 0.0
+        self.on_maintenance_complete: Optional[Callable[[Dict[str, Any]], None]] = None
 
     def start(self):
         """Starts the scheduler thread if not already running."""
@@ -127,10 +128,58 @@ class EvolutionScheduler:
         # 4. Fetch active aliases
         active_aliases = self.storage.get_active_aliases(min_confidence=3)
 
+        # 4B. Run Actionable Weakness Detection & Self-Benchmarks
+        weakness_analysis = {}
+        benchmarks = {}
+        try:
+            from core.evolution.evaluator import PerformanceEvaluator
+            evaluator = PerformanceEvaluator(
+                storage=self.storage,
+                collector=self.collector
+            )
+            weakness_analysis = evaluator.analyze_weaknesses()
+            benchmarks = evaluator.run_regression_benchmarks()
+        except Exception as ee:
+            logger.warning(f"[SCHEDULER] Evaluator execution error: {ee}")
+
+        # 4C. Generate / Refresh Evolution Proposals (Stage 5)
+        proposals_summary = {}
+        try:
+            from core.evolution.evolution_manager import EvolutionManager
+            evo_mgr = EvolutionManager(
+                storage=self.storage,
+                evaluator=evaluator if 'evaluator' in locals() else None,
+                collector=self.collector
+            )
+            pending_props = evo_mgr.generate_proposals()
+            proposals_summary = {
+                "pending_count": len(pending_props),
+                "proposals": [
+                    {
+                        "id": p["proposal_id"],
+                        "type": p["proposal_type"],
+                        "target": p["target_key"],
+                        "reason": p["reason"]
+                    } for p in pending_props[:5]
+                ]
+            }
+            # Refresh stats to reflect newly drafted proposals
+            db_stats = self.storage.get_stats()
+        except Exception as pe:
+            logger.warning(f"[SCHEDULER] Proposal generation error: {pe}")
+
         # 5. Determine system health status
         status = "HEALTHY"
-        if sys_snap.get("game_detected"):
+        if sys_snap.get("voice_active"):
+            status = "PAUSED_VOICE"
+        elif sys_snap.get("game_detected"):
             status = "PAUSED_GAMING"
+        elif not sys_snap.get("battery_plugged", True) and sys_snap.get("battery_percent", 100) < 50:
+            status = "PAUSED_BATTERY"
+        elif sys_snap.get("cpu_percent", 0) > self.guard.max_cpu_percent or sys_snap.get("memory_percent", 0) > self.guard.max_ram_percent:
+            status = "PAUSED_HIGH_LOAD"
+        elif not sys_snap.get("can_run", True):
+            status = "PAUSED_CONSTRAINTS"
         elif db_stats.get("total_experiences", 0) > 10 and db_stats.get("success_rate", 1.0) < 0.6:
             status = "DEGRADED"
 
@@ -141,6 +190,11 @@ class EvolutionScheduler:
             "system_resources": sys_snap,
             "active_aliases_count": len(active_aliases),
             "active_aliases": active_aliases,
+            "weakness_analysis": weakness_analysis,
+            "benchmarks": benchmarks,
+            "pending_proposals_count": db_stats.get("pending_proposals_count", 0),
+            "approved_improvements_count": db_stats.get("approved_proposals_count", 0),
+            "proposals_summary": proposals_summary,
             "last_maintenance_unix": time.time()
         }
 
@@ -155,6 +209,13 @@ class EvolutionScheduler:
             logger.info(f"[SCHEDULER] Health report updated at: {self.report_path}")
         except Exception as e:
             logger.warning(f"[SCHEDULER] Failed to write health report: {e}")
+
+        # Trigger maintenance complete observer
+        if self.on_maintenance_complete:
+            try:
+                self.on_maintenance_complete(report)
+            except Exception as ce:
+                logger.debug(f"[SCHEDULER] Maintenance complete callback error: {ce}")
 
         return report
 
