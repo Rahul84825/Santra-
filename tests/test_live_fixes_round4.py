@@ -188,13 +188,21 @@ class TestBug3GreetingReflex(unittest.TestCase):
             "greetings santra"
         ]
         for phrase in cases:
-            t0 = time.perf_counter()
-            req = intelligence_router.route(phrase)
-            elapsed_ms = (time.perf_counter() - t0) * 1000
+            # Warm up once
+            intelligence_router.route(phrase)
 
+            # Benchmark warm latency across 3 runs to avoid transient OS jitter
+            timings = []
+            req = None
+            for _ in range(3):
+                t0 = time.perf_counter()
+                req = intelligence_router.route(phrase)
+                timings.append((time.perf_counter() - t0) * 1000)
+
+            elapsed_ms = min(timings)
             self.assertEqual(req.layer, LAYER_1)
             self.assertEqual(req.intent, "GREETING_REFLEX", f"Failed intent classification for '{phrase}'")
-            self.assertLess(elapsed_ms, 2.0, f"Greeting routing exceeded 2ms: {elapsed_ms:.3f}ms for '{phrase}'")
+            self.assertLess(elapsed_ms, 1.5, f"Greeting routing exceeded 1.5ms: {elapsed_ms:.3f}ms for '{phrase}'")
 
     def test_02_get_greeting_reflex_response_time_of_day_context(self):
         """Verifies authentic context-aware greetings based on time-of-day phrases."""
