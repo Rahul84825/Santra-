@@ -23,6 +23,23 @@ from core.evolution.collector import ExperienceCollector, evolution_collector
 
 logger = logging.getLogger("Santra.Evolution.Manager")
 
+# Categorized Proposal Risk Classes & Security Enforcement Levels
+PROPOSAL_RISK_MAP = {
+    "ALIAS_PROMOTION": "PHONETIC_ALIAS",     # Low Risk
+    "SKILL_PROMOTION": "SKILL_PROMOTION",     # Medium Risk
+    "INTENT_RULE": "INTENT_RULE",             # High Risk
+    "TIMEOUT_TUNING": "TIMEOUT_TUNING",       # Medium Risk
+    "RUNTIME_CONFIG": "RUNTIME_CONFIG",       # High Risk
+}
+
+RISK_LEVELS = {
+    "PHONETIC_ALIAS": "LOW",
+    "SKILL_PROMOTION": "MEDIUM",
+    "INTENT_RULE": "HIGH",
+    "TIMEOUT_TUNING": "MEDIUM",
+    "RUNTIME_CONFIG": "HIGH",
+}
+
 
 class EvolutionManager:
     """Orchestrates controlled autonomous evolution with versioned rollback and approval gates."""
@@ -255,21 +272,30 @@ class EvolutionManager:
             logger.info(f"[EVOLUTION_MGR] Generated {len(created_proposals)} new proposals ({len(existing_pending)} total pending).")
             return self.storage.get_pending_proposals()
 
+    @classmethod
+    def get_proposal_risk(cls, prop_type: str) -> Tuple[str, str]:
+        """Returns (risk_class, risk_level) for a given proposal type."""
+        category = PROPOSAL_RISK_MAP.get(prop_type, "RUNTIME_CONFIG")
+        level = RISK_LEVELS.get(category, "HIGH")
+        return category, level
+
     # ==========================================
     # 2. APPROVAL GATE & REGRESSION CHECK
     # ==========================================
     def approve_proposal(
         self,
         proposal_id: str,
-        simulated_regression_score: Optional[float] = None
+        simulated_regression_score: Optional[float] = None,
+        confirmed_by_user: bool = False
     ) -> Tuple[bool, str]:
         """
         Enforces Level 3 (L3) Controlled Autonomy:
-        1. Captures pre-state and baseline benchmark score.
-        2. Applies proposed change.
-        3. Measures post-change benchmark score.
-        4. Triggers automatic rollback if score degrades.
-        5. Writes versioned snapshot upon success.
+        1. Verifies explicit human-in-the-loop confirmation for Medium/High risk classes.
+        2. Captures pre-state and baseline benchmark score.
+        3. Applies proposed change.
+        4. Measures post-change benchmark score.
+        5. Triggers automatic rollback if score degrades.
+        6. Writes versioned snapshot upon success.
         """
         with self._lock:
             proposal = self.storage.get_proposal(proposal_id)
@@ -278,11 +304,16 @@ class EvolutionManager:
             if proposal.get("status") != "PENDING":
                 return False, f"Proposal '{proposal_id}' is not in PENDING status ({proposal.get('status')})."
 
-            prop_type = proposal.get("proposal_type")
+            prop_type = proposal.get("proposal_type", "")
             target_key = proposal.get("target_key")
             proposed_val = proposal.get("proposed_value") or {}
 
-            logger.info(f"[EVOLUTION_MGR] Evaluating proposal '{proposal_id}' ({prop_type})...")
+            # Strict Human-in-the-Loop Risk Gate
+            risk_class, risk_level = self.get_proposal_risk(prop_type)
+            if risk_level in ("MEDIUM", "HIGH") and not confirmed_by_user:
+                return False, f"Proposal '{proposal_id}' has risk level {risk_level} ({risk_class}). Explicit user confirmation is required."
+
+            logger.info(f"[EVOLUTION_MGR] Evaluating proposal '{proposal_id}' ({prop_type}, Risk: {risk_level})...")
 
             # 1. Capture Previous State
             prev_state: Dict[str, Any] = {}
@@ -432,17 +463,31 @@ class EvolutionManager:
             )
 
     # ==========================================
-    # 4. BATCH APPROVAL
+    # 4. BATCH APPROVAL WITH HUMAN-IN-THE-LOOP GATE
     # ==========================================
-    def approve_all_pending(self) -> Dict[str, Any]:
-        """Iterates through and safely approves all pending proposals."""
+    def approve_all_pending(self, confirmed_by_user: bool = False) -> Dict[str, Any]:
+        """
+        Iterates through and safely approves pending proposals.
+        If confirmed_by_user is False, only LOW-risk proposals (PHONETIC_ALIAS) are approved;
+        MEDIUM and HIGH risk proposals are deferred until explicit human approval.
+        """
         pending = self.storage.get_pending_proposals()
         approved = []
         failed = []
 
         for p in pending:
             p_id = p["proposal_id"]
-            ok, msg = self.approve_proposal(p_id)
+            p_type = p.get("proposal_type", "")
+            risk_class, risk_level = self.get_proposal_risk(p_type)
+
+            if risk_level in ("MEDIUM", "HIGH") and not confirmed_by_user:
+                failed.append({
+                    "proposal_id": p_id,
+                    "error": f"Requires explicit user confirmation (Risk: {risk_level}, Class: {risk_class})"
+                })
+                continue
+
+            ok, msg = self.approve_proposal(p_id, confirmed_by_user=confirmed_by_user)
             if ok:
                 approved.append({"proposal_id": p_id, "message": msg})
             else:

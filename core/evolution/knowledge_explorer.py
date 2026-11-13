@@ -84,6 +84,7 @@ class KnowledgeExplorer:
 
     def __init__(self, storage: Optional[EvolutionStorage] = None):
         self.storage = storage or evolution_storage
+        self._file_hashes: Dict[str, str] = {}
 
     # ==========================================
     # SECURITY & PROMPT-INJECTION FILTERING
@@ -128,6 +129,20 @@ class KnowledgeExplorer:
         if not raw_text or not raw_text.strip():
             return {"success": False, "error": "Empty file content", "chunks_ingested": 0}
 
+        file_norm = os.path.abspath(file_path).replace("\\", "/")
+        current_file_hash = compute_sha256(raw_text)
+        if self._file_hashes.get(file_norm) == current_file_hash:
+            logger.debug(f"[KNOWLEDGE_INGEST] File '{file_path}' hash unchanged ({current_file_hash[:8]}). Skipping re-indexing.")
+            return {
+                "success": True,
+                "file_path": file_norm,
+                "verification_status": "CACHED_UNMODIFIED",
+                "total_chunks": 0,
+                "chunks_ingested": 0,
+                "chunks_skipped": 0,
+                "skipped_unchanged": True
+            }
+
         # Check prompt injection
         sec_check = self.sanitize_external_content(raw_text)
         status = "VERIFIED" if sec_check["safe"] else "REJECTED"
@@ -136,7 +151,6 @@ class KnowledgeExplorer:
         ingested = 0
         skipped = 0
         now = time.time()
-        file_norm = os.path.abspath(file_path).replace("\\", "/")
 
         for idx, chunk in enumerate(chunks):
             chunk_hash = compute_sha256(chunk)
@@ -168,6 +182,9 @@ class KnowledgeExplorer:
                 ingested += 1
             except Exception as e:
                 logger.warning(f"[KNOWLEDGE_INGEST] Error storing chunk {idx}: {e}")
+
+        if status == "VERIFIED":
+            self._file_hashes[file_norm] = current_file_hash
 
         logger.info(f"[KNOWLEDGE_INGEST] Ingested '{file_path}': {ingested} chunks stored ({status}).")
         return {

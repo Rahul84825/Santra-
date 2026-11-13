@@ -97,6 +97,52 @@ class AgentBrain:
             "description": "Lists all configured Model Context Protocol (MCP) servers on this machine.",
             "func": lambda: mcp_bridge.get_configured_servers()
         }
+
+        # Screen Perception & Grounding
+        from modules.system import screen_perception
+        tools_dict["capture_screen_context"] = {
+            "description": "Captures the active window frame and extracts readable UI text elements without GPU VRAM.",
+            "func": lambda region="active_window": screen_perception.capture_screen_context(region)
+        }
+        tools_dict["find_active_input_box"] = {
+            "description": "Inspects the foreground window's UI Automation tree to ground focused or primary editable controls.",
+            "func": lambda: screen_perception.find_active_input_box()
+        }
+
+        # GUI Automation & Safe Typing
+        from modules.system import gui_interactor
+        tools_dict["type_into_input_box"] = {
+            "description": "Types text into the active input box using clipboard injection with draft-and-confirm safety.",
+            "func": lambda text, auto_locate=True, submit=False: gui_interactor.type_into_input_box(text, auto_locate, submit)
+        }
+
+        # Filesystem CRUD
+        from modules.system import filesystem_crud
+        tools_dict["create_folder"] = {
+            "description": "Recursively creates a directory safely (e.g. Desktop, Documents, or workspace).",
+            "func": lambda path: filesystem_crud.create_folder(path)
+        }
+        tools_dict["create_file"] = {
+            "description": "Creates a text file with parent directory auto-creation and UTF-8 encoding.",
+            "func": lambda path, content="", allow_overwrite=True: filesystem_crud.create_file(path, content, allow_overwrite)
+        }
+        tools_dict["read_file"] = {
+            "description": "Reads text from a file safely, preventing runaway reads of massive files.",
+            "func": lambda path, max_lines=200: filesystem_crud.read_file(path, max_lines=max_lines)
+        }
+        tools_dict["list_directory"] = {
+            "description": "Lists files and directories with sizes, counts, and last modified timestamps.",
+            "func": lambda path=None, pattern="*": filesystem_crud.list_directory(path, pattern=pattern)
+        }
+        tools_dict["modify_file"] = {
+            "description": "Updates file contents with automatic .bak backup creation before appending or overwriting.",
+            "func": lambda path, content, mode="append": filesystem_crud.modify_file(path, content, mode=mode)
+        }
+        tools_dict["trash_item"] = {
+            "description": "Safely moves files or directories to the Windows Recycle Bin using send2trash.",
+            "func": lambda path: filesystem_crud.trash_item(path)
+        }
+
         return tools_dict
 
     def _build_system_prompt(self, user_query: str, include_tools: bool = True) -> str:
@@ -143,17 +189,19 @@ class AgentBrain:
   * Include a clear worked example or code sample.
   * Explicitly analyze time complexity (e.g. O(log n)) and space complexity (including iterative vs recursive stack differences).
   * Highlight edge cases or common pitfalls.
-- Maintain a respectful British service register ("Sir").
+- Maintain a respectful, calm, and articulate advisor tone ("Sir").
 - Do not fabricate compilation or execution results."""
         else:
-            rules = """CONVERSATIONAL RULES:
-- BREVITY: Maximum 2 sentences. The median answer is under twelve words.
-- SPOKEN PROSE: Write natural prose. Never use markdown, bullet points, headers, or raw URLs.
+            rules = """CONVERSATIONAL & PERSONA RULES:
+- PERSONA: Articulate, calm, highly intelligent, grounded, and polite. You are a trusted, top-tier executive technical advisor. Avoid robotic subservience.
+- BREVITY: Concise spoken prose. Maximum 2 sentences for routine conversational answers.
 - "SIR" IS POSITIONAL:
   * Routine answer: "The render is complete, sir."
   * Urgent alert: "Sir, battery is at eleven percent."
-  * Correction: "Actually, sir, the figure is lower."
-- REPORTING: State facts directly. No filler (um, well, let me check). No apologies (never say sorry)."""
+  * Confirmation request: "I have drafted the text, sir. Shall I send it?"
+- CONFIRMATION PROTOCOL:
+  Always proactively ask for user confirmation before executing actions with external side effects (e.g. sending a message, deleting or trashing files, overwriting code, or making irreversible changes).
+- REPORTING: State facts directly. No filler (um, well, let me check). Never say sorry; provide constructive solutions."""
 
         tools_section = ""
         if include_tools:
@@ -161,16 +209,21 @@ class AgentBrain:
 {tools_block}
 
 Format Guidelines:
-When a tool is needed, output:
-Thought: <plan>
+When reasoning through a complex request or before calling tools, formulate a concise thought block:
+<thought>
+Intent: <user intent>
+UI Grounding & Controls: <targeted window/controls if applicable>
+Safety & Permissions: <side-effects check, confirmation required or safe to execute>
+Strategy: <chosen tool or action>
+</thought>
 Action: <tool_name>
 Action Input: {{"param1": "value1"}}
 
 When you have the final answer, output:
 Final Answer: <spoken response or explanation for the user>
 """
-        prompt = f"""You are SANTRA, an autonomous voice AI desktop assistant.
-You are speaking to one person in a British service register ("Sir").
+        prompt = f"""You are SANTRA, an articulate, autonomous voice AI desktop assistant and systems advisor on Windows 11.
+You are speaking to one person in a polite service register ("Sir").
 NVIDIA Nemotron is merely an external cognition provider powering your thought process; you are SANTRA with real local system access and authority on Windows 11. Never disclaim access to local applications or files.
 
 {rules}

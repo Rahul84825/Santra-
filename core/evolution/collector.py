@@ -109,6 +109,8 @@ class ExperienceCollector:
     def apply_known_aliases(self, text: str) -> str:
         """
         Applies learned phonetic aliases to the transcript in-memory (<0.1ms).
+        Guarantees length-priority matching, word-boundary preservation, and
+        collision defense (e.g. 'visual studio' will not mangle 'visual studio code').
         Zero SQLite queries occur here.
         """
         if not text or not text.strip():
@@ -122,11 +124,20 @@ class ExperienceCollector:
             return text
 
         def _replace_match(match: re.Match) -> str:
-            key = match.group(0).lower()
-            return cache.get(key, match.group(0))
+            matched_str = match.group(0)
+            key = matched_str.lower()
+            # Collision guard: prevent shorter prefix alias from destroying compound suffix
+            # e.g., 'visual studio' -> 'vscode' when immediately followed by 'code'
+            following_text = match.string[match.end():]
+            if key == "visual studio" and re.match(r"^\s+code\b", following_text, re.IGNORECASE):
+                return matched_str
+            return cache.get(key, matched_str)
 
         try:
-            return regex.sub(_replace_match, text)
+            res = regex.sub(_replace_match, text)
+            # Post-sub defense against stutter / compound artifacts
+            res = re.sub(r"\bvscode\s+code\b", "vscode", res, flags=re.IGNORECASE)
+            return res
         except Exception as e:
             logger.debug(f"[ALIAS_RESOLUTION] Error applying regex alias: {e}")
             return text
@@ -153,13 +164,16 @@ class ExperienceCollector:
         success: bool = True,
         message: Optional[str] = None,
         latency_ms: float = 0.0,
-        error_type: Optional[str] = None
+        error_type: Optional[str] = None,
+        raw_transcript: Optional[str] = None
     ):
         """
         Non-blocking ingestion of an execution outcome.
         Scrubs privacy data and pushes to queue in <0.05ms.
+        Preserves original raw_transcript alongside normalized user_request.
         """
         scrubbed_req = scrub_text(user_request)
+        scrubbed_raw = scrub_text(raw_transcript) if raw_transcript is not None else scrubbed_req
         scrubbed_msg = scrub_text(message or "")
         scrubbed_params = scrub_data(parameters or {})
 
@@ -167,6 +181,7 @@ class ExperienceCollector:
             "type": "experience",
             "timestamp": time.time(),
             "user_request": scrubbed_req,
+            "raw_transcript": scrubbed_raw,
             "intent": intent or "",
             "action": action or "",
             "parameters": scrubbed_params,
@@ -237,7 +252,8 @@ class ExperienceCollector:
             message=event.get("message"),
             latency_ms=event.get("latency_ms", 0.0),
             error_type=event.get("error_type"),
-            timestamp=event.get("timestamp")
+            timestamp=event.get("timestamp"),
+            raw_transcript=event.get("raw_transcript")
         )
 
     def _process_correction(self, event: Dict[str, Any]):

@@ -24,7 +24,7 @@ Whisper Model    : READY ({getattr(config, "whisper_model_size", "small")} on {g
 Command Engine   : READY (Intent & Multi-Command Parser)
 Executor         : READY (Platform: {runtime.executor.history_tracker and "Active"})
 TTS Engine       : READY (Provider: {runtime.tts_manager.provider.get_name()})
-============================================================
+================================================== deployment successful ==========
 SANTRA ONLINE — Standing by for wake word...
 ============================================================
 """
@@ -44,7 +44,7 @@ def run_headless(guard=None):
 
     signal.signal(signal.SIGINT, handle_sigint)
     runtime.start()
-
+ 
     # Keep main thread alive in headless mode
     try:
         while True:

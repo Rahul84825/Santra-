@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger("Santra.Evolution.Storage")
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 5
 
 
 class EvolutionStorage:
@@ -75,117 +75,280 @@ class EvolutionStorage:
 
             if current_ver < 1:
                 logger.info("[MIGRATION] Applying ALEE schema version 1...")
-                # 1. Experiences Table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS experiences (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        timestamp REAL NOT NULL,
-                        user_request TEXT NOT NULL,
-                        intent TEXT,
-                        action TEXT,
-                        parameters_json TEXT,
-                        success INTEGER NOT NULL,
-                        message TEXT,
-                        latency_ms REAL DEFAULT 0.0,
-                        error_type TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                try:
+                    # 1. Experiences Table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS experiences (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp REAL NOT NULL,
+                            user_request TEXT NOT NULL,
+                            intent TEXT,
+                            action TEXT,
+                            parameters_json TEXT,
+                            success INTEGER NOT NULL,
+                            message TEXT,
+                            latency_ms REAL DEFAULT 0.0,
+                            error_type TEXT,
+                            raw_transcript TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_exp_intent ON experiences(intent);")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_exp_success ON experiences(success);")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_exp_timestamp ON experiences(timestamp);")
+
+                    # 2. Phonetic Aliases Table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS phonetic_aliases (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            misheard_phrase TEXT UNIQUE NOT NULL,
+                            intended_phrase TEXT NOT NULL,
+                            confidence_count INTEGER DEFAULT 1,
+                            last_seen REAL NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_alias_misheard ON phonetic_aliases(misheard_phrase);")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_alias_conf ON phonetic_aliases(confidence_count);")
+
+                    # 3. Knowledge Items Table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS knowledge_items (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            key TEXT UNIQUE NOT NULL,
+                            category TEXT NOT NULL,
+                            content TEXT NOT NULL,
+                            metadata_json TEXT,
+                            updated_at REAL NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_know_cat ON knowledge_items(category);")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_know_key ON knowledge_items(key);")
+
+                    # 4. Knowledge FTS5 Virtual Table & Sync Triggers
+                    cursor.execute("""
+                        CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
+                            key,
+                            category,
+                            content,
+                            content=knowledge_items,
+                            content_rowid=id
+                        )
+                    """)
+
+                    cursor.execute("""
+                        CREATE TRIGGER IF NOT EXISTS trg_know_ai AFTER INSERT ON knowledge_items BEGIN
+                            INSERT INTO knowledge_fts(rowid, key, category, content)
+                            VALUES (new.id, new.key, new.category, new.content);
+                        END;
+                    """)
+                    cursor.execute("""
+                        CREATE TRIGGER IF NOT EXISTS trg_know_ad AFTER DELETE ON knowledge_items BEGIN
+                            INSERT INTO knowledge_fts(knowledge_fts, rowid, key, category, content)
+                            VALUES ('delete', old.id, old.key, old.category, old.content);
+                        END;
+                    """)
+                    cursor.execute("""
+                        CREATE TRIGGER IF NOT EXISTS trg_know_au AFTER UPDATE ON knowledge_items BEGIN
+                            INSERT INTO knowledge_fts(knowledge_fts, rowid, key, category, content)
+                            VALUES ('delete', old.id, old.key, old.category, old.content);
+                            INSERT INTO knowledge_fts(rowid, key, category, content)
+                            VALUES (new.id, new.key, new.category, new.content);
+                        END;
+                    """)
+
+                    cursor.execute(
+                        "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                        (1, "Initial ALEE schema: experiences, phonetic_aliases, knowledge_items, knowledge_fts")
                     )
-                """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_exp_intent ON experiences(intent);")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_exp_success ON experiences(success);")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_exp_timestamp ON experiences(timestamp);")
-
-                # 2. Phonetic Aliases Table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS phonetic_aliases (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        misheard_phrase TEXT UNIQUE NOT NULL,
-                        intended_phrase TEXT NOT NULL,
-                        confidence_count INTEGER DEFAULT 1,
-                        last_seen REAL NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_alias_misheard ON phonetic_aliases(misheard_phrase);")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_alias_conf ON phonetic_aliases(confidence_count);")
-
-                # 3. Knowledge Items Table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS knowledge_items (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        key TEXT UNIQUE NOT NULL,
-                        category TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        metadata_json TEXT,
-                        updated_at REAL NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_know_cat ON knowledge_items(category);")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_know_key ON knowledge_items(key);")
-
-                # 4. Knowledge FTS5 Virtual Table & Sync Triggers
-                cursor.execute("""
-                    CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
-                        key,
-                        category,
-                        content,
-                        content=knowledge_items,
-                        content_rowid=id
-                    )
-                """)
-
-                cursor.execute("""
-                    CREATE TRIGGER IF NOT EXISTS trg_know_ai AFTER INSERT ON knowledge_items BEGIN
-                        INSERT INTO knowledge_fts(rowid, key, category, content)
-                        VALUES (new.id, new.key, new.category, new.content);
-                    END;
-                """)
-                cursor.execute("""
-                    CREATE TRIGGER IF NOT EXISTS trg_know_ad AFTER DELETE ON knowledge_items BEGIN
-                        INSERT INTO knowledge_fts(knowledge_fts, rowid, key, category, content)
-                        VALUES ('delete', old.id, old.key, old.category, old.content);
-                    END;
-                """)
-                cursor.execute("""
-                    CREATE TRIGGER IF NOT EXISTS trg_know_au AFTER UPDATE ON knowledge_items BEGIN
-                        INSERT INTO knowledge_fts(knowledge_fts, rowid, key, category, content)
-                        VALUES ('delete', old.id, old.key, old.category, old.content);
-                        INSERT INTO knowledge_fts(rowid, key, category, content)
-                        VALUES (new.id, new.key, new.category, new.content);
-                    END;
-                """)
-
-                cursor.execute(
-                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
-                    (1, "Initial ALEE schema: experiences, phonetic_aliases, knowledge_items, knowledge_fts")
-                )
-                conn.commit()
-                logger.info("[MIGRATION] ALEE schema version 1 applied successfully.")
+                    conn.commit()
+                    logger.info("[MIGRATION] ALEE schema version 1 applied successfully.")
+                except Exception as m1_err:
+                    conn.rollback()
+                    logger.error(f"[MIGRATION] Schema version 1 failed: {m1_err}")
+                    raise
 
             if current_ver < 2:
                 logger.info("[MIGRATION] Applying ALEE schema version 2 (Stage 1.5 domain pre-seeding & auto_apply)...")
-                # Add auto_apply column if not present
-                cursor.execute("PRAGMA table_info(phonetic_aliases)")
-                columns = [col[1] for col in cursor.fetchall()]
-                if "auto_apply" not in columns:
-                    cursor.execute("ALTER TABLE phonetic_aliases ADD COLUMN auto_apply INTEGER DEFAULT 1;")
+                try:
+                    # Add auto_apply column if not present
+                    cursor.execute("PRAGMA table_info(phonetic_aliases)")
+                    columns = [col[1] for col in cursor.fetchall()]
+                    if "auto_apply" not in columns:
+                        cursor.execute("ALTER TABLE phonetic_aliases ADD COLUMN auto_apply INTEGER DEFAULT 1;")
 
-                preseeded_aliases = [
-                    ("ballorant", "valorant", 5, 1),
-                    ("valorent", "valorant", 5, 1),
-                    ("velorant", "valorant", 5, 1),
-                    ("anti gravity", "antigravity", 5, 1),
-                    ("ante gravity", "antigravity", 5, 1),
-                    ("samtra", "santra", 5, 1),
-                    ("sandra", "santra", 5, 1),
-                    ("santa", "santra", 5, 1),
-                    ("nemo tron", "nemotron", 5, 1),
-                    ("vs code", "vscode", 5, 1),
-                    ("visual studio", "vscode", 5, 1),
-                ]
+                    preseeded_aliases = [
+                        ("ballorant", "valorant", 5, 1),
+                        ("valorent", "valorant", 5, 1),
+                        ("velorant", "valorant", 5, 1),
+                        ("anti gravity", "antigravity", 5, 1),
+                        ("ante gravity", "antigravity", 5, 1),
+                        ("samtra", "santra", 5, 1),
+                        ("sandra", "santra", 5, 1),
+                        ("santa", "santra", 5, 1),
+                        ("nemo tron", "nemotron", 5, 1),
+                        ("vs code", "vscode", 5, 1),
+                        ("visual studio code", "vscode", 5, 1),
+                        ("visual studio", "vscode", 5, 1),
+                    ]
+                    now = time.time()
+                    for misheard, intended, conf, auto in preseeded_aliases:
+                        cursor.execute("""
+                            INSERT INTO phonetic_aliases (misheard_phrase, intended_phrase, confidence_count, auto_apply, last_seen)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(misheard_phrase) DO UPDATE SET
+                                intended_phrase=excluded.intended_phrase,
+                                confidence_count=MAX(phonetic_aliases.confidence_count, excluded.confidence_count),
+                                auto_apply=excluded.auto_apply,
+                                last_seen=excluded.last_seen
+                        """, (misheard, intended, conf, auto, now))
+
+                    cursor.execute(
+                        "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                        (2, "Stage 1.5 domain pre-seeding and auto_apply column")
+                    )
+                    conn.commit()
+                    logger.info("[MIGRATION] ALEE schema version 2 applied successfully.")
+                except Exception as m2_err:
+                    conn.rollback()
+                    logger.error(f"[MIGRATION] Schema version 2 failed: {m2_err}")
+                    raise
+
+            if current_ver < 3:
+                logger.info("[MIGRATION] Applying ALEE schema version 3 (Autonomous Skills Registry)...")
+                try:
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS skills (
+                            skill_id TEXT PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            trigger_phrases TEXT NOT NULL,
+                            description TEXT,
+                            steps_json TEXT NOT NULL,
+                            version INTEGER DEFAULT 1,
+                            status TEXT DEFAULT 'SANDBOX',
+                            success_count INTEGER DEFAULT 0,
+                            failure_count INTEGER DEFAULT 0,
+                            created_at REAL NOT NULL,
+                            updated_at REAL NOT NULL
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_skills_status ON skills(status);")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);")
+
+                    cursor.execute(
+                        "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                        (3, "Stage 4 autonomous skills table")
+                    )
+                    conn.commit()
+                    logger.info("[MIGRATION] ALEE schema version 3 applied successfully.")
+                except Exception as m3_err:
+                    conn.rollback()
+                    logger.error(f"[MIGRATION] Schema version 3 failed: {m3_err}")
+                    raise
+
+            if current_ver < 4:
+                logger.info("[MIGRATION] Applying ALEE schema version 4 (Controlled Evolution Proposals & Snapshots)...")
+                try:
+                    # 1. Evolution Proposals Table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS evolution_proposals (
+                            proposal_id TEXT PRIMARY KEY,
+                            proposal_type TEXT NOT NULL,
+                            target_key TEXT NOT NULL,
+                            proposed_value_json TEXT NOT NULL,
+                            reason TEXT NOT NULL,
+                            evidence_count INTEGER DEFAULT 1,
+                            status TEXT DEFAULT 'PENDING',
+                            created_at REAL NOT NULL,
+                            reviewed_at REAL
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_prop_status ON evolution_proposals(status);")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_prop_type ON evolution_proposals(proposal_type);")
+
+                    # 2. Evolution Snapshots (Audit & Rollback Log) Table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS evolution_snapshots (
+                            snapshot_id TEXT PRIMARY KEY,
+                            proposal_id TEXT NOT NULL,
+                            previous_state_json TEXT NOT NULL,
+                            new_state_json TEXT NOT NULL,
+                            benchmark_score_before REAL DEFAULT 100.0,
+                            benchmark_score_after REAL DEFAULT 100.0,
+                            applied_at REAL NOT NULL,
+                            rolled_back_at REAL,
+                            FOREIGN KEY (proposal_id) REFERENCES evolution_proposals(proposal_id)
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snap_proposal ON evolution_snapshots(proposal_id);")
+
+                    cursor.execute(
+                        "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                        (4, "Stage 5 evolution proposals and versioned snapshots tables")
+                    )
+                    conn.commit()
+                    logger.info("[MIGRATION] ALEE schema version 4 applied successfully.")
+                except Exception as m4_err:
+                    conn.rollback()
+                    logger.error(f"[MIGRATION] Schema version 4 failed: {m4_err}")
+                    raise
+
+            if current_ver < 5:
+                logger.info("[MIGRATION] Applying ALEE schema version 5 (Working Memory & Transient Entity Persistence)...")
+                try:
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS working_memory (
+                            key TEXT PRIMARY KEY,
+                            value TEXT,
+                            metadata_json TEXT,
+                            updated_at REAL
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_wm_key ON working_memory(key);")
+                    cursor.execute(
+                        "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                        (5, "Working memory key-value persistent storage")
+                    )
+                    conn.commit()
+                    logger.info("[MIGRATION] ALEE schema version 5 applied successfully.")
+                except Exception as m5_err:
+                    conn.rollback()
+                    logger.error(f"[MIGRATION] Schema version 5 failed: {m5_err}")
+                    raise
+
+            # Idempotent table check for working_memory across all database versions
+            try:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS working_memory (
+                        key TEXT PRIMARY KEY,
+                        value TEXT,
+                        metadata_json TEXT,
+                        updated_at REAL
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_wm_key ON working_memory(key);")
+                conn.commit()
+            except Exception as wm_init_err:
+                logger.debug(f"[MIGRATION] working_memory check notice: {wm_init_err}")
+
+            # Idempotent column check for raw_transcript across all existing database versions
+            try:
+                cursor.execute("PRAGMA table_info(experiences)")
+                exp_cols = [col[1] for col in cursor.fetchall()]
+                if exp_cols and "raw_transcript" not in exp_cols:
+                    cursor.execute("ALTER TABLE experiences ADD COLUMN raw_transcript TEXT;")
+                    conn.commit()
+                    logger.info("[MIGRATION] Added raw_transcript column to experiences table.")
+            except Exception as exp_col_err:
+                logger.debug(f"[MIGRATION] raw_transcript check notice: {exp_col_err}")
+
+            # Idempotent pre-seeded aliases sync
+            try:
                 now = time.time()
-                for misheard, intended, conf, auto in preseeded_aliases:
+                for misheard, intended, conf, auto in [
+                    ("visual studio code", "vscode", 5, 1),
+                ]:
                     cursor.execute("""
                         INSERT INTO phonetic_aliases (misheard_phrase, intended_phrase, confidence_count, auto_apply, last_seen)
                         VALUES (?, ?, ?, ?, ?)
@@ -195,82 +358,9 @@ class EvolutionStorage:
                             auto_apply=excluded.auto_apply,
                             last_seen=excluded.last_seen
                     """, (misheard, intended, conf, auto, now))
-
-                cursor.execute(
-                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
-                    (2, "Stage 1.5 domain pre-seeding and auto_apply column")
-                )
                 conn.commit()
-                logger.info("[MIGRATION] ALEE schema version 2 applied successfully.")
-
-            if current_ver < 3:
-                logger.info("[MIGRATION] Applying ALEE schema version 3 (Autonomous Skills Registry)...")
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS skills (
-                        skill_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        trigger_phrases TEXT NOT NULL,
-                        description TEXT,
-                        steps_json TEXT NOT NULL,
-                        version INTEGER DEFAULT 1,
-                        status TEXT DEFAULT 'SANDBOX',
-                        success_count INTEGER DEFAULT 0,
-                        failure_count INTEGER DEFAULT 0,
-                        created_at REAL NOT NULL,
-                        updated_at REAL NOT NULL
-                    )
-                """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_skills_status ON skills(status);")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);")
-
-                cursor.execute(
-                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
-                    (3, "Stage 4 autonomous skills table")
-                )
-                conn.commit()
-                logger.info("[MIGRATION] ALEE schema version 3 applied successfully.")
-
-            if current_ver < 4:
-                logger.info("[MIGRATION] Applying ALEE schema version 4 (Controlled Evolution Proposals & Snapshots)...")
-                # 1. Evolution Proposals Table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS evolution_proposals (
-                        proposal_id TEXT PRIMARY KEY,
-                        proposal_type TEXT NOT NULL,
-                        target_key TEXT NOT NULL,
-                        proposed_value_json TEXT NOT NULL,
-                        reason TEXT NOT NULL,
-                        evidence_count INTEGER DEFAULT 1,
-                        status TEXT DEFAULT 'PENDING',
-                        created_at REAL NOT NULL,
-                        reviewed_at REAL
-                    )
-                """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_prop_status ON evolution_proposals(status);")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_prop_type ON evolution_proposals(proposal_type);")
-
-                # 2. Evolution Snapshots (Audit & Rollback Log) Table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS evolution_snapshots (
-                        snapshot_id TEXT PRIMARY KEY,
-                        proposal_id TEXT NOT NULL,
-                        previous_state_json TEXT NOT NULL,
-                        new_state_json TEXT NOT NULL,
-                        benchmark_score_before REAL DEFAULT 100.0,
-                        benchmark_score_after REAL DEFAULT 100.0,
-                        applied_at REAL NOT NULL,
-                        rolled_back_at REAL,
-                        FOREIGN KEY (proposal_id) REFERENCES evolution_proposals(proposal_id)
-                    )
-                """)
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_snap_proposal ON evolution_snapshots(proposal_id);")
-
-                cursor.execute(
-                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
-                    (4, "Stage 5 evolution proposals and versioned snapshots tables")
-                )
-                conn.commit()
-                logger.info("[MIGRATION] ALEE schema version 4 applied successfully.")
+            except Exception as alias_seed_err:
+                logger.debug(f"[MIGRATION] alias seed notice: {alias_seed_err}")
 
             cursor.close()
 
@@ -287,19 +377,21 @@ class EvolutionStorage:
         message: Optional[str] = None,
         latency_ms: float = 0.0,
         error_type: Optional[str] = None,
-        timestamp: Optional[float] = None
+        timestamp: Optional[float] = None,
+        raw_transcript: Optional[str] = None
     ) -> int:
-        """Inserts an execution experience record."""
+        """Inserts an execution experience record preserving raw transcript."""
         ts = timestamp or time.time()
         param_str = json.dumps(parameters or {}, default=str)
+        raw_req = raw_transcript if raw_transcript is not None else user_request
         with self._lock:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO experiences (
                     timestamp, user_request, intent, action,
-                    parameters_json, success, message, latency_ms, error_type
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    parameters_json, success, message, latency_ms, error_type, raw_transcript
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 ts,
                 user_request,
@@ -309,7 +401,8 @@ class EvolutionStorage:
                 1 if success else 0,
                 message or "",
                 float(latency_ms),
-                error_type or ("" if success else "EXECUTION_ERROR")
+                error_type or ("" if success else "EXECUTION_ERROR"),
+                raw_req
             ))
             exp_id = cursor.lastrowid
             conn.commit()
@@ -1041,6 +1134,76 @@ class EvolutionStorage:
                 "total_snapshots": total_snaps
             }
 
+    def set_entity_memory(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
+        """Stores or updates a persistent entity memory record in SQLite working_memory table."""
+        if not key:
+            return False
+        now = time.time()
+        meta_json = json.dumps(metadata) if metadata else "{}"
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO working_memory (key, value, metadata_json, updated_at)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(key) DO UPDATE SET
+                        value = excluded.value,
+                        metadata_json = excluded.metadata_json,
+                        updated_at = excluded.updated_at
+                """, (key, str(value), meta_json, now))
+                conn.commit()
+                cursor.close()
+                return True
+        except Exception as e:
+            logger.error(f"[EVOLUTION_STORAGE] Failed to set entity memory '{key}': {e}")
+            return False
+
+    def get_entity_memory(self, key: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a persistent entity memory record from SQLite working_memory table."""
+        if not key:
+            return None
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT key, value, metadata_json, updated_at FROM working_memory WHERE key = ?",
+                    (key,)
+                )
+                row = cursor.fetchone()
+                cursor.close()
+                if row:
+                    meta = {}
+                    if row[2]:
+                        try:
+                            meta = json.loads(row[2])
+                        except Exception:
+                            meta = {}
+                    return {
+                        "key": row[0],
+                        "value": row[1],
+                        "metadata": meta,
+                        "updated_at": row[3]
+                    }
+                return None
+        except Exception as e:
+            logger.debug(f"[EVOLUTION_STORAGE] Failed to get entity memory '{key}': {e}")
+            return None
+
+    def clear_entity_memory(self, key: str) -> bool:
+        """Removes a key from working_memory in SQLite."""
+        if not key:
+            return False
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM working_memory WHERE key = ?", (key,))
+                conn.commit()
+                cursor.close()
+                return True
+        except Exception as e:
+            logger.debug(f"[EVOLUTION_STORAGE] Failed to clear entity memory '{key}': {e}")
+            return False
+
     def close(self):
         """Cleanly closes database connection."""
         with self._lock:
@@ -1054,3 +1217,18 @@ class EvolutionStorage:
 
 # Singleton instance
 evolution_storage = EvolutionStorage()
+
+
+def set_entity_memory(key: str, value: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
+    """Module-level helper to set persistent entity memory."""
+    return evolution_storage.set_entity_memory(key, value, metadata)
+
+
+def get_entity_memory(key: str) -> Optional[Dict[str, Any]]:
+    """Module-level helper to retrieve persistent entity memory."""
+    return evolution_storage.get_entity_memory(key)
+
+
+def clear_entity_memory(key: str) -> bool:
+    """Module-level helper to clear persistent entity memory."""
+    return evolution_storage.clear_entity_memory(key)

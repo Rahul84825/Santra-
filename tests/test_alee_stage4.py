@@ -109,12 +109,17 @@ class TestALEEStage4(unittest.TestCase):
         skill_id = self.storage.upsert_skill(safe_spec)
         self.assertEqual(self.storage.get_skill(skill_id)["status"], "SANDBOX")
 
-        # Dry-run test should pass and promote
+        # Dry-run test should pass and promote to DRY_RUN_PASSED (honest lifecycle)
         passed = self.skill_dev.test_skill_in_sandbox(skill_id)
         self.assertTrue(passed, "Safe skill must pass sandbox testing")
 
         promoted = self.storage.get_skill(skill_id)
-        self.assertEqual(promoted["status"], "VERIFIED")
+        self.assertEqual(promoted["status"], "DRY_RUN_PASSED")
+
+        # Explicit user confirmation gate promotes to VERIFIED
+        ok, msg = self.skill_dev.promote_skill_to_verified(skill_id, confirmed_by_user=True)
+        self.assertTrue(ok)
+        self.assertEqual(self.storage.get_skill(skill_id)["status"], "VERIFIED")
 
         # Must now be active in memory trigger cache
         match = self.skill_dev.match_trigger("open python docs")

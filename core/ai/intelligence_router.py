@@ -163,18 +163,29 @@ class IntelligenceRouter:
             )
 
         # Step 0D: Fast Conversational Small Talk, Greetings & Social Reflexes (Latency < 0.1ms)
-        # Greetings: "Hi Santra", "Hello", "Good morning"
-        greeting_phrases = ["hi", "hello", "hey", "hi santra", "hello santra", "hey santra", "good morning", "good evening", "good afternoon"]
-        if clean in greeting_phrases or clean_no_punct in greeting_phrases or re.match(r"^(?:hi|hello|hey)\s+(?:santra|samtra|suntra|jarvis)$", clean):
+        # Dedicated JARVIS / F.R.I.D.A.Y. Fast-Path Greeting Reflex
+        greeting_rx1 = re.compile(r"^(?:hello|hey|hi|heya|good\s+(?:morning|afternoon|evening)|greetings)\s*(?:santra|sandra|samtra|jarvis|friday)?[\s!.,?]*$", re.IGNORECASE)
+        greeting_rx2 = re.compile(r"^(?:santra|sandra|samtra|jarvis|friday)\s*,\s*(?:hello|hey|hi|heya|good\s+(?:morning|afternoon|evening)|greetings)[\s!.,?]*$", re.IGNORECASE)
+        greeting_rx3 = re.compile(r"^(?:santra|sandra|samtra|jarvis|friday)\s+(?:hello|hey|hi|heya|good\s+(?:morning|afternoon|evening)|greetings)[\s!.,?]*$", re.IGNORECASE)
+
+        is_greeting = bool(
+            greeting_rx1.match(raw_clean) or greeting_rx1.match(clean) or
+            greeting_rx2.match(raw_clean) or greeting_rx2.match(clean) or
+            greeting_rx3.match(raw_clean) or greeting_rx3.match(clean) or
+            clean in ["hi", "hello", "hey", "heya", "greetings", "good morning", "good afternoon", "good evening", "hi santra", "hello santra", "hey santra"] or
+            clean_no_punct in ["hi", "hello", "hey", "heya", "greetings", "good morning", "good afternoon", "good evening", "hi santra", "hello santra", "hey santra"]
+        )
+
+        if is_greeting:
             elapsed_ms = (time.perf_counter() - t0) * 1000
-            logger.info(f"[ROUTER] Fast-path classified as GREETING (Latency={elapsed_ms:.2f}ms)")
+            logger.info(f"[ROUTER] Fast-path classified as GREETING_REFLEX (Latency={elapsed_ms:.2f}ms)")
             return StructuredRequest(
                 raw_text=raw_text,
                 normalized_text=normalized,
                 mode=MODE_FAST_LOCAL,
                 layer=LAYER_1,
-                intent="GREETING",
-                action="greet",
+                intent="GREETING_REFLEX",
+                action="greeting_reflex",
                 target=clean,
                 confidence=1.0,
                 context_required=False,
@@ -220,6 +231,310 @@ class IntelligenceRouter:
                 context_required=False,
                 planning_required=False,
                 entities={"action": "tell_joke"}
+            )
+
+        # Step 0D2: Fast Stealth / Hologram HUD Voice Summoning Fast Paths (Layer 1 Fast Local)
+        show_hud_phrases = [
+            "open your panel", "open panel", "show panel", "show hud", "bring up hud",
+            "display panel", "open hud", "open the panel", "show the panel", "show the hud",
+            "open the hud", "display hud", "display the hud", "santra open your panel", "santra show panel",
+            "show dashboard", "open dashboard", "show santra dashboard", "open santra dashboard"
+        ]
+        if clean in show_hud_phrases or clean_no_punct in show_hud_phrases or re.search(r"^(?:open|show|display|bring\s+up)\s+(?:your\s+|the\s+)?(?:panel|hud|dashboard)\b", clean):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as SHOW_PANEL (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="SHOW_PANEL",
+                action="show_panel",
+                target="hud_panel",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        hide_hud_phrases = [
+            "hide your panel", "hide panel", "close panel", "minimize hud", "go to stealth",
+            "hide hud", "hide the panel", "hide the hud", "close the panel", "close hud",
+            "close the hud", "stealth mode", "enter stealth mode", "santra hide panel",
+            "dismiss panel", "dismiss the panel", "dismiss hud", "dismiss the hud",
+            "minimize dashboard", "hide dashboard", "minimize santra dashboard", "hide santra dashboard"
+        ]
+        if clean in hide_hud_phrases or clean_no_punct in hide_hud_phrases or re.search(r"^(?:hide|close|minimize|dismiss)\s+(?:your\s+|the\s+)?(?:panel|hud|dashboard)\b", clean) or "go to stealth" in clean:
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as HIDE_PANEL (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="HIDE_PANEL",
+                action="hide_panel",
+                target="hud_panel",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        # Step 0E: GUI Confirmation & Cancellation Fast Paths (Layer 1 Fast Local)
+        confirm_phrases = [
+            "yes send it", "yes, send it", "go ahead", "press enter", "confirm send",
+            "send it", "submit it", "yes send", "confirm and send", "yes please send it",
+            "yes", "send", "confirm", "submit", "please send it", "do it"
+        ]
+        if clean in confirm_phrases or clean_no_punct in confirm_phrases or clean in ["yes", "send", "confirm", "submit"]:
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as CONFIRM_ACTION (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="CONFIRM_ACTION",
+                action="confirm_pending_gui_action",
+                target="pending_gui_action",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        cancel_gui_phrases = [
+            "cancel that", "don't send", "dont send", "don t send", "do not send", "cancel send",
+            "cancel the send", "discard draft", "do not submit", "don't submit", "dont submit", "don t submit",
+            "cancel", "no", "discard", "stop"
+        ]
+        if clean in cancel_gui_phrases or clean_no_punct in cancel_gui_phrases or re.search(r"^(?:don'?t|don\s+t|do\s+not)\s+send\b", clean) or clean in ["cancel", "no", "discard"]:
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as CANCEL_ACTION (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="CANCEL_ACTION",
+                action="cancel_pending_gui_action",
+                target="pending_gui_action",
+                confidence=1.0,
+                context_required=False,
+                planning_required=False
+            )
+
+        # Step 0F: Screen Perception & UI Grounding Fast Paths (Layer 1 Fast Local)
+        screen_patterns = [
+            r"\b(?:analyze|read|inspect|what(?:'s|s|\s+is)|bots?)\s+(?:on\s+)?(?:the\s+|my\s+)?screen\b",
+            r"\b(?:analyze|read|inspect|describe|summarize)?\s*(?:what(?:'s|s|\s+is)\s+)?(?:on\s+)?(?:the\s+|my\s+)?screen\b",
+            r"\b(?:screen\s+analysis|read\s+this\s+error|read\s+active\s+window)\b",
+            r"^(?:analyze|inspect|read|describe|summarize)\s+(?:my\s+|the\s+|this\s+|current\s+)?(?:screen|active\s+window|display)\b",
+            r"^(?:read|check|inspect)\s+(?:this\s+|the\s+)?error\b"
+        ]
+        if any(re.search(pat, clean, re.IGNORECASE) or re.search(pat, raw_text, re.IGNORECASE) for pat in screen_patterns):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as SCREEN_ANALYSIS (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="SCREEN_ANALYSIS",
+                action="capture_screen_context",
+                target="active_window",
+                confidence=0.98,
+                context_required=False,
+                planning_required=False
+            )
+
+        # Step 0G: GUI Typing & Input Box Grounding Fast Paths (Layer 1 Fast Local)
+        type_match = re.search(r"^(?:type|enter|input|draft)(?:\s+(?:this|a\s+message))?(?:\s+(?:in|into)\s+(?:the\s+)?(?:input\s+box|input\s+field|text\s+box|box))?[:\s]+(.+)$", clean)
+        if type_match and not clean.startswith("type of") and not clean.startswith("enter full") and not clean.startswith("enter fullscreen"):
+            typed_text = type_match.group(1).strip().strip("\"'")
+            # Strip trailing target location phrases (e.g. "into the input box", "in the text box")
+            typed_text = re.sub(r"\s+(?:in|into)\s+(?:the\s+)?(?:input\s+box|input\s+field|text\s+box|box)$", "", typed_text, flags=re.IGNORECASE).strip().strip("\"'")
+            if typed_text:
+                elapsed_ms = (time.perf_counter() - t0) * 1000
+                logger.info(f"[ROUTER] Fast-path classified as GUI_TYPE_TEXT (Latency={elapsed_ms:.2f}ms)")
+                return StructuredRequest(
+                    raw_text=raw_text,
+                    normalized_text=normalized,
+                    mode=MODE_FAST_LOCAL,
+                    layer=LAYER_1,
+                    intent="GUI_TYPE_TEXT",
+                    action="type_into_input_box",
+                    target=typed_text,
+                    confidence=0.98,
+                    context_required=False,
+                    planning_required=False,
+                    entities={"text": typed_text, "auto_locate": True, "submit": False}
+                )
+
+        # Step 0H: Filesystem CRUD Fast Paths (Layer 1 Fast Local)
+        # Create folder with destination target separation (Desktop, Documents, Downloads, etc.)
+        create_dir_match = re.search(
+            r"^(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:called|named)?\s*[\"']?([^,\"']+)[\"']?(?:\s*,\s*|\s+)?(?:(?:in|on|at)\s+(?:my\s+|the\s+)?(desktop|documents|downloads|workspace|home))?\s*$",
+            clean,
+            re.IGNORECASE
+        )
+        if create_dir_match:
+            from modules.system.filesystem_crud import extract_name_and_destination, resolve_path
+            raw_target = create_dir_match.group(1).strip()
+            explicit_dest = create_dir_match.group(2)
+
+            clean_name, extracted_dest = extract_name_and_destination(raw_target)
+
+            # Preserve exact casing from raw_text if provided (e.g. "Project")
+            raw_match = re.search(
+                r"^(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:called|named)?\s*[\"']?([^,\"']+)[\"']?(?:\s*,\s*|\s+)?(?:(?:in|on|at)\s+(?:my\s+|the\s+)?(desktop|documents|downloads|workspace|home))?\s*$",
+                raw_text,
+                re.IGNORECASE
+            )
+            if raw_match:
+                cased_name, _ = extract_name_and_destination(raw_match.group(1).strip())
+                if cased_name:
+                    clean_name = cased_name
+
+            final_dest = explicit_dest or extracted_dest
+            target_path_obj = resolve_path(clean_name, destination=final_dest)
+            target_path_str = str(target_path_obj)
+            target_val = target_path_str if final_dest else clean_name
+
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as FS_CREATE_FOLDER (Latency={elapsed_ms:.2f}ms, Dest={final_dest})")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="FS_CREATE_FOLDER",
+                action="create_folder",
+                target=target_val,
+                confidence=0.98,
+                context_required=False,
+                planning_required=False,
+                entities={"name": clean_name, "destination": final_dest, "path": target_path_str}
+            )
+
+        # Create file
+        create_file_match = re.search(r"^(?:create|make)\s+(?:a\s+)?file(?:\s+called|\s+named)?\s+([a-zA-Z0-9_\-\.\s/\\:~]+)$", clean)
+        if create_file_match:
+            file_name = create_file_match.group(1).strip()
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as FS_CREATE_FILE (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="FS_CREATE_FILE",
+                action="create_file",
+                target=file_name,
+                confidence=0.98,
+                context_required=False,
+                planning_required=False,
+                entities={"path": file_name, "content": ""}
+            )
+
+        # List files / directory
+        list_dir_match = re.search(r"^(?:list|show)\s+(?:all\s+)?(?:files|directories|folders|directory|items)(?:\s+in\s+([a-zA-Z0-9_\-\.\s/\\:~]+))?$", clean)
+        if list_dir_match:
+            dir_path = (list_dir_match.group(1) or "").strip()
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as FS_LIST_DIRECTORY (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="FS_LIST_DIRECTORY",
+                action="list_directory",
+                target=dir_path or "current",
+                confidence=0.98,
+                context_required=False,
+                planning_required=False,
+                entities={"path": dir_path or None}
+            )
+
+        # Trash / recycle / delete item
+        trash_match = re.search(r"^(?:can\s+you\s+|please\s+|could\s+you\s+)?(?:trash|recycle|delete|remove)\s+(?:the\s+)?(?:file|folder|directory|item)?\s*([a-zA-Z0-9_\-\.\s/\\:~]+)$", clean, re.IGNORECASE)
+        if trash_match and not clean.startswith("delete history") and not clean.startswith("delete memory"):
+            raw_item = trash_match.group(1).strip()
+            # Strip generic entity nouns (folder, directory, file) unless it's a pronoun
+            clean_item = re.sub(r"\b(folder|directory|file)\b", "", raw_item, flags=re.IGNORECASE).strip().strip(" ,'\"")
+            final_target = clean_item if clean_item else raw_item
+            if final_target:
+                elapsed_ms = (time.perf_counter() - t0) * 1000
+                logger.info(f"[ROUTER] Fast-path classified as FS_TRASH_ITEM (Target='{final_target}', Latency={elapsed_ms:.2f}ms)")
+                return StructuredRequest(
+                    raw_text=raw_text,
+                    normalized_text=normalized,
+                    mode=MODE_FAST_LOCAL,
+                    layer=LAYER_1,
+                    intent="FS_TRASH_ITEM",
+                    action="trash_item",
+                    target=final_target,
+                    confidence=0.98,
+                    context_required=False,
+                    planning_required=False,
+                    entities={"path": final_target}
+                )
+
+        # Open in IDE / Open With Fast Path (Layer 1 Fast Local)
+        open_ide_match = re.search(
+            r"\bopen\s+(?:(it|this|that|the\s+folder|the\s+project|the\s+file)|([a-zA-Z0-9_\-\.\s/\\:~]+?))\s+(?:in|with)\s+(vscode|vs\s*code|code|antigravity)\b",
+            clean,
+            re.IGNORECASE
+        )
+        if open_ide_match:
+            pronoun_group = open_ide_match.group(1)
+            target_group = open_ide_match.group(2)
+            ide_group = open_ide_match.group(3).lower().replace(" ", "")
+            ide_name = "vscode" if ide_group in ("vscode", "code") else "antigravity"
+
+            raw_target = (pronoun_group or target_group or "it").strip()
+            is_pronoun = raw_target.lower() in ("it", "this", "that", "the folder", "the project", "the file")
+            if is_pronoun:
+                target_clean = "it"
+            else:
+                target_clean = re.sub(r"\b(folder|directory|file)\b", "", raw_target, flags=re.IGNORECASE).strip().strip(" ,'\"")
+                if not target_clean:
+                    target_clean = "it"
+                    is_pronoun = True
+
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as OPEN_IN_IDE ({ide_name}, Target={target_clean}, Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="OPEN_IN_IDE",
+                action="open_in_ide",
+                target=target_clean,
+                confidence=1.0,
+                context_required=False,
+                planning_required=False,
+                entities={"ide": ide_name, "target": target_clean, "pronoun": is_pronoun}
+            )
+
+        # Read file
+        read_file_match = re.search(r"^(?:read|display|cat)\s+(?:the\s+)?file\s+([a-zA-Z0-9_\-\.\s/\\:~]+)$", clean)
+        if read_file_match:
+            file_path = read_file_match.group(1).strip()
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(f"[ROUTER] Fast-path classified as FS_READ_FILE (Latency={elapsed_ms:.2f}ms)")
+            return StructuredRequest(
+                raw_text=raw_text,
+                normalized_text=normalized,
+                mode=MODE_FAST_LOCAL,
+                layer=LAYER_1,
+                intent="FS_READ_FILE",
+                action="read_file",
+                target=file_path,
+                confidence=0.98,
+                context_required=False,
+                planning_required=False,
+                entities={"path": file_path}
             )
 
         # Step 1: Detect Complex Multi-Step / Reasoning Requests (Layer 3)

@@ -1,34 +1,32 @@
 {
-  "timestamp": "2026-11-06T00:20:52.473053",
-  "status": "PAUSED_HIGH_LOAD",
+  "timestamp": "2026-11-11T10:07:17.645719",
+  "status": "HEALTHY",
   "database_stats": {
-    "total_experiences": 1281,
-    "successful_experiences": 1216,
-    "failed_experiences": 65,
-    "success_rate": 0.9493,
-    "total_aliases": 11,
-    "active_aliases": 11,
+    "total_experiences": 1326,
+    "successful_experiences": 1253,
+    "failed_experiences": 73,
+    "success_rate": 0.9449,
+    "total_aliases": 12,
+    "active_aliases": 12,
     "total_knowledge_items": 5,
     "total_skills": 7,
     "verified_skills": 6,
-    "pending_proposals_count": 0,
+    "pending_proposals_count": 2,
     "approved_proposals_count": 5,
-    "total_proposals": 5,
+    "total_proposals": 7,
     "total_snapshots": 16
   },
   "system_resources": {
-    "can_run": false,
-    "cpu_percent": 63.9,
-    "memory_percent": 77.1,
-    "battery_plugged": true,
-    "battery_percent": 80,
+    "can_run": true,
+    "cpu_percent": 0.0,
+    "memory_percent": 75.5,
+    "battery_plugged": false,
+    "battery_percent": 70,
     "game_detected": null,
     "voice_active": false,
-    "reasons": [
-      "CPU high (63.9% > 30.0%)"
-    ]
+    "reasons": []
   },
-  "active_aliases_count": 11,
+  "active_aliases_count": 12,
   "active_aliases": {
     "ballorant": "valorant",
     "valorent": "valorant",
@@ -40,7 +38,8 @@
     "santa": "santra",
     "nemo tron": "nemotron",
     "vs code": "vscode",
-    "visual studio": "vscode"
+    "visual studio": "vscode",
+    "visual studio code": "vscode"
   },
   "weakness_analysis": {
     "failing_intents": [
@@ -53,56 +52,85 @@
         "avg_latency_ms": 0.0
       },
       {
+        "operation": "open_in_ide",
+        "total_executions": 10,
+        "failed_count": 6,
+        "success_rate": 40.0,
+        "most_common_error": "Could not locate the executable for Custom_Editor on your system PATH.",
+        "avg_latency_ms": 0.0
+      },
+      {
         "operation": "close_application",
         "total_executions": 3,
         "failed_count": 2,
         "success_rate": 33.3,
         "most_common_error": "failed",
         "avg_latency_ms": 0.0
+      },
+      {
+        "operation": "type_into_input_box",
+        "total_executions": 3,
+        "failed_count": 1,
+        "success_rate": 66.7,
+        "most_common_error": "No editable input box detected in the active window. Please click inside the target input box first.",
+        "avg_latency_ms": 0.0
       }
     ],
     "slow_operations": [],
     "pending_aliases": [],
     "overall_metrics": {
-      "total_commands_all_time": 1281,
+      "total_commands_all_time": 1326,
       "total_commands_24h": 0,
-      "overall_success_rate": 94.9,
+      "overall_success_rate": 94.5,
       "latency_p50_ms": 0.0,
       "latency_p95_ms": 0.0,
-      "active_alias_count": 11,
+      "active_alias_count": 12,
       "verified_knowledge_count": 5
     }
   },
   "benchmarks": {
     "passed": true,
     "score": 100.0,
-    "total_benchmark_time_ms": 0.54,
+    "total_benchmark_time_ms": 1.59,
     "benchmarks": {
       "alias_resolution": {
         "passed": true,
-        "latency_ms": 0.032,
+        "latency_ms": 0.0456,
         "target_ms": 1.0,
         "tested_pairs": 5
       },
       "bm25_retrieval": {
         "passed": true,
-        "latency_ms": 0.3208,
+        "latency_ms": 0.8826,
         "target_ms": 5.0,
         "hits_found": 1
       },
       "safety_defense": {
         "passed": true,
-        "latency_ms": 0.1862,
+        "latency_ms": 0.4966,
         "blocked_count": 4,
         "total_attacks": 4
       }
     }
   },
-  "pending_proposals_count": 0,
+  "pending_proposals_count": 2,
   "approved_improvements_count": 5,
   "proposals_summary": {
-    "pending_count": 0,
-    "proposals": []
+    "pending_count": 2,
+    "proposals": [
+      {
+        "id": "prop_intent_type_into_input_box",
+        "type": "INTENT_RULE",
+        "target": "type_into_input_box",
+        "reason": "Failing intent 'type_into_input_box' detected (1 failures, 66.7% success, most common error: 'No editable input box detected in the active window. Please click inside the target input box first.')."
+      },
+      {
+        "id": "prop_intent_open_in_ide",
+        "type": "INTENT_RULE",
+        "target": "open_in_ide",
+        "reason": "Failing intent 'open_in_ide' detected (2 failures, 0.0% success, most common error: 'I could not locate the target item to open in Antigravity.')."
+      }
+    ]
   },
-  "last_maintenance_unix": 1793904652.473109
+  "last_maintenance_unix": 1794371837.6457324
 }

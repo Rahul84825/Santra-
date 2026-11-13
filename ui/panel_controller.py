@@ -68,6 +68,13 @@ class PanelVisibilityController(QObject):
             logger.error("[PANEL_CONTROLLER] Cannot show panel: MainWindow reference is None.")
             return
 
+        if hasattr(self.window, "show_hud"):
+            try:
+                self.window.show_hud()
+                return
+            except Exception as he:
+                logger.debug(f"[PANEL_CONTROLLER] show_hud notice: {he}")
+
         try:
             # 1. Verify and repair screen geometry if moved off-screen
             self._ensure_onscreen_geometry()
@@ -102,6 +109,13 @@ class PanelVisibilityController(QObject):
         """Hides the panel to tray without destroying state or terminating the assistant."""
         if not self.window:
             return
+
+        if hasattr(self.window, "hide_hud"):
+            try:
+                self.window.hide_hud()
+                return
+            except Exception as he:
+                logger.debug(f"[PANEL_CONTROLLER] hide_hud notice: {he}")
 
         try:
             if self.window.isVisible():

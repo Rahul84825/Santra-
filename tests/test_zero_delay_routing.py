@@ -59,7 +59,7 @@ class TestZeroDelayRouting(unittest.TestCase):
         route_ms = (time.perf_counter() - t0) * 1000
 
         self.assertEqual(req.layer, LAYER_1)
-        self.assertEqual(req.intent, "GREETING")
+        self.assertIn(req.intent, ["GREETING", "GREETING_REFLEX"])
         self.assertLess(route_ms, 35.0, f"Greeting routing exceeded 35ms ({route_ms:.2f}ms)")
 
         # Verify runtime execution does not trigger UNDERSTANDING state

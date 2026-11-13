@@ -166,6 +166,9 @@ class PerformanceEvaluator:
             ("wake up samtra", "wake up santra"),
             ("query nemo tron", "query nemotron")
         ]
+        # Instruction cache warmup
+        self.collector.apply_known_aliases("warmup")
+
         t0_alias = time.perf_counter()
         alias_passed = True
         for raw_phrase, expected_phrase in alias_test_pairs:

@@ -73,7 +73,7 @@ class TestALEEStage6Integration(unittest.TestCase):
             "status": "PENDING"
         })
 
-        ok, msg = self.evo_mgr.approve_proposal(prop_id)
+        ok, msg = self.evo_mgr.approve_proposal(prop_id, confirmed_by_user=True)
         self.assertTrue(ok, f"Approval failed: {msg}")
 
         # In-memory lookup must immediately return the active configuration

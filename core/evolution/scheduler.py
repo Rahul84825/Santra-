@@ -96,79 +96,21 @@ class EvolutionScheduler:
                 time.sleep(5.0)
                 slept += 5.0
 
-    def run_maintenance_now(self) -> Dict[str, Any]:
+    def run_maintenance_now(self, force: bool = False) -> Dict[str, Any]:
         """
-        Executes an immediate maintenance cycle:
-        1. Optimizes FTS5 index.
-        2. Compiles database stats.
-        3. Collects system resource snapshot.
-        4. Writes health report JSON atomically.
+        Executes a maintenance cycle:
+        1. Checks ResourceGuard: if constrained and not force, defers heavy workloads.
+        2. Optimizes FTS5 index (idle window only).
+        3. Indexes local documentation with file-hash deduplication.
+        4. Gathers database stats and system resource snapshot.
+        5. Computes weakness analysis and regression benchmarks.
+        6. Writes health report JSON atomically.
         """
-        logger.info("[SCHEDULER] Running ALEE maintenance tasks...")
-
-        # 1. Optimize full-text index
-        self.storage.optimize_fts()
-
-        # 1B. Index local documentation (docs/) during idle window
-        try:
-            from core.evolution.knowledge_explorer import knowledge_explorer
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            docs_dir = os.path.join(base_dir, "docs")
-            if os.path.exists(docs_dir):
-                knowledge_explorer.index_directory(docs_dir, category="architecture_docs")
-        except Exception as de:
-            logger.debug(f"[SCHEDULER] Local docs indexing notice: {de}")
-
-        # 2. Gather database stats
-        db_stats = self.storage.get_stats()
-
-        # 3. Gather system snapshot
         sys_snap = self.guard.get_system_snapshot()
-
-        # 4. Fetch active aliases
+        db_stats = self.storage.get_stats()
         active_aliases = self.storage.get_active_aliases(min_confidence=3)
 
-        # 4B. Run Actionable Weakness Detection & Self-Benchmarks
-        weakness_analysis = {}
-        benchmarks = {}
-        try:
-            from core.evolution.evaluator import PerformanceEvaluator
-            evaluator = PerformanceEvaluator(
-                storage=self.storage,
-                collector=self.collector
-            )
-            weakness_analysis = evaluator.analyze_weaknesses()
-            benchmarks = evaluator.run_regression_benchmarks()
-        except Exception as ee:
-            logger.warning(f"[SCHEDULER] Evaluator execution error: {ee}")
-
-        # 4C. Generate / Refresh Evolution Proposals (Stage 5)
-        proposals_summary = {}
-        try:
-            from core.evolution.evolution_manager import EvolutionManager
-            evo_mgr = EvolutionManager(
-                storage=self.storage,
-                evaluator=evaluator if 'evaluator' in locals() else None,
-                collector=self.collector
-            )
-            pending_props = evo_mgr.generate_proposals()
-            proposals_summary = {
-                "pending_count": len(pending_props),
-                "proposals": [
-                    {
-                        "id": p["proposal_id"],
-                        "type": p["proposal_type"],
-                        "target": p["target_key"],
-                        "reason": p["reason"]
-                    } for p in pending_props[:5]
-                ]
-            }
-            # Refresh stats to reflect newly drafted proposals
-            db_stats = self.storage.get_stats()
-        except Exception as pe:
-            logger.warning(f"[SCHEDULER] Proposal generation error: {pe}")
-
-        # 5. Determine system health status
+        # 1. Determine system status
         status = "HEALTHY"
         if sys_snap.get("voice_active"):
             status = "PAUSED_VOICE"
@@ -182,6 +124,71 @@ class EvolutionScheduler:
             status = "PAUSED_CONSTRAINTS"
         elif db_stats.get("total_experiences", 0) > 10 and db_stats.get("success_rate", 1.0) < 0.6:
             status = "DEGRADED"
+
+        # Check Resource Gating: Defer heavy operations under load
+        can_run = force or sys_snap.get("can_run", True)
+        weakness_analysis = {}
+        benchmarks = {}
+        proposals_summary = {}
+
+        if not can_run:
+            reasons = ", ".join(sys_snap.get("reasons", [])) or "Resource constraints"
+            logger.info(f"[SCHEDULER] Maintenance deferred due to resource constraints ({status}: {reasons}).")
+        else:
+            logger.info("[SCHEDULER] Running ALEE maintenance tasks...")
+
+            # 1. Optimize full-text index
+            try:
+                self.storage.optimize_fts()
+            except Exception as fe:
+                logger.debug(f"[SCHEDULER] FTS optimization notice: {fe}")
+
+            # 2. Index local documentation with hash tracking
+            try:
+                from core.evolution.knowledge_explorer import knowledge_explorer
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                docs_dir = os.path.join(base_dir, "docs")
+                if os.path.exists(docs_dir):
+                    knowledge_explorer.index_directory(docs_dir, category="architecture_docs")
+            except Exception as de:
+                logger.debug(f"[SCHEDULER] Local docs indexing notice: {de}")
+
+            # 3. Actionable Weakness Detection & Self-Benchmarks
+            try:
+                from core.evolution.evaluator import PerformanceEvaluator
+                evaluator = PerformanceEvaluator(
+                    storage=self.storage,
+                    collector=self.collector
+                )
+                weakness_analysis = evaluator.analyze_weaknesses()
+                benchmarks = evaluator.run_regression_benchmarks()
+            except Exception as ee:
+                logger.warning(f"[SCHEDULER] Evaluator execution error: {ee}")
+
+            # 4. Generate / Refresh Evolution Proposals
+            try:
+                from core.evolution.evolution_manager import EvolutionManager
+                evo_mgr = EvolutionManager(
+                    storage=self.storage,
+                    evaluator=evaluator if 'evaluator' in locals() else None,
+                    collector=self.collector
+                )
+                pending_props = evo_mgr.generate_proposals()
+                proposals_summary = {
+                    "pending_count": len(pending_props),
+                    "proposals": [
+                        {
+                            "id": p["proposal_id"],
+                            "type": p["proposal_type"],
+                            "target": p["target_key"],
+                            "reason": p["reason"]
+                        } for p in pending_props[:5]
+                    ]
+                }
+                # Refresh stats to reflect newly drafted proposals
+                db_stats = self.storage.get_stats()
+            except Exception as pe:
+                logger.warning(f"[SCHEDULER] Proposal generation error: {pe}")
 
         report = {
             "timestamp": datetime.datetime.now().isoformat(),

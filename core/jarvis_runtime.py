@@ -4,6 +4,7 @@ import time
 import uuid
 import logging
 import threading
+from pathlib import Path
 from collections import deque
 from typing import Callable, Optional, List, Dict, Any
 
@@ -62,6 +63,156 @@ LEGAL_TRANSITIONS = {
     "STOPPED": {"STANDBY", "ACTIVE"},
     "ERROR": {"STANDBY", "ACTIVE", "LISTENING", "SLEEPING", "STOPPED"}
 }
+ 
+ 
+def find_ide_executable(ide_name: str, fallback_to_active: bool = False) -> Optional[str]:
+    """Exhaustively locates an IDE executable on Windows across CLI PATH, common install locations,
+    Windows Registry App Paths, and running process trees.
+
+    Args:
+        ide_name: Name or alias of the IDE (e.g. 'vscode', 'code', 'antigravity', 'cursor').
+        fallback_to_active: If True, falls back to currently active/running IDE if requested IDE is absent.
+
+    Returns:
+        Optional[str]: Absolute path to the IDE executable, or None if not found.
+    """
+    if not ide_name:
+        return None
+
+    import shutil
+    import sys
+    ide = ide_name.lower().strip()
+
+    # 1. Check CLI PATH via shutil.which
+    if ide in ["vscode", "code", "visual studio code", "vs_code"]:
+        for candidate in ["code", "code.cmd", "code.exe"]:
+            w = shutil.which(candidate)
+            if w:
+                return w
+    elif ide in ["antigravity", "agy", "antigravity ide", "anti gravity"]:
+        for candidate in ["antigravity", "antigravity.exe", "agy", "agy.cmd", "agy.exe"]:
+            w = shutil.which(candidate)
+            if w:
+                return w
+    elif ide in ["cursor"]:
+        for candidate in ["cursor", "cursor.cmd", "cursor.exe"]:
+            w = shutil.which(candidate)
+            if w:
+                return w
+    else:
+        w = shutil.which(ide)
+        if w:
+            return w
+
+    # 2. Check common Windows user and system install locations
+    locations = []
+    if ide in ["vscode", "code", "visual studio code", "vs_code"]:
+        locations = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Microsoft VS Code\Code.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft VS Code\Code.exe"),
+        ]
+    elif ide in ["antigravity", "agy", "antigravity ide", "anti gravity"]:
+        locations = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Antigravity\Antigravity.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Antigravity IDE\Antigravity IDE.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Antigravity\Antigravity.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Antigravity IDE\Antigravity IDE.exe"),
+        ]
+    elif ide in ["cursor"]:
+        locations = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\cursor\Cursor.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Cursor\Cursor.exe"),
+        ]
+
+    for loc in locations:
+        if loc and os.path.exists(loc):
+            return loc
+
+    # 3. Check Windows Registry App Paths (HKLM and HKCU)
+    if os.name == "nt":
+        try:
+            import winreg
+            app_subkeys = []
+            if ide in ["vscode", "code", "visual studio code", "vs_code"]:
+                app_subkeys = [r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Code.exe"]
+            elif ide in ["antigravity", "agy", "antigravity ide", "anti gravity"]:
+                app_subkeys = [
+                    r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Antigravity.exe",
+                    r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Antigravity IDE.exe",
+                ]
+            elif ide in ["cursor"]:
+                app_subkeys = [r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Cursor.exe"]
+
+            for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+                for sub in app_subkeys:
+                    try:
+                        with winreg.OpenKey(hive, sub) as k:
+                            val, _ = winreg.QueryValueEx(k, "")
+                            if val and os.path.exists(val):
+                                return val
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    # 4. Check running process tree via psutil
+    try:
+        import psutil
+        for p in psutil.process_iter(['name', 'exe']):
+            p_name = (p.info.get('name') or '').lower()
+            p_exe = p.info.get('exe')
+            if p_exe and os.path.exists(p_exe):
+                if ide in ["antigravity", "agy", "antigravity ide", "anti gravity"] and "antigravity" in p_name:
+                    return p_exe
+                elif ide in ["vscode", "code", "visual studio code", "vs_code"] and p_name == "code.exe":
+                    return p_exe
+                elif ide in ["cursor"] and p_name == "cursor.exe":
+                    return p_exe
+    except Exception:
+        pass
+
+    # 5. Fallback for Antigravity if running under python/sys.executable
+    if ide in ["antigravity", "agy", "antigravity ide", "anti gravity"] and sys.executable:
+        return sys.executable
+
+    # 6. Optional fallback to currently active IDE if requested IDE is not installed
+    if fallback_to_active:
+        for alt_ide in ["antigravity", "cursor", "vscode"]:
+            if alt_ide != ide:
+                alt_exe = find_ide_executable(alt_ide, fallback_to_active=False)
+                if alt_exe:
+                    return alt_exe
+
+    return None
+
+
+def get_greeting_reflex_response(text: str = "") -> str:
+    """Generates authentic, dynamic JARVIS/F.R.I.D.A.Y. greetings conditioned on the system clock.
+
+    Time Breakdown:
+      Morning (05:00 - 12:00): Good morning, Sir. All systems and telemetry online. How may I assist you?
+      Afternoon (12:00 - 17:00): Good afternoon, Sir. Standing by for your commands.
+      Evening/Night (17:00 - 05:00): Good evening, Sir. Holographic core active. What are we building today?
+    """
+    import datetime
+    now_hour = datetime.datetime.now().hour
+    txt = (text or "").lower()
+
+    if "morning" in txt:
+        return "Good morning, Sir. All systems and telemetry online. How may I assist you?"
+    if "afternoon" in txt:
+        return "Good afternoon, Sir. Standing by for your commands."
+    if "evening" in txt or "night" in txt:
+        return "Good evening, Sir. Holographic core active. What are we building today?"
+
+    if 5 <= now_hour < 12:
+        return "Good morning, Sir. All systems and telemetry online. How may I assist you?"
+    elif 12 <= now_hour < 17:
+        return "Good afternoon, Sir. Standing by for your commands."
+    else:
+        return "Good evening, Sir. Holographic core active. What are we building today?"
+
 
 class JarvisRuntime:
     """Headless Central Voice Core Coordinator with Transaction Tracking,
@@ -76,6 +227,7 @@ class JarvisRuntime:
         self.current_speech_text = "Standby. Say 'Santra' or speak into microphone."
         self.muted = False
         self.pending_intent = None
+        self._pending_confirmation: Optional[Dict[str, Any]] = None
         self._tts_speaking_lock = False
         self._state_lock = threading.Lock()
         self._active_utterance_id: Optional[str] = None
@@ -95,6 +247,8 @@ class JarvisRuntime:
         self._cancelled_lock = threading.Lock()
         self._last_raw_transcript: str = ""
         self._last_normalized_transcript: str = ""
+        self._last_filesystem_target: Optional[Path] = None
+        self._pending_confirmation: Optional[Dict[str, Any]] = None
 
         # Observers / Callbacks
         self.on_status_change_cb: Optional[Callable[[str], None]] = None
@@ -244,8 +398,12 @@ class JarvisRuntime:
             try:
                 evolution_scheduler.on_maintenance_complete = lambda rep: self._trigger_cb(self.on_evolution_update_cb, rep)
                 evolution_scheduler.start()
-                initial_rep = evolution_scheduler.run_maintenance_now()
-                self._trigger_cb(self.on_evolution_update_cb, initial_rep)
+                # Defer eager boot maintenance: only run on boot if resources are strictly healthy and idle, else defer
+                if hasattr(evolution_scheduler, "guard") and evolution_scheduler.guard.can_run_background_tasks():
+                    initial_rep = evolution_scheduler.run_maintenance_now()
+                    self._trigger_cb(self.on_evolution_update_cb, initial_rep)
+                else:
+                    logger.info("[EVOLUTION] Deferring eager startup maintenance: system under load or battery constraints. Handing off to scheduler loop.")
             except Exception as se:
                 logger.warning(f"Could not start evolution scheduler: {se}")
 
@@ -873,6 +1031,32 @@ class JarvisRuntime:
                 logger.info(f"[UTTERANCE {utterance_id}][PENDING_SUPERSEDED] Follow-up '{clean_text}' does not answer pending clarification '{pending_act.clarification_question}'. Discarding pending action and executing new request.")
                 self.conversation_manager.clear_pending_action()
                 self.pending_intent = None
+
+        # 0.9. GUI Draft-and-Confirm Safety Gate handler
+        if getattr(self, "_pending_confirmation", None):
+            pending_conf = self._pending_confirmation
+            pending_time = pending_conf.get("timestamp", 0)
+            if pending_time and (time.time() - pending_time > 60.0):
+                logger.info(f"[UTTERANCE {utterance_id}] Pending GUI draft-and-confirm timed out after 60s.")
+                self._pending_confirmation = None
+            else:
+                from modules.system import gui_interactor
+                yes_phrases = ["yes", "confirm", "sure", "ok", "go ahead", "do it", "send", "send it", "press enter", "submit", "submit it", "yes send it"]
+                no_phrases = ["no", "cancel", "don't send", "dont send", "do not send", "abort", "discard", "stop"]
+                if any(p in clean_text for p in yes_phrases) and not any(n in clean_text for n in ["no", "don't", "dont", "cancel"]):
+                    ok = gui_interactor.confirm_pending_gui_action(self)
+                    msg = "Confirmed and sent, Sir." if ok else "Action submitted."
+                    self.response_manager.success(msg, spoken_text=msg, speak=True)
+                    self._update_status("STANDBY", utterance_id)
+                    self._update_speech_text(msg)
+                    return {"success": True, "action": "confirm_gui_action", "message": msg}
+                elif any(p in clean_text for p in no_phrases):
+                    ok = gui_interactor.cancel_pending_gui_action(self)
+                    msg = "Action cancelled and draft discarded, Sir."
+                    self.response_manager.conversation(msg, speak=True)
+                    self._update_status("STANDBY", utterance_id)
+                    self._update_speech_text(msg)
+                    return {"success": True, "action": "cancel_gui_action", "message": msg}
 
         # 1. Safety & Workspace confirmation handler
         if self.pending_intent:
@@ -1524,14 +1708,18 @@ class JarvisRuntime:
         # Case 3: Conversational Greetings, Acknowledgments, Social Intelligence & Etiquette
         intent_lower = req.intent.lower()
         if intent_lower in [
-            "greeting", "social_greeting", "session_start", "thank_you", "goodbye", "help", "identity", 
+            "greeting", "greeting_reflex", "social_greeting", "session_start", "thank_you", "goodbye", "help", "identity", 
             "social_humor", "social_personality", "social_chat", "about",
             "repeat_response", "acknowledgement", "affirmation", "negation", "how_are_you", "status_check"
         ]:
             from core.social_engine import social_engine
-            if intent_lower in ["greeting", "social_greeting"]:
-                res = self.response_manager.greeting(normalized_text, speak=speak)
-                resp_text = res.get("text", "Hello, Sir.")
+            if intent_lower in ["greeting", "greeting_reflex", "social_greeting"]:
+                resp_text = get_greeting_reflex_response(normalized_text or raw_full_text)
+                res = self.response_manager.conversation(resp_text, speak=speak)
+                self._update_status("STANDBY", uid)
+                self._update_speech_text(resp_text)
+                self._notify_pipeline_stage(raw_full_text, normalized_text, "chat:greeting", "Reflex", resp_text, "Speaking", turn_id=uid)
+                return {"success": True, "action": "greeting_reflex", "message": resp_text}
             elif intent_lower == "session_start":
                 resp_text = "Ready and standing by, Sir. All systems are operational. What would you like to work on?"
                 res = self.response_manager.conversation(resp_text, speak=speak)
@@ -1628,10 +1816,15 @@ class JarvisRuntime:
             "command_management", "custom_command",
             "turn_on_camera", "turn_off_camera", "start_hand_tracking", "stop_hand_tracking", "camera_snapshot",
             "workspace.launch", "workspace_control", "launch_workspace", "power_control", "power.scheme", "battery_info",
+            "screen_analysis", "gui_type_text", "confirm_action", "cancel_action",
+            "show_panel", "hide_panel",
+            "fs_create_folder", "fs_create_file", "fs_list_directory", "fs_trash_item", "fs_read_file", "fs_modify_file",
+            "open_in_ide", "open_with",
             "panel_visibility", "unsupported_capability", "invalid_command"
         ]
 
         if (intent_lower in os_intents or
+            intent_lower.startswith("fs_") or
             intent_lower.startswith("application.") or
             intent_lower.startswith("desktop.") or
             intent_lower.startswith("desktop_interaction.") or
@@ -1794,10 +1987,22 @@ class JarvisRuntime:
                             self._trigger_cb(self.on_status_change_cb, "STANDBY")
 
     def _execute_intent(self, intent_node: dict, confirm: bool = False, speak: bool = True, utterance_id: Optional[str] = None) -> dict:
+        global evolution_collector
         uid = utterance_id or uuid.uuid4().hex[:6].upper()
         self._update_status("EXECUTING", uid)
         intent = intent_node.get("intent", "").lower()
         action = intent_node.get("action") or intent
+
+        # Handle Instant Fast-Path Greetings Directly in Runtime
+        if intent in ["greeting", "greeting_reflex", "greet"] or action in ["greeting", "greeting_reflex", "greet"]:
+            resp_text = get_greeting_reflex_response(intent_node.get("raw") or intent_node.get("target") or "")
+            self.response_manager.conversation(resp_text, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(resp_text)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, "greeting_reflex", True, resp_text)
+            self._notify_pipeline_stage("", "", "chat:greeting", "Reflex", resp_text, "Speaking")
+            return {"success": True, "action": "greeting_reflex", "message": resp_text}
 
         # Handle Camera Subsystem Actions Directly
         if intent in ["turn_on_camera", "turn_off_camera", "start_hand_tracking", "stop_hand_tracking", "camera_snapshot"]:
@@ -1826,6 +2031,265 @@ class JarvisRuntime:
             if self.on_action_complete_cb:
                 self._trigger_cb(self.on_action_complete_cb, intent, ok, msg)
             self._notify_pipeline_stage("", "", f"camera:{intent}", "CameraManager", msg, "Speaking")
+            return res
+
+        # Handle Holographic HUD Panel Visibility Actions
+        if intent in ["show_panel", "hide_panel", "panel_visibility"]:
+            act = "show" if (intent == "show_panel" or action == "show_panel") else "hide"
+            if self.panel_visibility_cb:
+                self._trigger_cb(self.panel_visibility_cb, act)
+            msg = "Holographic HUD online, Sir." if act == "show" else "Switching to stealth background mode, Sir."
+            res = {"success": True, "action": intent, "target": "hud_panel", "message": msg}
+            self.response_manager.conversation(msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, intent, True, msg)
+            self._notify_pipeline_stage("", "", f"hud:{act}", "HUDController", msg, "Speaking")
+            return res
+
+        # Handle Screen Perception Actions Directly in Runtime
+        if intent in ["screen_analysis", "screen.analyze", "screen_understanding.analyze"]:
+            hud_was_active = False
+            if hasattr(self, "panel_visibility_cb") and self.panel_visibility_cb:
+                try:
+                    self.panel_visibility_cb("hide")
+                    hud_was_active = True
+                    time.sleep(0.06)
+                except Exception as hide_err:
+                    logger.debug(f"[RUNTIME] Screen analysis HUD hide notice: {hide_err}")
+
+            from modules.system.screen_perception import capture_screen_context
+            ctx = capture_screen_context()
+
+            if hud_was_active and hasattr(self, "panel_visibility_cb") and self.panel_visibility_cb:
+                try:
+                    self.panel_visibility_cb("show")
+                except Exception:
+                    pass
+
+            active_win = ctx.get("active_window", "your active window")
+            readable = ctx.get("readable_texts", [])
+            clean_texts = []
+            for it in readable:
+                txt = (it.get("name") or "").strip()
+                if txt and len(txt) > 1 and txt not in clean_texts:
+                    clean_texts.append(txt)
+            summary = "; ".join(clean_texts[:5]) if clean_texts else ctx.get("description", "No readable text detected.")
+            spoken = f"Active window is {active_win}. Visible elements/text: {summary}."
+
+            res = {"success": ctx.get("success", True), "action": "screen_analysis", "target": active_win, "message": spoken, "spoken": spoken, "context": ctx}
+            self.response_manager.conversation(spoken, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(spoken)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, "screen_analysis", True, spoken)
+            self._notify_pipeline_stage("", "", "screen:analyze", "ScreenPerception", spoken, "Speaking")
+            try:
+                from core.evolution.collector import evolution_collector
+                if evolution_collector:
+                    evolution_collector.record_experience(
+                        user_request=intent_node.get("raw") or "analyze screen",
+                        intent="SCREEN_ANALYSIS",
+                        action="capture_screen_context",
+                        parameters={"active_window": active_win},
+                        success=True,
+                        message=spoken
+                    )
+            except Exception:
+                pass
+            return res
+
+        # Handle GUI Typing & Draft-and-Confirm Safety Gate Directly in Runtime
+        if intent in ["gui_type_text", "desktop.enter_text", "desktop_interaction.type_text"]:
+            from modules.system.gui_interactor import type_into_input_box
+            text_val = intent_node.get("text") or intent_node.get("target") or intent_node.get("query") or ""
+            submit_val = intent_node.get("submit", False)
+            type_res = type_into_input_box(text=text_val, auto_locate=True, submit=submit_val, runtime=self)
+            msg = type_res.get("message", "Text typed into input field.")
+            is_ok = bool(type_res.get("success", False))
+            res = {"success": is_ok, "action": "gui_type_text", "target": type_res.get("target_window"), "message": msg, "data": type_res}
+            if is_ok:
+                self.response_manager.conversation(msg, speak=speak)
+            else:
+                self.response_manager.failure(msg, spoken_text=msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, "gui_type_text", is_ok, msg)
+            self._notify_pipeline_stage("", "", "gui:type_text", "GuiInteractor", msg, "Speaking")
+            try:
+                from core.evolution.collector import evolution_collector
+                if evolution_collector:
+                    evolution_collector.record_experience(
+                        user_request=intent_node.get("raw") or f"type {text_val}",
+                        intent="GUI_TYPE_TEXT",
+                        action="type_into_input_box",
+                        parameters={"text": text_val, "submit": submit_val},
+                        success=is_ok,
+                        message=msg
+                    )
+            except Exception:
+                pass
+            return res
+
+        # Handle Confirmation and Cancellation of GUI Actions Directly in Runtime
+        if intent in ["confirm_action", "gui_confirm_submit"]:
+            from modules.system.gui_interactor import confirm_pending_gui_action
+            ok = confirm_pending_gui_action(self)
+            msg = "Confirmed and sent, Sir." if ok else "No pending action to confirm, Sir."
+            res = {"success": ok, "action": "confirm_action", "target": "pending_action", "message": msg}
+            self.response_manager.conversation(msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, "confirm_action", ok, msg)
+            self._notify_pipeline_stage("", "", "gui:confirm", "GuiInteractor", msg, "Speaking")
+            return res
+
+        if intent in ["cancel_action", "gui_cancel_submit"]:
+            from modules.system.gui_interactor import cancel_pending_gui_action
+            ok = cancel_pending_gui_action(self)
+            msg = "Action cancelled and draft discarded, Sir." if ok else "No pending action to cancel, Sir."
+            res = {"success": ok, "action": "cancel_action", "target": "pending_action", "message": msg}
+            self.response_manager.conversation(msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, "cancel_action", ok, msg)
+            self._notify_pipeline_stage("", "", "gui:cancel", "GuiInteractor", msg, "Speaking")
+            return res
+
+        # Handle Filesystem CRUD Operations Directly in Runtime
+        if intent.startswith("fs_"):
+            from modules.system import filesystem_crud
+            target_path = intent_node.get("path") or intent_node.get("target") or ""
+            if intent == "fs_create_folder":
+                fs_res = filesystem_crud.create_folder(target_path)
+                if fs_res.get("success") and fs_res.get("path"):
+                    self._last_filesystem_target = Path(fs_res["path"])
+                    filesystem_crud.set_last_filesystem_target(self._last_filesystem_target)
+            elif intent == "fs_create_file":
+                content = intent_node.get("content", "")
+                fs_res = filesystem_crud.create_file(target_path, content=content)
+                if fs_res.get("success") and fs_res.get("path"):
+                    self._last_filesystem_target = Path(fs_res["path"])
+                    filesystem_crud.set_last_filesystem_target(self._last_filesystem_target)
+            elif intent == "fs_list_directory":
+                fs_res = filesystem_crud.list_directory(target_path if target_path != "current" else None)
+            elif intent == "fs_trash_item":
+                fs_res = filesystem_crud.trash_item(target_path, runtime=self)
+                if fs_res.get("success"):
+                    if self._last_filesystem_target and (
+                        str(self._last_filesystem_target) == fs_res.get("path") or
+                        str(target_path).lower() in ("it", "this", "that", "the folder", "the file")
+                    ):
+                        self._last_filesystem_target = None
+                        filesystem_crud.set_last_filesystem_target(None)
+            elif intent == "fs_read_file":
+                fs_res = filesystem_crud.read_file(target_path)
+            elif intent == "fs_modify_file":
+                content = intent_node.get("content", "")
+                mode = intent_node.get("mode", "append")
+                fs_res = filesystem_crud.modify_file(target_path, content=content, mode=mode)
+            else:
+                fs_res = {"success": False, "message": f"Unknown filesystem operation '{intent}'."}
+
+            msg = fs_res.get("message", "Filesystem operation completed.")
+            res = {"success": fs_res.get("success", False), "action": intent, "target": target_path, "message": msg, "data": fs_res}
+            if fs_res.get("success"):
+                self.response_manager.success(msg, spoken_text=msg, speak=speak)
+            else:
+                self.response_manager.failure(msg, spoken_text=msg, speak=speak)
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, intent, fs_res.get("success", False), msg)
+            self._notify_pipeline_stage("", "", f"fs:{intent}", "FilesystemCrud", msg, "Speaking")
+            try:
+                from core.evolution.collector import evolution_collector
+                if evolution_collector:
+                    evolution_collector.record_experience(
+                        user_request=intent_node.get("raw") or f"{intent} {target_path}",
+                        intent=intent.upper(),
+                        action=intent,
+                        parameters={"path": target_path},
+                        success=fs_res.get("success", False),
+                        message=msg
+                    )
+            except Exception:
+                pass
+            return res
+
+        # Handle Open in IDE (VSCode / Antigravity) with Entity Context Memory
+        if intent in ["open_in_ide", "open_with"]:
+            from modules.system import filesystem_crud
+            ide = (intent_node.get("ide") or "vscode").lower().strip()
+            ide_display = "VS Code" if ide in ["vscode", "code"] else ("Antigravity" if ide == "antigravity" else ide.title())
+            target_str = intent_node.get("target")
+
+            target_path = None
+            if not target_str or target_str.lower() in ("it", "this", "that", "the folder", "the file", "the project", "vscode", "antigravity"):
+                target_path = getattr(self, "_last_filesystem_target", None) or filesystem_crud.get_last_filesystem_target()
+            else:
+                target_path = filesystem_crud.find_or_resolve_target(target_str, runtime=self)
+
+            if not target_path or not Path(target_path).exists():
+                msg = f"I could not locate the target item to open in {ide_display}."
+                res = {"success": False, "action": intent, "target": str(target_path) if target_path else "", "message": msg}
+                self.response_manager.failure(msg, spoken_text=msg, speak=speak)
+            else:
+                import subprocess
+
+                ide_bin = find_ide_executable(ide, fallback_to_active=False)
+                # If requested IDE not found and it was generic vscode/code, check if Antigravity is active
+                if not ide_bin and ide in ["vscode", "code"]:
+                    alt_bin = find_ide_executable("antigravity", fallback_to_active=False)
+                    if alt_bin:
+                        ide_bin = alt_bin
+                        ide_display = "Antigravity"
+
+                if not ide_bin:
+                    msg = f"Could not locate the executable for {ide_display} on your system PATH."
+                    res = {"success": False, "action": intent, "target": str(target_path), "message": msg}
+                    self.response_manager.failure(msg, spoken_text=msg, speak=speak)
+                else:
+                    target_abs = str(Path(target_path).resolve())
+                    raw_name = Path(target_path).name
+                    clean_name = re.sub(r"^(?:name|named|called)\s+", "", raw_name, flags=re.IGNORECASE).strip()
+                    clean_name = re.sub(r"\s+(?:folder|directory|file)$", "", clean_name, flags=re.IGNORECASE).strip()
+                    target_display = clean_name or raw_name or "project"
+
+                    DETACHED_FLAGS = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+                    try:
+                        # Non-blocking detached process launch
+                        subprocess.Popen([ide_bin, target_abs], creationflags=DETACHED_FLAGS, close_fds=True)
+                        msg = f"Opened {target_display} in {ide_display}."
+                        res = {"success": True, "action": intent, "target": target_abs, "message": msg}
+                        self.response_manager.success(msg, spoken_text=msg, speak=speak)
+                    except Exception as launch_err:
+                        msg = f"Failed to open in {ide_display}: {launch_err}"
+                        res = {"success": False, "action": intent, "target": target_abs, "message": msg}
+                        self.response_manager.failure(msg, spoken_text=msg, speak=speak)
+
+            self._update_status("STANDBY", uid)
+            self._update_speech_text(msg)
+            if self.on_action_complete_cb:
+                self._trigger_cb(self.on_action_complete_cb, intent, res.get("success", False), msg)
+            self._notify_pipeline_stage("", "", f"ide:{intent}", "IDEBridge", msg, "Speaking")
+            try:
+                from core.evolution.collector import evolution_collector
+                if evolution_collector:
+                    evolution_collector.record_experience(
+                        user_request=intent_node.get("raw") or f"open in {ide}",
+                        intent="OPEN_IN_IDE",
+                        action=intent,
+                        parameters={"ide": ide, "target": str(target_path)},
+                        success=res.get("success", False),
+                        message=msg
+                    )
+            except Exception:
+                pass
             return res
 
         # Handle Standby, Sleep & Listening Lifecycle Actions Directly in Runtime
@@ -2075,7 +2539,8 @@ class JarvisRuntime:
                     parameters=intent_node,
                     success=success,
                     message=message,
-                    latency_ms=exec_latency
+                    latency_ms=exec_latency,
+                    raw_transcript=getattr(self, "_last_raw_transcript", None) or intent_node.get("raw") or action
                 )
             except Exception as ee:
                 logger.debug(f"[EVOLUTION] Collector recording error: {ee}")

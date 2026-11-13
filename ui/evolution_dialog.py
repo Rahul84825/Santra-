@@ -272,9 +272,15 @@ class EvolutionCenterDialog(QDialog):
             item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.tbl_proposals.setItem(row, 0, item_id)
 
-            # Type
-            item_type = QTableWidgetItem(p.get("proposal_type", ""))
+            # Type & Risk Level
+            p_type = p.get("proposal_type", "")
+            risk_class, risk_level = self.evo_mgr.get_proposal_risk(p_type)
+            item_type = QTableWidgetItem(f"{p_type} [{risk_level}]")
             item_type.setFlags(item_type.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            if risk_level == "HIGH":
+                item_type.setForeground(Qt.GlobalColor.red)
+            elif risk_level == "MEDIUM":
+                item_type.setForeground(Qt.GlobalColor.yellow)
             self.tbl_proposals.setItem(row, 1, item_type)
 
             # Target
@@ -322,7 +328,25 @@ class EvolutionCenterDialog(QDialog):
         self.data_changed.emit()
 
     def _on_approve_single(self, prop_id: str):
-        ok, msg = self.evo_mgr.approve_proposal(prop_id)
+        proposal = self.storage.get_proposal(prop_id)
+        if not proposal:
+            QMessageBox.warning(self, "Proposal Not Found", f"Proposal '{prop_id}' does not exist.")
+            return
+
+        p_type = proposal.get("proposal_type", "")
+        risk_class, risk_level = self.evo_mgr.get_proposal_risk(p_type)
+        if risk_level in ("MEDIUM", "HIGH"):
+            confirm = QMessageBox.question(
+                self,
+                f"Confirm Proposal Approval ({risk_level} Risk)",
+                f"Proposal: {prop_id}\nType: {p_type} ({risk_class})\nTarget: {proposal.get('target_key')}\n\nReason: {proposal.get('reason')}\n\nApprove and verify across regression benchmarks?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if confirm != QMessageBox.StandardButton.Yes:
+                self.lbl_footer_status.setText(f"Approval of '{prop_id}' cancelled by user.")
+                return
+
+        ok, msg = self.evo_mgr.approve_proposal(prop_id, confirmed_by_user=True)
         if ok:
             self.lbl_footer_status.setText(f"Proposal '{prop_id}' approved & verified.")
         else:
@@ -342,7 +366,16 @@ class EvolutionCenterDialog(QDialog):
         self.data_changed.emit()
 
     def _on_approve_all(self):
-        res = self.evo_mgr.approve_all_pending()
+        confirm = QMessageBox.question(
+            self,
+            "Confirm Batch Approval",
+            "Approve all pending evolution proposals across regression benchmarks?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        res = self.evo_mgr.approve_all_pending(confirmed_by_user=True)
         self.lbl_footer_status.setText(f"Approved {res['approved_count']} proposals ({res['failed_count']} failed/reverted).")
         self._load_proposals()
         self._load_telemetry()
@@ -502,11 +535,28 @@ class EvolutionCenterDialog(QDialog):
         self.data_changed.emit()
 
     def _on_promote_skill(self, skill_id: str):
+        # 1. Isolated dry-run testing
         passed = self.skill_dev.test_skill_in_sandbox(skill_id)
-        if passed:
-            self.lbl_footer_status.setText(f"Skill '{skill_id}' tested and promoted to VERIFIED.")
+        if not passed:
+            QMessageBox.warning(self, "Dry-Run Failed", f"Skill '{skill_id}' failed safety or dry-run validation.")
+            self._load_skills()
+            return
+
+        # 2. Explicit User Confirmation Gate
+        confirm = QMessageBox.question(
+            self,
+            "Confirm Skill Promotion",
+            f"Skill '{skill_id}' passed isolated dry-run testing (Status: DRY_RUN_PASSED).\n\nPromote this skill to active VERIFIED status?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if confirm == QMessageBox.StandardButton.Yes:
+            promoted, msg = self.skill_dev.promote_skill_to_verified(skill_id, confirmed_by_user=True)
+            if promoted:
+                self.lbl_footer_status.setText(f"Skill '{skill_id}' verified and active.")
+            else:
+                QMessageBox.warning(self, "Promotion Failed", msg)
         else:
-            QMessageBox.warning(self, "Promotion Blocked", f"Skill '{skill_id}' failed safety or dry-run validation.")
+            self.lbl_footer_status.setText(f"Skill '{skill_id}' kept in DRY_RUN_PASSED status.")
         self._load_skills()
         self.data_changed.emit()
 
@@ -525,7 +575,7 @@ class EvolutionCenterDialog(QDialog):
         self.card_exp.setProperty("class", "statCard")
         lay_exp = QVBoxLayout(self.card_exp)
         lay_exp.addWidget(QLabel("HISTORICAL SUCCESS RATE"))
-        self.lbl_stat_success = QLabel("94.9% (1,216/1,281)")
+        self.lbl_stat_success = QLabel("N/A")
         self.lbl_stat_success.setStyleSheet("color: #10b981; font-size: 16px; font-weight: 800;")
         lay_exp.addWidget(self.lbl_stat_success)
         cards_row.addWidget(self.card_exp)
@@ -534,8 +584,8 @@ class EvolutionCenterDialog(QDialog):
         self.card_lat.setProperty("class", "statCard")
         lay_lat = QVBoxLayout(self.card_lat)
         lay_lat.addWidget(QLabel("OFFLINE BENCHMARK"))
-        self.lbl_stat_score = QLabel("100% PASS (0.8ms)")
-        self.lbl_stat_score.setStyleSheet("color: #38bdf8; font-size: 16px; font-weight: 800;")
+        self.lbl_stat_score = QLabel("Score: NOT RUN")
+        self.lbl_stat_score.setStyleSheet("color: #94a3b8; font-size: 16px; font-weight: 800;")
         lay_lat.addWidget(self.lbl_stat_score)
         cards_row.addWidget(self.card_lat)
 
@@ -543,7 +593,7 @@ class EvolutionCenterDialog(QDialog):
         self.card_props.setProperty("class", "statCard")
         lay_props = QVBoxLayout(self.card_props)
         lay_props.addWidget(QLabel("ACTIVE PROPOSALS"))
-        self.lbl_stat_props = QLabel("3 Pending · 2 Approved")
+        self.lbl_stat_props = QLabel("N/A")
         self.lbl_stat_props.setStyleSheet("color: #f59e0b; font-size: 16px; font-weight: 800;")
         lay_props.addWidget(self.lbl_stat_props)
         cards_row.addWidget(self.card_props)
@@ -552,12 +602,12 @@ class EvolutionCenterDialog(QDialog):
 
         # Benchmark Runner Bar
         bench_row = QHBoxLayout()
-        lbl_b_title = QLabel("Deterministic Regression Suite (Zero VRAM, < 2ms latency):")
+        lbl_b_title = QLabel("Core Learning Smoke Test (FTS5 + Aliases + Injection Filter):")
         lbl_b_title.setStyleSheet("color: #94a3b8; font-size: 11px;")
         bench_row.addWidget(lbl_b_title)
         bench_row.addStretch(1)
 
-        btn_run_bench = QPushButton("▶ Run Regression Benchmark Now")
+        btn_run_bench = QPushButton("▶ Run Core Smoke Test Now")
         btn_run_bench.setProperty("class", "btnPrimary")
         btn_run_bench.clicked.connect(self._on_run_benchmark)
         bench_row.addWidget(btn_run_bench)

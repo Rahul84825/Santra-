@@ -9,6 +9,36 @@ class CommandNormalizer:
     and splits multi-command chains.
     """
 
+    @staticmethod
+    def normalize_spoken_syntax(text: str) -> str:
+        """Normalizes spoken programming syntax and acoustic transcriptions into canonical code characters.
+
+        Examples:
+            'console.log, bracket,' -> 'console.log('
+            'open bracket' -> '('
+            'close bracket' -> ')'
+            'dot' -> '.'
+            'comma' -> ','
+            'semicolon' -> ';'
+            'quotes', 'quote' -> "'"
+        """
+        if not text:
+            return ""
+        s = str(text)
+        # 1. Close brackets first so 'close bracket' is not eaten by 'bracket'
+        s = re.sub(r"[\s,]*\b(?:close\s+bracket|closing\s+bracket|close\s+parenthesis|right\s+bracket)\b[\s,]*", ")", s, flags=re.IGNORECASE)
+        # 2. Open brackets and standalone bracket
+        s = re.sub(r"[\s,]*\b(?:open\s+bracket|opening\s+bracket|open\s+parenthesis|left\s+bracket|bracket)\b[\s,]*", "(", s, flags=re.IGNORECASE)
+        # 3. Quotes
+        s = re.sub(r"[\s,]*\b(?:double\s+quotes?|quotes?|quote)\b[\s,]*", "'", s, flags=re.IGNORECASE)
+        # 4. Semicolon
+        s = re.sub(r"[\s,]*\bsemicolon\b[\s,]*", ";", s, flags=re.IGNORECASE)
+        # 5. Dot
+        s = re.sub(r"[\s,]*\bdot\b[\s,]*", ".", s, flags=re.IGNORECASE)
+        # 6. Comma
+        s = re.sub(r"\s*\bcomma\b\s*", ",", s, flags=re.IGNORECASE)
+        return s.strip()
+
     def __init__(self):
         logger.info("Initializing Command Normalizer.")
 
@@ -385,3 +415,7 @@ class CommandNormalizer:
             "confidence": 1.0,
             "meaningful": bool(final_normalized)
         }
+
+
+# Module-level convenience function
+normalize_spoken_syntax = CommandNormalizer.normalize_spoken_syntax

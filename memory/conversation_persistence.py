@@ -82,11 +82,21 @@ class ConversationPersistence:
 
     def _handle_corrupt_database(self):
         """Safely renames corrupt database file to preserve evidence and allows recreation."""
+        import gc
+        gc.collect()
         try:
+            timestamp = int(time.time())
             if self.db_path.exists():
-                backup_name = f"{self.db_path}.corrupt.{int(time.time())}"
+                backup_name = f"{self.db_path}.corrupt.{timestamp}"
                 shutil.move(str(self.db_path), backup_name)
                 logger.warning(f"Corrupt database moved to '{backup_name}'. Created fresh database.")
+            for ext in ["-wal", "-shm"]:
+                p_extra = Path(f"{self.db_path}{ext}")
+                if p_extra.exists():
+                    try:
+                        p_extra.unlink()
+                    except Exception:
+                        pass
         except Exception as e:
             logger.error(f"Could not back up corrupt database: {e}")
 

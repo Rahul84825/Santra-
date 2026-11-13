@@ -18,13 +18,28 @@ import string
 import logging
 import threading
 import webbrowser
+import subprocess
+import urllib.parse
 from typing import Optional, Dict, Any, List, Tuple
 from core.evolution.storage import EvolutionStorage, evolution_storage
 from core.evolution.collector import ExperienceCollector, evolution_collector
 
 logger = logging.getLogger("Santra.Evolution.SkillDeveloper")
 
-# Whitelist of permissible tools inside declarative skills
+# Explicit honest skill lifecycle states
+VALID_SKILL_STATES = {
+    "SANDBOX",
+    "SCHEMA_VALIDATED",
+    "DRY_RUN_PASSED",
+    "VERIFIED",
+    "BLOCKED",
+    "FAILED",
+}
+
+# Pre-compiled punctuation translation table for zero-latency normalization
+_PUNCT_TABLE = str.maketrans("", "", string.punctuation)
+
+# Strict whitelist of permissible tools inside declarative skills (no shell or raw execution)
 ALLOWED_SKILL_TOOLS = {
     "open_application",
     "open_app",
@@ -33,46 +48,9 @@ ALLOWED_SKILL_TOOLS = {
     "synthesize_speech",
     "wait",
     "delay",
-    "system_command",
-    "get_system_info",
     "evolution_status",
     "evolution_proposals_list",
-    "evolution_proposals_approve",
 }
-
-# Blacklist of dangerous expressions, system calls, or shell execution paths
-PROHIBITED_SUBSTRINGS = [
-    "eval(",
-    "exec(",
-    "os.system",
-    "subprocess.",
-    "shutil.rmtree",
-    "os.remove",
-    "os.unlink",
-    "os.rmdir",
-    "reg.exe",
-    "reg add",
-    "reg delete",
-    "format c:",
-    "powershell",
-    "cmd.exe",
-    "drop table",
-    "delete from",
-    "truncate ",
-    "rm -rf",
-    "del /",
-    "del c:",
-]
-
-# Prohibited sensitive path patterns
-PROHIBITED_PATHS = [
-    "core/",
-    "core\\",
-    ".git",
-    "system32",
-    "windows/system",
-    "appdata/roaming/microsoft",
-]
 
 
 class SkillDeveloper:
@@ -114,9 +92,7 @@ class SkillDeveloper:
         """Strips punctuation, lowercases, and collapses whitespace."""
         if not text:
             return ""
-        t = text.lower()
-        # Remove punctuation
-        t = t.translate(str.maketrans("", "", string.punctuation))
+        t = text.lower().translate(_PUNCT_TABLE)
         return " ".join(t.split())
 
     def match_trigger(self, query: str) -> Optional[Dict[str, Any]]:
@@ -151,63 +127,96 @@ class SkillDeveloper:
     # ==========================================
     def validate_skill_spec(self, spec: Dict[str, Any]) -> Tuple[bool, str]:
         """
-        Strict AST and content inspection ensuring skills contain NO arbitrary shell commands,
-        file deletion, or core python file modifications.
+        Strict schema and parameter allowlist validation ensuring skills contain
+        only permitted tools, strictly bound argument types, and no shell execution paths.
         """
         if not isinstance(spec, dict):
             return False, "Skill specification must be a dictionary"
 
         name = spec.get("name")
-        if not name or not str(name).strip():
-            return False, "Skill must have a non-empty name"
+        if not name or not isinstance(name, str) or not name.strip() or len(name) > 100:
+            return False, "Skill must have a non-empty name (max 100 characters)"
 
         triggers = spec.get("trigger_phrases")
         if not triggers or not isinstance(triggers, list) or len(triggers) == 0:
             return False, "Skill must provide at least one trigger phrase"
+        for trig in triggers:
+            if not isinstance(trig, str) or not trig.strip() or len(trig) > 150:
+                return False, "Trigger phrases must be non-empty strings (max 150 characters)"
 
         steps = spec.get("steps", spec.get("steps_json", []))
         if not steps or not isinstance(steps, list) or len(steps) == 0:
             return False, "Skill must provide at least one executable step"
+        if len(steps) > 20:
+            return False, "Skill exceeds maximum allowed step count (20)"
 
-        # Check each step
-        spec_str = json.dumps(spec).lower()
-        for prohibited in PROHIBITED_SUBSTRINGS:
-            if prohibited in spec_str:
-                return False, f"Safety Governor violation: Prohibited token '{prohibited}' detected"
-
-        for step in steps:
+        for step_idx, step in enumerate(steps):
             if not isinstance(step, dict):
-                return False, "Each step must be a dictionary specification"
+                return False, f"Step {step_idx} must be a dictionary specification"
 
             tool = step.get("tool")
             if not tool or tool not in ALLOWED_SKILL_TOOLS:
-                return False, f"Safety Governor violation: Tool '{tool}' is not in the allowed tools whitelist"
+                return False, f"Safety Governor violation: Tool '{tool}' is not in allowed tools whitelist"
 
             args = step.get("args", {})
             if not isinstance(args, dict):
-                return False, "Step args must be a dictionary"
+                return False, f"Step {step_idx} args must be a dictionary"
 
-            args_str = json.dumps(args).lower()
+            # Strict Tool Schemas & Parameter Allowlist
+            if tool in ("open_application", "open_app"):
+                allowed_keys = {"app_name"}
+                if not set(args.keys()).issubset(allowed_keys):
+                    return False, f"Safety Governor violation: Step {step_idx} for {tool} contains unauthorized arguments: {set(args.keys()) - allowed_keys}"
+                app_name = args.get("app_name")
+                if not isinstance(app_name, str) or not app_name.strip():
+                    return False, f"Step {step_idx} missing required string parameter 'app_name'"
+                app_clean = app_name.strip()
+                if len(app_clean) > 64:
+                    return False, f"Step {step_idx} app_name exceeds maximum length of 64 characters"
+                # Disallow directory navigation / path traversal
+                app_lower = app_clean.lower()
+                if ".." in app_lower or "/" in app_lower or "\\" in app_lower:
+                    return False, f"Safety Governor violation: Directory traversal pattern in '{app_clean}'"
+                # Reject prohibited characters and shell metacharacters via strict allowlist
+                if not re.match(r"^[a-zA-Z0-9_\-\.\s]+$", app_clean):
+                    return False, f"Safety Governor violation: app_name '{app_clean}' contains prohibited characters"
+                # Disallow executable/script extensions
+                prohibited_exts = [".bat", ".cmd", ".vbs", ".ps1", ".py", ".sh", ".exe", ".msi", ".reg", ".dll", ".scr"]
+                if any(app_lower.endswith(ext) or (ext + " ") in app_lower for ext in prohibited_exts):
+                    return False, f"Safety Governor violation: Prohibited executable/script target extension in '{app_clean}'"
 
-            # Specific tool argument validations
-            if tool == "open_url":
-                url = str(args.get("url", "")).strip().lower()
-                if not (url.startswith("http://") or url.startswith("https://")):
-                    return False, "Safety Governor violation: open_url requires http:// or https:// scheme"
+            elif tool == "open_url":
+                allowed_keys = {"url"}
+                if not set(args.keys()).issubset(allowed_keys):
+                    return False, f"Safety Governor violation: Step {step_idx} for {tool} contains unauthorized arguments: {set(args.keys()) - allowed_keys}"
+                url = args.get("url")
+                if not isinstance(url, str) or not url.strip() or len(url) > 2048:
+                    return False, f"Step {step_idx} requires string parameter 'url' (max 2048 chars)"
+                parsed = urllib.parse.urlparse(url.strip())
+                if parsed.scheme.lower() not in ("http", "https"):
+                    return False, f"Safety Governor violation: open_url requires http:// or https:// scheme, got '{parsed.scheme}'"
+                if not parsed.netloc:
+                    return False, "Safety Governor violation: open_url requires valid hostname netloc"
 
-            elif tool in ["open_application", "open_app"]:
-                app = str(args.get("app_name", "")).strip().lower()
-                if not app or any(ext in app for ext in [".bat", ".cmd", ".vbs", ".ps1"]):
-                    return False, f"Safety Governor violation: Prohibited application target '{app}'"
-                if re.search(r'\.py(?:["\'\s]|$)', app):
-                    return False, "Safety Governor violation: Direct Python file manipulation (.py) detected in step arguments"
-                for p_path in PROHIBITED_PATHS:
-                    if p_path in app:
-                        return False, f"Safety Governor violation: Restricted path pattern '{p_path}' in step arguments"
-            else:
-                for p_path in PROHIBITED_PATHS:
-                    if p_path in args_str:
-                        return False, f"Safety Governor violation: Restricted path pattern '{p_path}' in step arguments"
+            elif tool in ("speak", "synthesize_speech"):
+                allowed_keys = {"text"}
+                if not set(args.keys()).issubset(allowed_keys):
+                    return False, f"Step {step_idx} for {tool} contains unauthorized arguments: {set(args.keys()) - allowed_keys}"
+                text_val = args.get("text")
+                if not isinstance(text_val, str) or len(text_val) > 1000:
+                    return False, f"Step {step_idx} requires string parameter 'text' (max 1000 chars)"
+
+            elif tool in ("wait", "delay"):
+                allowed_keys = {"seconds"}
+                if not set(args.keys()).issubset(allowed_keys):
+                    return False, f"Step {step_idx} for {tool} contains unauthorized arguments: {set(args.keys()) - allowed_keys}"
+                secs = args.get("seconds", 1.0)
+                if not isinstance(secs, (int, float)) or secs < 0.0 or secs > 30.0:
+                    return False, f"Step {step_idx} wait seconds must be a numeric value between 0.0 and 30.0"
+
+            elif tool in ("evolution_status", "evolution_proposals_list"):
+                if args and not set(args.keys()).issubset(set()):
+                    return False, f"Step {step_idx} tool '{tool}' takes no arguments"
 
         return True, "Valid skill specification"
 
@@ -217,7 +226,8 @@ class SkillDeveloper:
     def test_skill_in_sandbox(self, skill_id: str) -> bool:
         """
         Executes an isolated dry-run test of a candidate skill without firing external side-effects.
-        If validation and simulated step evaluation succeed, promotes the skill to 'VERIFIED'.
+        Promotes the skill to 'DRY_RUN_PASSED' on success.
+        A skill CANNOT reach 'VERIFIED' without explicit human or policy approval.
         """
         skill = self.storage.get_skill(skill_id)
         if not skill:
@@ -230,6 +240,9 @@ class SkillDeveloper:
             logger.warning(f"[SKILL_DEV] Skill '{skill_id}' failed safety governor: {reason}")
             self.storage.update_skill_status(skill_id, "BLOCKED")
             return False
+
+        # Mark SCHEMA_VALIDATED
+        self.storage.update_skill_status(skill_id, "SCHEMA_VALIDATED")
 
         # 2. Simulated dry-run verification
         steps = skill.get("steps", [])
@@ -248,20 +261,43 @@ class SkillDeveloper:
                         raise ValueError("Missing text in speak step")
                 elif tool in ["wait", "delay"]:
                     secs = float(args.get("seconds", 1.0))
-                    if secs < 0 or secs > 60:
-                        raise ValueError("Wait duration out of acceptable bounds (0-60s)")
+                    if secs < 0 or secs > 30:
+                        raise ValueError("Wait duration out of acceptable bounds (0-30s)")
         except Exception as e:
             logger.warning(f"[SKILL_DEV] Skill '{skill_id}' dry-run simulation failed: {e}")
-            self.storage.update_skill_status(skill_id, "SANDBOX")
+            self.storage.update_skill_status(skill_id, "FAILED")
             return False
 
-        # Promotion to VERIFIED
-        self.storage.update_skill_status(skill_id, "VERIFIED")
-        logger.info(f"[SKILL_DEV] Skill '{skill_id}' passed sandbox testing. Promoted to VERIFIED.")
-
-        # Reload in-memory trigger cache
-        self.load_skills_cache()
+        # Promote only to DRY_RUN_PASSED (Truthful Lifecycle: cannot reach VERIFIED without human approval)
+        self.storage.update_skill_status(skill_id, "DRY_RUN_PASSED")
+        logger.info(f"[SKILL_DEV] Skill '{skill_id}' passed dry-run testing. Promoted to DRY_RUN_PASSED.")
         return True
+
+    def promote_skill_to_verified(self, skill_id: str, confirmed_by_user: bool = False) -> Tuple[bool, str]:
+        """
+        Promotes a skill from DRY_RUN_PASSED to VERIFIED upon explicit user confirmation.
+        """
+        if not confirmed_by_user:
+            return False, "Skill promotion to VERIFIED requires explicit user confirmation."
+
+        skill = self.storage.get_skill(skill_id)
+        if not skill:
+            return False, f"Skill '{skill_id}' not found."
+
+        current_status = skill.get("status")
+        if current_status not in ("DRY_RUN_PASSED", "SANDBOX", "SCHEMA_VALIDATED"):
+            return False, f"Skill '{skill_id}' cannot be promoted from status '{current_status}'."
+
+        # Verify specification before promoting
+        valid, reason = self.validate_skill_spec(skill)
+        if not valid:
+            self.storage.update_skill_status(skill_id, "BLOCKED")
+            return False, f"Safety check failed: {reason}"
+
+        self.storage.update_skill_status(skill_id, "VERIFIED")
+        self.load_skills_cache()
+        logger.info(f"[SKILL_DEV] Skill '{skill_id}' promoted to VERIFIED by explicit user confirmation.")
+        return True, f"Skill '{skill['name']}' promoted to VERIFIED."
 
     # ==========================================
     # AUTOMATIC WORKFLOW MINING FROM EXPERIENCES
@@ -434,11 +470,11 @@ class SkillDeveloper:
                     "promote sandbox skills",
                     "apply evolution proposals",
                 ],
-                "description": "Evaluates and approves pending evolution proposals across regression benchmarks.",
+                "description": "Explains that evolution proposals require explicit review and approval in the Evolution Center.",
                 "steps": [
-                    {"tool": "evolution_proposals_approve", "args": {}},
+                    {"tool": "speak", "args": {"text": "Autonomous approval via voice is disabled for security. Please review and approve proposals in the Evolution Center dialog."}},
                 ],
-                "version": 1,
+                "version": 2,
                 "status": "VERIFIED",
                 "created_at": now,
                 "updated_at": now
@@ -447,7 +483,7 @@ class SkillDeveloper:
 
         for s in preseeded:
             existing = self.storage.get_skill(s["skill_id"])
-            if not existing:
+            if not existing or (s["skill_id"] == "skill_approve_evolution_proposals" and existing.get("version", 1) < 2):
                 self.storage.upsert_skill(s)
                 logger.info(f"[SKILL_DEV] Pre-seeded verified skill: {s['name']}")
 
@@ -486,17 +522,23 @@ class SkillDeveloper:
                     if runtime and speak and hasattr(runtime, "response_manager"):
                         runtime.response_manager.conversation(final_message, speak=True)
 
-                elif tool == "evolution_proposals_approve":
-                    final_message = self._execute_proposals_approval()
-                    if runtime and speak and hasattr(runtime, "response_manager"):
-                        runtime.response_manager.conversation(final_message, speak=True)
-
-                elif tool == "open_application" or tool == "open_app":
-                    app_name = args.get("app_name", "")
+                elif tool in ("open_application", "open_app"):
+                    app_name = str(args.get("app_name", "")).strip()
                     if runtime and hasattr(runtime, "executor") and hasattr(runtime.executor, "open_app"):
                         runtime.executor.open_app(app_name)
                     else:
-                        os.system(f"start {app_name}")
+                        # Non-shell structured execution (no cmd.exe / os.system)
+                        if not re.match(r"^[a-zA-Z0-9_\-\.\s]+$", app_name):
+                            raise ValueError(f"Prohibited application target name: '{app_name}'")
+                        try:
+                            os.startfile(app_name)
+                        except Exception:
+                            import shutil
+                            bin_path = shutil.which(app_name)
+                            if bin_path:
+                                subprocess.run([bin_path], shell=False, check=False)
+                            else:
+                                raise FileNotFoundError(f"Application '{app_name}' not found on system PATH.")
 
                 elif tool == "open_url":
                     url = args.get("url", "")
@@ -612,34 +654,13 @@ class SkillDeveloper:
         summary = (
             f"ALEE has {len(pending)} pending evolution proposals awaiting approval. "
             f"Historical weakness analysis detected {len(failing_names)} failing operations: {failing_str}. "
-            f"You can say 'approve pending proposals' to evaluate and verify them."
+            f"Please open the Evolution Center dialog to review and approve them."
         )
         return summary
 
     def _execute_proposals_approval(self) -> str:
-        """Executes Level 3 approval on all pending proposals and reports verification status."""
-        try:
-            from core.evolution.evolution_manager import evolution_manager
-            res = evolution_manager.approve_all_pending()
-            approved_count = res.get("approved_count", 0)
-            failed_count = res.get("failed_count", 0)
-        except Exception as e:
-            return f"Approval evaluation encountered an error: {e}"
-
-        score = 100
-        try:
-            from core.evolution.evaluator import PerformanceEvaluator
-            evaluator = PerformanceEvaluator(storage=self.storage, collector=self.collector)
-            bench = evaluator.run_regression_benchmarks()
-            score = int(bench.get("score", 100))
-        except Exception:
-            pass
-
-        summary = (
-            f"Processed pending evolution proposals: {approved_count} approved and verified, "
-            f"{failed_count} rejected due to regression guards. Current system benchmark score is {score} percent."
-        )
-        return summary
+        """Advises user to review proposals interactively in the Evolution Center dialog."""
+        return "Autonomous approval via voice is disabled for security. Please review and approve proposals in the Evolution Center dialog."
 
 
 # Singleton instance

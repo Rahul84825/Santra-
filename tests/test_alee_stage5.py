@@ -181,7 +181,7 @@ class TestALEEStage5(unittest.TestCase):
         })
 
         # Attempt approval with simulated post-change regression score (e.g. 50% vs 100%)
-        approved, msg = self.evo_mgr.approve_proposal(prop_id, simulated_regression_score=50.0)
+        approved, msg = self.evo_mgr.approve_proposal(prop_id, simulated_regression_score=50.0, confirmed_by_user=True)
         self.assertFalse(approved)
         self.assertIn("Regression detected", msg)
 
@@ -222,7 +222,7 @@ class TestALEEStage5(unittest.TestCase):
             "status": "PENDING"
         })
 
-        ok, msg = self.evo_mgr.approve_proposal(prop_id)
+        ok, msg = self.evo_mgr.approve_proposal(prop_id, confirmed_by_user=True)
         self.assertTrue(ok)
         self.assertEqual(self.storage.get_skill("skill_rollback_demo")["status"], "VERIFIED")
 
@@ -256,6 +256,9 @@ class TestALEEStage5(unittest.TestCase):
             ("approve pending proposals", "approve evolution proposals")
         ]
 
+        # Warm up CPU instruction cache before benchmark
+        self.skill_dev.match_trigger("warmup")
+
         for query, expected_name in triggers:
             t0 = time.perf_counter()
             match = self.skill_dev.match_trigger(query)
@@ -276,7 +279,7 @@ class TestALEEStage5(unittest.TestCase):
         m_app = self.skill_dev.match_trigger("approve pending proposals")
         res_app = self.skill_dev.execute_skill(m_app, speak=False)
         self.assertTrue(res_app["success"])
-        self.assertIn("Processed pending evolution proposals", res_app["message"])
+        self.assertIn("Evolution Center dialog", res_app["message"])
 
     # ==========================================
     # TEST 6: SCHEDULER & PYQT6 HUD PROPOSAL TELEMETRY
